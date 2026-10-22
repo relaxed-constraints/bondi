@@ -1,0 +1,40 @@
+name: dbrtoolkit
+services:
+  mongodb:
+    image: mongo:8.0.16
+    profiles: [mongodb]
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "quit(db.adminCommand({ping: 1}).ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  couchbase:
+    image: couchbase:community-7.6.2
+    profiles: [couchbase]
+    ports:
+      - "127.0.0.1:8091:8091"
+      - "127.0.0.1:8093:8093"
+      - "127.0.0.1:11210:11210"
+    volumes:
+      - couchbase-data:/opt/couchbase/var
+    stop_grace_period: 60s
+    mem_limit: 4g
+    cpus: 2
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --user, "Administrator:dbrtoolkit-local", http://localhost:8091/pools]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+volumes:
+  mongodb-data:
+  couchbase-data:

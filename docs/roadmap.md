@@ -30,6 +30,10 @@ plans and conservative aggregation summaries, with saved explain fixtures. Raw
 responses remain available. Sharded and nested-read metric interpretation, warmups
 and repetitions are deferred.
 
+Step 9 starts with optional Docker Compose environments for both databases, shared
+synthetic sample data and repeatable initialization. Couchbase executor and explain
+parsing contracts remain the next increment.
+
 ## First functional milestone
 
 A student can install the toolkit, construct a MongoDB find query, save it, reload

@@ -1,0 +1,10 @@
+[
+  {"business_id":"demo-001","name":"Harbour Cafe","city":"Sydney","stars":4.5,"review_count":120,"categories":["Cafe","Breakfast"]},
+  {"business_id":"demo-002","name":"Garden Books","city":"Sydney","stars":4.0,"review_count":45,"categories":["Books"]},
+  {"business_id":"demo-003","name":"Station Noodles","city":"Sydney","stars":3.5,"review_count":80,"categories":["Restaurant"]},
+  {"business_id":"demo-004","name":"Laneway Coffee","city":"Melbourne","stars":4.5,"review_count":200,"categories":["Cafe"]},
+  {"business_id":"demo-005","name":"River Bikes","city":"Melbourne","stars":4.0,"review_count":60,"categories":["Bikes"]},
+  {"business_id":"demo-006","name":"Market Bakery","city":"Melbourne","stars":5.0,"review_count":95,"categories":["Bakery"]},
+  {"business_id":"demo-007","name":"Hilltop Deli","city":"Brisbane","stars":4.0,"review_count":35,"categories":["Deli"]},
+  {"business_id":"demo-008","name":"Sunset Pizza","city":"Brisbane","stars":3.0,"review_count":70,"categories":["Restaurant"]}
+]

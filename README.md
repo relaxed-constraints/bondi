@@ -59,3 +59,9 @@ A distribution can be built with `uv build`.
 
 This is a local, unpublished project. A license and release policy must be chosen
 before public distribution; no license is implied by this scaffold.
+
+## Optional local databases
+
+See [the local database guide](docs/local-databases.md) for MongoDB and Couchbase
+Docker Compose profiles, sample data, startup and cleanup. No database or Docker
+installation is required for the offline test suite.

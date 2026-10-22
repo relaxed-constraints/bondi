@@ -165,3 +165,11 @@ no recursive summation of counters or time estimates. Split pipelines retain fin
 output counts but may lack other metrics. Sharded and nested-read interpretations
 are deferred. Projects keep the raw document for custom fields; no extensibility
 registry or universal cross-backend plan model is introduced.
+
+## Local development databases
+
+Opt-in Compose profiles provide separate MongoDB and Couchbase services with pinned
+images, localhost ports and named volumes. A shared synthetic fixture is loaded
+through native database interfaces. Initialization is repeatable and separate from
+container startup; no database dependencies are added to the library. Development
+credentials and resource limits are intentionally local-only.

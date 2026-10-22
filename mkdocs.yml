@@ -5,6 +5,7 @@ watch:
 nav:
   - Overview: index.md
   - Guides:
+      - Local databases: local-databases.md
       - Collection reference: collection-reference.md
       - Find query: find-query.md
       - Aggregation query: aggregate-query.md
