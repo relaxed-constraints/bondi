@@ -45,3 +45,15 @@
       show_root_heading: true
       heading_level: 2
       members: [validate, __len__, __iter__, __getitem__]
+
+::: dbrtoolkit.execution.ExecutionResult
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [status]
+
+::: dbrtoolkit.mongodb.AsyncMongoDBExecutor
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [from_uri, close, run, run_workload, explain, explain_workload]

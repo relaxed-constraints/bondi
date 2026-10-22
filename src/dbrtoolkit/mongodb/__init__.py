@@ -2,6 +2,7 @@
 
 from dbrtoolkit.mongodb.aggregate import MongoAggregateQuery
 from dbrtoolkit.mongodb.collection import MongoCollectionRef
+from dbrtoolkit.mongodb.executor import AsyncMongoDBExecutor
 from dbrtoolkit.mongodb.query import MongoFindQuery
 
-__all__ = ["MongoAggregateQuery", "MongoCollectionRef", "MongoFindQuery"]
+__all__ = ["AsyncMongoDBExecutor", "MongoAggregateQuery", "MongoCollectionRef", "MongoFindQuery"]

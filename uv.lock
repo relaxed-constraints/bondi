@@ -39,7 +39,7 @@ docs = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pymongo", specifier = ">=4.6,<5" }]
+requires-dist = [{ name = "pymongo", specifier = ">=4.13,<5" }]
 
 [package.metadata.requires-dev]
 dev = [

@@ -21,6 +21,9 @@ The [Couchbase guide](couchbase-query.md) introduces SQL++ text, parameters and 
 The [workload guide](workloads.md) explains the Query protocol, reference ownership
 and single-backend validation.
 
+The [executor guide](executor.md) covers async MongoDB execution, raw explains and
+concurrent workloads. Database connections are needed only for execution.
+
 ## Where to start
 
 - [Architecture](architecture.md): scope and agreed design boundaries.

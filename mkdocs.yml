@@ -10,6 +10,7 @@ nav:
       - Aggregation query: aggregate-query.md
       - Couchbase query: couchbase-query.md
       - Queries and workloads: workloads.md
+      - Async MongoDB executor: executor.md
   - Documentation walkthrough: documentation.md
   - Architecture: architecture.md
   - Roadmap: roadmap.md

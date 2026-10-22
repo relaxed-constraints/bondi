@@ -21,11 +21,12 @@ This roadmap is a guide, not a commitment to speculative classes.
 
 ## Current progress
 
-Steps 0–5 and the in-memory portion of step 6 are implemented. Query is a small
-structural protocol. WorkloadEntry retains query references and optional integer
-pattern IDs. Workload shallow-copies the entry list and validates a single backend.
-Weights are deferred. Workload persistence and generic query loading are the next
-design discussion before proceeding to database execution.
+Steps 0–5 and the in-memory portion of step 6 are implemented. Workload persistence
+and generic query loading remain deferred. Step 7 now implements async MongoDB
+find/aggregation execution and raw explains, single-query and workload operations,
+bounded concurrency, configurable failure continuation, deadlines and client ownership.
+Raw explains are available; step 8's typed parsing remains to be designed. Warmups
+and repetitions are deferred.
 
 ## First functional milestone
 

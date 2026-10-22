@@ -78,7 +78,7 @@ Filter and projection are deep-copied at construction; later assignments and edi
 are not intercepted. Queries have value equality but are unhashable. Public to_json(), from_json() and fingerprint() methods own persistence and
 representation identity. PyMongo is a required dependency for bson.json_util.
 Serialization preserves order, rejects ambiguous Extended JSON document wrappers,
-and follows BSON date/binary normalization. Execution remains future work.
+and follows BSON date/binary normalization. Execution is provided by AsyncMongoDBExecutor.
 
 ## MongoDB aggregation query
 
@@ -121,6 +121,24 @@ deepcopy is available when isolation is needed. Workload validates a common back
 at construction and on explicit validate(); different MongoDB named databases and
 collections may coexist. Empty workloads are valid. Later edits are not intercepted.
 Weights, persistence, generic loading and pattern-registry management are deferred.
+
+## Async MongoDB executor
+
+A single public executor owns single-query and workload operations; there is no
+separate runner class. It accepts a borrowed AsyncMongoClient or creates an owned
+one via from_uri, closed through async context management or close(). Inputs are
+used by reference and must not be mutated during execution. Workloads prevalidate
+all query types and use bounded asyncio workers, returning input-aligned lists of
+ExecutionResult or None for unstarted entries. Successful runs consume all cursor
+batches, optionally retaining documents. Explain returns the raw response.
+
+Expected database/timeout failures become workload results; single operations raise.
+Stop-on-error drains in-flight operations but stops scheduling. Caller cancellation
+and programming errors propagate after cleanup. Status derives from the original
+exception. A per-query PyMongo timeout context covers initial execution and cursor
+consumption. Native query_kwargs/command_kwargs are supported with reserved-field
+checks. There is no write guard, input snapshot, executor retry, warmup or repetition
+feature. PyMongo >=4.13 is required for the stable async API.
 
 ## Open decisions
 
