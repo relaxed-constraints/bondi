@@ -6,12 +6,20 @@ before moving on to the next component.
 
 ## Current capabilities
 
-The package provides an immutable `MongoCollectionRef` and a mutable `MongoFindQuery`.
+The package provides an immutable `MongoCollectionRef` and mutable `MongoFindQuery` and `MongoAggregateQuery` classes.
 No database connection is needed; PyMongo is installed automatically for BSON support. Start with the
-[first collection reference](collection-reference.md), then follow the
+[collection reference guide](collection-reference.md), then follow the
 [documentation walkthrough](documentation.md) to see how its API docs are built.
 
 See the [find-query guide](find-query.md) for construction and mutation examples.
+
+The [aggregation guide](aggregate-query.md) introduces ordered pipelines and
+explains how the two native query classes share serialization.
+
+The [Couchbase guide](couchbase-query.md) introduces SQL++ text, parameters and context.
+
+The [workload guide](workloads.md) explains the Query protocol, reference ownership
+and single-backend validation.
 
 ## Where to start
 

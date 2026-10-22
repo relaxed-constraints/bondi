@@ -7,8 +7,8 @@ generation, database execution, explain parsing and index management. Research
 algorithms and experiment pipelines live in separate repositories that depend on
 this toolkit.
 
-**Status:** foundation, `MongoCollectionRef` and `MongoFindQuery` implemented. No database connections
-or query execution are implemented yet. See the [first example](docs/collection-reference.md).
+**Status:** foundation, `MongoCollectionRef`, `MongoFindQuery`, `MongoAggregateQuery` and `CouchbaseQuery` implemented. The shared query protocol and in-memory workloads are also available. No database connections
+or query execution are implemented yet. See the [collection reference guide](docs/collection-reference.md).
 
 ## Start developing
 

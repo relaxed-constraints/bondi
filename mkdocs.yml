@@ -4,8 +4,12 @@ watch:
   - src
 nav:
   - Overview: index.md
-  - First collection reference: collection-reference.md
-  - First find query: find-query.md
+  - Guides:
+      - Collection reference: collection-reference.md
+      - Find query: find-query.md
+      - Aggregation query: aggregate-query.md
+      - Couchbase query: couchbase-query.md
+      - Queries and workloads: workloads.md
   - Documentation walkthrough: documentation.md
   - Architecture: architecture.md
   - Roadmap: roadmap.md

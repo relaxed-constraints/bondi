@@ -1,4 +1,4 @@
-# Your first find query
+# Find query
 
 `MongoFindQuery` describes a native MongoDB find operation. It does not connect to
 MongoDB or execute anything. PyMongo is installed as a required dependency to

@@ -11,7 +11,7 @@ This roadmap is a guide, not a commitment to speculative classes.
 | 3 | Persistence and identity | Save and restore queries with explicit format and fingerprint rules. |
 | 4 | MongoAggregateQuery, then CouchbaseQuery | Represent each native query form independently. |
 | 5 | Shared query contract | Introduce a minimal protocol justified by concrete types. |
-| 6 | WorkloadEntry, then Workload | Preserve order, duplicates, weights and pattern membership in persisted workloads. |
+| 6 | WorkloadEntry, then Workload | Preserve order, duplicates and integer pattern membership with shared references; design persistence separately. |
 | 7 | First database interaction | Execute a MongoDB query with defined result and resource lifetimes. |
 | 8 | Explain support | Collect raw explains and parse MongoDB information without losing the source. |
 | 9 | Second backend | Validate shared contracts through Couchbase execution and explains. |
@@ -21,10 +21,11 @@ This roadmap is a guide, not a commitment to speculative classes.
 
 ## Current progress
 
-Steps 0–3 are implemented, including contract tests, executable docstring examples
-and guides. MongoFindQuery is mutable, deep-copies input documents at construction,
-and remains unhashable. Versioned BSON-aware JSON persistence, explicit validation and fingerprints are
-implemented. Step 4 awaits discussion of the aggregation-query contract.
+Steps 0–5 and the in-memory portion of step 6 are implemented. Query is a small
+structural protocol. WorkloadEntry retains query references and optional integer
+pattern IDs. Workload shallow-copies the entry list and validates a single backend.
+Weights are deferred. Workload persistence and generic query loading are the next
+design discussion before proceeding to database execution.
 
 ## First functional milestone
 

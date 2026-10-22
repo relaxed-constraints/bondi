@@ -30,8 +30,8 @@ execution configuration. The precise option boundaries will be reviewed when
 implementing each backend.
 
 Workloads preserve order and duplicate entries. A query fingerprint is not a
-workload-entry identifier. Patterns and workload weights are distinct from native
-query syntax.
+workload-entry identifier. Pattern membership is separate from native query syntax. Weights are deferred
+until a concrete consumer requires them.
 
 Keep execution, explain collection and repeated measurement separate. Preserve
 raw explain responses alongside parsed information. Do not force backend plans
@@ -79,6 +79,48 @@ are not intercepted. Queries have value equality but are unhashable. Public to_j
 representation identity. PyMongo is a required dependency for bson.json_util.
 Serialization preserves order, rejects ambiguous Extended JSON document wrappers,
 and follows BSON date/binary normalization. Execution remains future work.
+
+## MongoDB aggregation query
+
+`MongoAggregateQuery` contains a starting collection target and required pipeline
+list. It follows the mutable, deep-copy-at-construction contract of MongoFindQuery.
+Each top-level stage must have exactly one string key starting with $ followed by
+a name. Empty pipelines and write stages are representable. Stage semantics and
+nested pipelines are deferred to MongoDB; execution policy is a separate concern.
+Collectionless and database-level aggregation are not yet represented.
+
+Both query types use private serialization helpers, without inheriting from each
+other. Aggregation uses a version-1 mongodb.aggregate envelope with target and
+pipeline, preserving stage and document order. Existing find JSON and fingerprints
+remain unchanged.
+
+## Couchbase SQL++ query
+
+`CouchbaseQuery` contains exact statement text, named parameters, positional
+parameters and an optional native query-context string. It has no single target
+collection. Only one parameter style may be nonempty. It is mutable and unhashable,
+with deep-copied parameters at construction and explicit validation thereafter.
+Validation accepts plain JSON values and rejects nonfinite floats and cycles;
+it does not parse SQL++, check placeholders or assert read-only execution.
+
+Its version-1 couchbase.sqlpp envelope uses standard JSON. Fingerprints include
+statement/context text and parameter order without semantic normalization. The
+class needs no Couchbase SDK; connections and execution controls remain separate.
+
+## Shared query contract and workloads
+
+The Query protocol declares a class-level backend identifier and instance methods
+validate(), to_json() and fingerprint(). Native classes satisfy it structurally;
+no inheritance or runtime-checkable protocol is required. Runtime entry validation
+checks member availability and delegates to the query, not method signatures.
+
+WorkloadEntry retains a query reference and optional nonnegative integer pattern_id.
+IDs are local identifiers, not list positions. Workload shallow-copies its input
+list but retains entry/query references, preserving order and duplicates. Explicit
+deepcopy is available when isolation is needed. Workload validates a common backend
+at construction and on explicit validate(); different MongoDB named databases and
+collections may coexist. Empty workloads are valid. Later edits are not intercepted.
+Weights, persistence, generic loading and pattern-registry management are deferred.
 
 ## Open decisions
 

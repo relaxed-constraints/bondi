@@ -1,31 +1,16 @@
 """Native MongoDB query descriptions."""
 
 import hashlib
-import json
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Self
+from typing import Any, ClassVar, Self
 
-from bson import json_util
-
+from dbrtoolkit.mongodb._serialization import (
+    _check_canonical_payload,
+    _dump_envelope,
+    _load_envelope,
+)
 from dbrtoolkit.mongodb.collection import MongoCollectionRef
-
-
-def _same_document_structure(original: Any, decoded: Any) -> bool:
-    """Detect literal documents consumed as Extended JSON scalar wrappers."""
-    if isinstance(original, dict):
-        return (
-            isinstance(decoded, dict)
-            and list(original) == list(decoded)
-            and all(_same_document_structure(v, decoded[k]) for k, v in original.items())
-        )
-    if isinstance(original, (list, tuple)):
-        return (
-            isinstance(decoded, list)
-            and len(original) == len(decoded)
-            and all(_same_document_structure(a, b) for a, b in zip(original, decoded))
-        )
-    return True
 
 
 @dataclass
@@ -69,6 +54,8 @@ class MongoFindQuery:
         >>> query.limit
         20
     """
+
+    backend: ClassVar[str] = "mongodb"
 
     target: MongoCollectionRef
     filter: dict[str, Any]
@@ -155,26 +142,7 @@ class MongoFindQuery:
             "skip": self.skip,
             "limit": self.limit,
         }
-        text = json_util.dumps(
-            envelope,
-            json_options=json_util.CANONICAL_JSON_OPTIONS,
-            separators=(",", ":"),
-            ensure_ascii=True,
-        )
-        # Extended JSON reserves document shapes for type wrappers. Never silently
-        # turn a native predicate/literal document into a different representation.
-        decoded = json_util.loads(text, json_options=json_util.CANONICAL_JSON_OPTIONS)
-        reencoded = json_util.dumps(
-            decoded,
-            json_options=json_util.CANONICAL_JSON_OPTIONS,
-            separators=(",", ":"),
-            ensure_ascii=True,
-        )
-        if text != reencoded or not _same_document_structure(envelope, decoded):
-            raise ValueError(
-                "Query contains a document ambiguous with an Extended JSON type wrapper"
-            )
-        return text
+        return _dump_envelope(envelope)
 
     @classmethod
     def from_json(cls, text: str) -> Self:
@@ -188,39 +156,10 @@ class MongoFindQuery:
             TypeError: Input is not a string or a decoded field has an incorrect type.
             ValueError: JSON, the envelope, canonical payload or field values are invalid.
         """
-        if not isinstance(text, str):
-            raise TypeError("text must be a string")
-
-        def unique_object(pairs):
-            result = {}
-            for key, value in pairs:
-                if key in result:
-                    raise ValueError(f"Duplicate JSON key: {key}")
-                result[key] = value
-            return result
-
-        raw = json.loads(text, object_pairs_hook=unique_object)
-        fields = {
-            "format_version",
-            "query_kind",
-            "target",
-            "filter",
-            "projection",
-            "sort",
-            "skip",
-            "limit",
-        }
-        if not isinstance(raw, dict) or set(raw) != fields:
-            raise ValueError("Query envelope must contain exactly the version-1 fields")
-        data = json_util.loads(text, json_options=json_util.CANONICAL_JSON_OPTIONS)
-        version = data["format_version"]
-        if isinstance(version, bool) or not isinstance(version, int) or version != 1:
-            raise ValueError("Unsupported format_version")
-        if data["query_kind"] != "mongodb.find":
-            raise ValueError("Unsupported query_kind")
+        raw, data = _load_envelope(
+            text, "mongodb.find", {"filter", "projection", "sort", "skip", "limit"}
+        )
         target = data["target"]
-        if not isinstance(target, dict) or set(target) != {"database", "collection"}:
-            raise ValueError("target must contain exactly database and collection")
         sort = data["sort"]
         if not isinstance(sort, list) or any(not isinstance(pair, list) for pair in sort):
             raise TypeError("Serialized sort must be an array of arrays")
@@ -238,12 +177,7 @@ class MongoFindQuery:
             skip=envelope_int(data["skip"]),
             limit=envelope_int(data["limit"]),
         )
-        encoded = json.loads(query.to_json())
-        for field in ("filter", "projection"):
-            if json.dumps(raw[field], separators=(",", ":")) != json.dumps(
-                encoded[field], separators=(",", ":")
-            ):
-                raise ValueError(f"{field} must use unambiguous Canonical Extended JSON")
+        _check_canonical_payload(raw, query.to_json(), ("filter", "projection"))
         return query
 
     def fingerprint(self) -> str:
