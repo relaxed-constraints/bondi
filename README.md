@@ -7,7 +7,7 @@ generation, database execution, explain parsing and index management. Research
 algorithms and experiment pipelines live in separate repositories that depend on
 this toolkit.
 
-**Status:** foundation and `MongoCollectionRef` implemented. No database connections
+**Status:** foundation, `MongoCollectionRef` and `MongoFindQuery` implemented. No database connections
 or query execution are implemented yet. See the [first example](docs/collection-reference.md).
 
 ## Start developing
@@ -23,7 +23,7 @@ uv run ruff format --check .
 ```
 
 `uv sync` installs the package in editable mode and includes the development group.
-There are no runtime dependencies and no database service is needed for these checks.
+PyMongo is a required dependency for BSON support; no database service is needed.
 The committed `uv.lock` records the development dependency resolution.
 
 ## Read the documentation

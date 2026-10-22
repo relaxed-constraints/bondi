@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Python building blocks for reproducible database research"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pymongo>=4.6,<5",
+]
 
 [build-system]
 requires = ["hatchling>=1.26"]

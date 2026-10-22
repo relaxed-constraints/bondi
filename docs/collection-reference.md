@@ -2,7 +2,7 @@
 
 A `MongoCollectionRef` identifies a logical MongoDB collection using a database
 name and collection name. It contains no client, host or credentials. You can use
-it without installing PyMongo or running MongoDB.
+it without running MongoDB. PyMongo is installed with the toolkit for BSON support.
 
 ```python
 from dbrtoolkit.mongodb import MongoCollectionRef

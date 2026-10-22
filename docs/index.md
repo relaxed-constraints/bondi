@@ -6,10 +6,12 @@ before moving on to the next component.
 
 ## Current capabilities
 
-The package provides an immutable `MongoCollectionRef` with basic name validation.
-No database connection or PyMongo installation is needed. Start with the
+The package provides an immutable `MongoCollectionRef` and a mutable `MongoFindQuery`.
+No database connection is needed; PyMongo is installed automatically for BSON support. Start with the
 [first collection reference](collection-reference.md), then follow the
 [documentation walkthrough](documentation.md) to see how its API docs are built.
+
+See the [find-query guide](find-query.md) for construction and mutation examples.
 
 ## Where to start
 

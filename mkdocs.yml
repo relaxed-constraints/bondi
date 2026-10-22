@@ -5,6 +5,7 @@ watch:
 nav:
   - Overview: index.md
   - First collection reference: collection-reference.md
+  - First find query: find-query.md
   - Documentation walkthrough: documentation.md
   - Architecture: architecture.md
   - Roadmap: roadmap.md

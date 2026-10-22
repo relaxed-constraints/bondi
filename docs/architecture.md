@@ -20,7 +20,7 @@ prompts, translation attempts and repair strategies belong in that project.
 
 Structural validity, database acceptance and semantic equivalence are separate
 outcomes. A query fingerprint identifies a stored representation, not semantic
-equivalence. Exact fingerprint and serialization rules remain to be designed.
+equivalence. Version-1 MongoDB find envelopes use Canonical Extended JSON and SHA-256 fingerprints.
 
 ## Data and execution boundaries
 
@@ -67,10 +67,23 @@ strings without null characters; names are preserved exactly. Full server naming
 validation is deferred. Equality and hashing use both names. There is no common
 backend parent class, namespace parsing or serialization API yet.
 
+## MongoDB find query
+
+`MongoFindQuery` is a mutable dataclass with a required target and filter dictionary,
+optional projection, ordered tuple sort, nonnegative skip and optional positive
+limit. None represents no limit; zero is rejected. Only integer 1/-1 sorts are
+supported initially. Validation is structural and runs at construction, explicitly via validate(), and
+before serialization or fingerprinting.
+Filter and projection are deep-copied at construction; later assignments and edits
+are not intercepted. Queries have value equality but are unhashable. Public to_json(), from_json() and fingerprint() methods own persistence and
+representation identity. PyMongo is a required dependency for bson.json_util.
+Serialization preserves order, rejects ambiguous Extended JSON document wrappers,
+and follows BSON date/binary normalization. Execution remains future work.
+
 ## Open decisions
 
 - License and release policy.
-- Exact query contracts, serialization and mutability rules.
+- Remaining native query contracts and their serialization formats.
 - Sync versus async execution strategy.
 - Schema types and sampling contracts.
 - Backend support and compatibility policy.

@@ -21,9 +21,10 @@ This roadmap is a guide, not a commitment to speculative classes.
 
 ## Current progress
 
-Steps 0 and 1 are implemented. Step 1 includes collection-reference contract tests,
-executable docstring examples and a documentation walkthrough. Step 2 remains
-unimplemented pending discussion of the query contract.
+Steps 0–3 are implemented, including contract tests, executable docstring examples
+and guides. MongoFindQuery is mutable, deep-copies input documents at construction,
+and remains unhashable. Versioned BSON-aware JSON persistence, explicit validation and fingerprints are
+implemented. Step 4 awaits discussion of the aggregation-query contract.
 
 ## First functional milestone
 
