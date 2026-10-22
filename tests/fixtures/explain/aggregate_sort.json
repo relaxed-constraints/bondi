@@ -1,0 +1,90 @@
+{
+  "explainVersion": "1",
+  "queryPlanner": {
+    "namespace": "yelp.business",
+    "parsedQuery": {
+      "state": {
+        "$eq": "AZ"
+      }
+    },
+    "indexFilterSet": false,
+    "planCacheShapeHash": "21833C7A",
+    "planCacheKey": "C09E1112",
+    "optimizationTimeMillis": 0,
+    "optimizedPipeline": true,
+    "maxIndexedOrSolutionsReached": false,
+    "maxIndexedAndSolutionsReached": false,
+    "maxScansToExplodeReached": false,
+    "prunedSimilarIndexes": false,
+    "winningPlan": {
+      "isCached": false,
+      "stage": "SORT",
+      "sortPattern": {
+        "stars": -1
+      },
+      "memLimit": 104857600,
+      "limitAmount": 5,
+      "type": "simple",
+      "inputStage": {
+        "stage": "COLLSCAN",
+        "filter": {
+          "state": {
+            "$eq": "AZ"
+          }
+        },
+        "direction": "forward"
+      }
+    },
+    "rejectedPlans": []
+  },
+  "executionStats": {
+    "executionSuccess": true,
+    "nReturned": 5,
+    "executionTimeMillis": 34,
+    "totalKeysExamined": 0,
+    "totalDocsExamined": 150346,
+    "executionStages": {
+      "isCached": false,
+      "stage": "SORT",
+      "nReturned": 5,
+      "executionTimeMillisEstimate": 22,
+      "works": 150353,
+      "advanced": 5,
+      "needTime": 150347,
+      "needYield": 0,
+      "saveState": 2,
+      "restoreState": 2,
+      "isEOF": 1,
+      "sortPattern": {
+        "stars": -1
+      },
+      "memLimit": 104857600,
+      "limitAmount": 5,
+      "type": "simple",
+      "totalDataSizeSorted": 3294,
+      "usedDisk": false,
+      "spills": 0,
+      "spilledDataStorageSize": 0,
+      "inputStage": {
+        "stage": "COLLSCAN",
+        "filter": {
+          "state": {
+            "$eq": "AZ"
+          }
+        },
+        "nReturned": 9912,
+        "executionTimeMillisEstimate": 18,
+        "works": 150347,
+        "advanced": 9912,
+        "needTime": 140434,
+        "needYield": 0,
+        "saveState": 2,
+        "restoreState": 2,
+        "isEOF": 1,
+        "direction": "forward",
+        "docsExamined": 150346
+      }
+    }
+  },
+  "ok": 1.0
+}

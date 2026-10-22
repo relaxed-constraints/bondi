@@ -153,3 +153,15 @@ feature. PyMongo >=4.13 is required for the stable async API.
 - Backend support and compatibility policy.
 
 Package/module names beyond the initial root are provisional.
+
+## MongoDB explain summaries
+
+`MongoExplainSummary` is a frozen six-field value object returned by the pure
+`summarize_explain(raw)` function. The executor continues to return raw documents;
+summary extraction is explicit and offline. None means unavailable, not zero.
+Winning-plan stages exclude pipeline operators and SBE textual/physical stage names.
+Examination counts describe whole-operation work only when scope is understood;
+no recursive summation of counters or time estimates. Split pipelines retain final
+output counts but may lack other metrics. Sharded and nested-read interpretations
+are deferred. Projects keep the raw document for custom fields; no extensibility
+registry or universal cross-backend plan model is introduced.

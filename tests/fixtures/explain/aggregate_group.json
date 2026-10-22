@@ -1,0 +1,155 @@
+{
+  "explainVersion": "2",
+  "queryPlanner": {
+    "namespace": "yelp.business",
+    "parsedQuery": {
+      "state": {
+        "$eq": "AZ"
+      }
+    },
+    "indexFilterSet": false,
+    "planCacheShapeHash": "CA40F55E",
+    "planCacheKey": "7CC93B1E",
+    "optimizationTimeMillis": 0,
+    "optimizedPipeline": true,
+    "maxIndexedOrSolutionsReached": false,
+    "maxIndexedAndSolutionsReached": false,
+    "maxScansToExplodeReached": false,
+    "prunedSimilarIndexes": false,
+    "winningPlan": {
+      "isCached": false,
+      "queryPlan": {
+        "stage": "GROUP",
+        "planNodeId": 3,
+        "inputStage": {
+          "stage": "COLLSCAN",
+          "planNodeId": 1,
+          "filter": {
+            "state": {
+              "$eq": "AZ"
+            }
+          },
+          "direction": "forward"
+        }
+      },
+      "slotBasedPlan": {
+        "slots": "$$RESULT=s10 env: { s5 = \"AZ\" }",
+        "stages": "[3] project [s10 = newBsonObj(\"_id\", s7, \"count\", s9)] \n[3] project [s9 = (convert ( s8, int32) ?: s8)] \n[3] group [s7] [s8 = count()] spillSlots[s6] mergingExprs[sum(s6)] \n[3] project [s7 = (s1 ?: null)] \n[1] filter {traverseF(s2, lambda(l2.0) { ((move(l2.0) == s5) ?: false) }, false)} \n[1] scan s3 s4 none none none none none none lowPriority [s1 = city, s2 = state] @\"dd29d204-4d01-4b18-9972-7db5c8629a64\" true false "
+      }
+    },
+    "rejectedPlans": []
+  },
+  "executionStats": {
+    "executionSuccess": true,
+    "nReturned": 33,
+    "executionTimeMillis": 54,
+    "totalKeysExamined": 0,
+    "totalDocsExamined": 150346,
+    "executionStages": {
+      "stage": "project",
+      "planNodeId": 3,
+      "nReturned": 33,
+      "executionTimeMillisEstimate": 48,
+      "opens": 1,
+      "closes": 1,
+      "saveState": 2,
+      "restoreState": 2,
+      "isEOF": 1,
+      "projections": {
+        "10": "newBsonObj(\"_id\", s7, \"count\", s9) "
+      },
+      "inputStage": {
+        "stage": "project",
+        "planNodeId": 3,
+        "nReturned": 33,
+        "executionTimeMillisEstimate": 48,
+        "opens": 1,
+        "closes": 1,
+        "saveState": 2,
+        "restoreState": 2,
+        "isEOF": 1,
+        "projections": {
+          "9": "(convert ( s8, int32) ?: s8) "
+        },
+        "inputStage": {
+          "stage": "group",
+          "planNodeId": 3,
+          "nReturned": 33,
+          "executionTimeMillisEstimate": 48,
+          "opens": 1,
+          "closes": 1,
+          "saveState": 2,
+          "restoreState": 2,
+          "isEOF": 1,
+          "groupBySlots": [
+            7
+          ],
+          "expressions": {
+            "8": "count() ",
+            "initExprs": {
+              "8": null
+            }
+          },
+          "mergingExprs": {
+            "6": "sum(s6) "
+          },
+          "usedDisk": false,
+          "spills": 0,
+          "spilledBytes": 0,
+          "spilledRecords": 0,
+          "spilledDataStorageSize": 0,
+          "inputStage": {
+            "stage": "project",
+            "planNodeId": 3,
+            "nReturned": 9912,
+            "executionTimeMillisEstimate": 48,
+            "opens": 1,
+            "closes": 1,
+            "saveState": 2,
+            "restoreState": 2,
+            "isEOF": 1,
+            "projections": {
+              "7": "(s1 ?: null) "
+            },
+            "inputStage": {
+              "stage": "filter",
+              "planNodeId": 1,
+              "nReturned": 9912,
+              "executionTimeMillisEstimate": 48,
+              "opens": 1,
+              "closes": 1,
+              "saveState": 2,
+              "restoreState": 2,
+              "isEOF": 1,
+              "numTested": 150346,
+              "filter": "traverseF(s2, lambda(l2.0) { ((move(l2.0) == s5) ?: false) }, false) ",
+              "inputStage": {
+                "stage": "scan",
+                "planNodeId": 1,
+                "nReturned": 150346,
+                "executionTimeMillisEstimate": 24,
+                "opens": 1,
+                "closes": 1,
+                "saveState": 2,
+                "restoreState": 2,
+                "isEOF": 1,
+                "numReads": 150346,
+                "recordSlot": 3,
+                "recordIdSlot": 4,
+                "scanFieldNames": [
+                  "city",
+                  "state"
+                ],
+                "scanFieldSlots": [
+                  1,
+                  2
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "ok": 1.0
+}

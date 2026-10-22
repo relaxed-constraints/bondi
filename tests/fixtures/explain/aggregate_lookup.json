@@ -1,0 +1,91 @@
+{
+  "explainVersion": "1",
+  "stages": [
+    {
+      "$cursor": {
+        "queryPlanner": {
+          "namespace": "yelp.business",
+          "parsedQuery": {},
+          "indexFilterSet": false,
+          "planCacheShapeHash": "8F2383EE",
+          "planCacheKey": "7DF350EE",
+          "optimizationTimeMillis": 0,
+          "maxIndexedOrSolutionsReached": false,
+          "maxIndexedAndSolutionsReached": false,
+          "maxScansToExplodeReached": false,
+          "prunedSimilarIndexes": false,
+          "winningPlan": {
+            "isCached": false,
+            "stage": "LIMIT",
+            "limitAmount": 2,
+            "inputStage": {
+              "stage": "COLLSCAN",
+              "direction": "forward"
+            }
+          },
+          "rejectedPlans": []
+        },
+        "executionStats": {
+          "executionSuccess": true,
+          "nReturned": 2,
+          "executionTimeMillis": 0,
+          "totalKeysExamined": 0,
+          "totalDocsExamined": 2,
+          "executionStages": {
+            "isCached": false,
+            "stage": "LIMIT",
+            "nReturned": 2,
+            "executionTimeMillisEstimate": 0,
+            "works": 3,
+            "advanced": 2,
+            "needTime": 0,
+            "needYield": 0,
+            "saveState": 1,
+            "restoreState": 1,
+            "isEOF": 1,
+            "limitAmount": 2,
+            "inputStage": {
+              "stage": "COLLSCAN",
+              "nReturned": 2,
+              "executionTimeMillisEstimate": 0,
+              "works": 2,
+              "advanced": 2,
+              "needTime": 0,
+              "needYield": 0,
+              "saveState": 1,
+              "restoreState": 1,
+              "isEOF": 0,
+              "direction": "forward",
+              "docsExamined": 2
+            }
+          }
+        }
+      },
+      "nReturned": 2,
+      "executionTimeMillisEstimate": 0
+    },
+    {
+      "$lookup": {
+        "from": "business",
+        "as": "matched",
+        "localField": "_id",
+        "foreignField": "_id",
+        "let": {},
+        "pipeline": [
+          {
+            "$limit": 1
+          }
+        ]
+      },
+      "totalDocsExamined": 2,
+      "totalKeysExamined": 2,
+      "collectionScans": 0,
+      "indexesUsed": [
+        "_id_"
+      ],
+      "nReturned": 2,
+      "executionTimeMillisEstimate": 0
+    }
+  ],
+  "ok": 1.0
+}

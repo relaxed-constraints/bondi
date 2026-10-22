@@ -25,7 +25,9 @@ Steps 0–6 are implemented, including atomic JSONL workload saves and loading
 through the native query-kind loaders. Step 7 now implements async MongoDB
 find/aggregation execution and raw explains, single-query and workload operations,
 bounded concurrency, configurable failure continuation, deadlines and client ownership.
-Raw explains are available; step 8's typed parsing remains to be designed. Warmups
+Step 8 now provides an offline MongoExplainSummary parser for standalone winning
+plans and conservative aggregation summaries, with saved explain fixtures. Raw
+responses remain available. Sharded and nested-read metric interpretation, warmups
 and repetitions are deferred.
 
 ## First functional milestone

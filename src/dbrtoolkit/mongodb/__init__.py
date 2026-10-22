@@ -3,6 +3,14 @@
 from dbrtoolkit.mongodb.aggregate import MongoAggregateQuery
 from dbrtoolkit.mongodb.collection import MongoCollectionRef
 from dbrtoolkit.mongodb.executor import AsyncMongoDBExecutor
+from dbrtoolkit.mongodb.explain import MongoExplainSummary, summarize_explain
 from dbrtoolkit.mongodb.query import MongoFindQuery
 
-__all__ = ["AsyncMongoDBExecutor", "MongoAggregateQuery", "MongoCollectionRef", "MongoFindQuery"]
+__all__ = [
+    "AsyncMongoDBExecutor",
+    "MongoAggregateQuery",
+    "MongoCollectionRef",
+    "MongoFindQuery",
+    "MongoExplainSummary",
+    "summarize_explain",
+]

@@ -1,0 +1,140 @@
+{
+  "explainVersion": "1",
+  "stages": [
+    {
+      "$cursor": {
+        "queryPlanner": {
+          "namespace": "yelp.business",
+          "parsedQuery": {
+            "state": {
+              "$eq": "AZ"
+            }
+          },
+          "indexFilterSet": false,
+          "planCacheShapeHash": "F84436E0",
+          "planCacheKey": "A06CE9C0",
+          "optimizationTimeMillis": 0,
+          "maxIndexedOrSolutionsReached": false,
+          "maxIndexedAndSolutionsReached": false,
+          "maxScansToExplodeReached": false,
+          "prunedSimilarIndexes": false,
+          "winningPlan": {
+            "isCached": false,
+            "stage": "LIMIT",
+            "limitAmount": 100,
+            "inputStage": {
+              "stage": "PROJECTION_SIMPLE",
+              "transformBy": {
+                "city": 1,
+                "_id": 0
+              },
+              "inputStage": {
+                "stage": "COLLSCAN",
+                "filter": {
+                  "state": {
+                    "$eq": "AZ"
+                  }
+                },
+                "direction": "forward"
+              }
+            }
+          },
+          "rejectedPlans": []
+        },
+        "executionStats": {
+          "executionSuccess": true,
+          "nReturned": 100,
+          "executionTimeMillis": 0,
+          "totalKeysExamined": 0,
+          "totalDocsExamined": 1144,
+          "executionStages": {
+            "isCached": false,
+            "stage": "LIMIT",
+            "nReturned": 100,
+            "executionTimeMillisEstimate": 0,
+            "works": 1145,
+            "advanced": 100,
+            "needTime": 1044,
+            "needYield": 0,
+            "saveState": 1,
+            "restoreState": 1,
+            "isEOF": 1,
+            "limitAmount": 100,
+            "inputStage": {
+              "stage": "PROJECTION_SIMPLE",
+              "nReturned": 100,
+              "executionTimeMillisEstimate": 0,
+              "works": 1144,
+              "advanced": 100,
+              "needTime": 1044,
+              "needYield": 0,
+              "saveState": 1,
+              "restoreState": 1,
+              "isEOF": 0,
+              "transformBy": {
+                "city": 1,
+                "_id": 0
+              },
+              "inputStage": {
+                "stage": "COLLSCAN",
+                "filter": {
+                  "state": {
+                    "$eq": "AZ"
+                  }
+                },
+                "nReturned": 100,
+                "executionTimeMillisEstimate": 0,
+                "works": 1144,
+                "advanced": 100,
+                "needTime": 1044,
+                "needYield": 0,
+                "saveState": 1,
+                "restoreState": 1,
+                "isEOF": 0,
+                "direction": "forward",
+                "docsExamined": 1144
+              }
+            }
+          }
+        }
+      },
+      "nReturned": 100,
+      "executionTimeMillisEstimate": 0
+    },
+    {
+      "$facet": {
+        "cities": [
+          {
+            "$internalFacetTeeConsumer": {},
+            "nReturned": 100,
+            "executionTimeMillisEstimate": 0
+          },
+          {
+            "$group": {
+              "_id": "$city",
+              "count": {
+                "$sum": {
+                  "$const": 1
+                }
+              }
+            },
+            "maxAccumulatorMemoryUsageBytes": {
+              "count": 816
+            },
+            "totalOutputDataSizeBytes": 1512,
+            "usedDisk": false,
+            "spills": 0,
+            "spilledDataStorageSize": 0,
+            "numBytesSpilledEstimate": 0,
+            "spilledRecords": 0,
+            "nReturned": 6,
+            "executionTimeMillisEstimate": 0
+          }
+        ]
+      },
+      "nReturned": 1,
+      "executionTimeMillisEstimate": 0
+    }
+  ],
+  "ok": 1.0
+}
