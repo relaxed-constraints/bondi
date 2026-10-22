@@ -44,7 +44,7 @@
     options:
       show_root_heading: true
       heading_level: 2
-      members: [validate, __len__, __iter__, __getitem__]
+      members: [validate, save, load, __len__, __iter__, __getitem__]
 
 ::: dbrtoolkit.execution.ExecutionResult
     options:

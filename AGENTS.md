@@ -11,3 +11,6 @@ each class.
 - Keep research algorithms and experiment pipelines in consumer repositories.
 - Use uv, pytest and Ruff. Update documentation with public behaviour changes.
 - Run relevant tests, Ruff checks and a strict documentation build for changes.
+
+- Implement new features on a `codex/` feature branch. After checks pass, commit
+  the feature and merge it back into `main`. Preserve unrelated user changes.

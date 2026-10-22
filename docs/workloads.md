@@ -79,5 +79,34 @@ does not establish a permanent invariant. No connections or serialization calls
 are made during workload validation.
 
 The code lives in `src/dbrtoolkit/query.py` and `src/dbrtoolkit/workload.py`. See the
-[API reference](api.md) for signatures. Persistence, generic loading, generation,
-sampling, splitting and execution are separate future steps.
+[API reference](api.md) for signatures. Generation, sampling and splitting remain separate future steps.
+
+## Save and load JSONL
+
+```python
+workload.save("yelp.jsonl")
+restored = Workload.load("yelp.jsonl")
+assert [e.query.fingerprint() for e in restored] == [e.query.fingerprint() for e in workload]
+```
+
+Each UTF-8 line is an entry envelope with exactly `format_version` (currently 1),
+`query` (the complete native query envelope as an object), and `pattern_id` (integer
+or null). There is no header. An empty file is an empty workload. Order, duplicates
+and pattern membership survive; Python reference sharing does not. Every loaded
+entry/query is independent, including duplicate entries. Pattern definitions are
+not stored yet, and local IDs are not renumbered.
+
+Loading dispatches by `query_kind` to the three built-in query loaders. MongoDB BSON
+values remain Extended JSON until the MongoDB loader decodes them; Couchbase JSON
+objects are never interpreted as BSON wrappers. Unknown kinds/versions, unexpected
+fields, duplicate keys, blank lines and mixed backends are rejected with one-based
+line numbers. The last line need not end with a newline. No partially loaded
+workload is returned after an error. Custom Query implementations remain usable in
+memory but do not yet have a persistence registration mechanism.
+
+Saving validates the workload and writes a temporary file in the destination's
+existing parent directory. Only after all entries serialize does it replace the
+destination. Failure leaves the previous destination untouched and removes the
+temporary file. This is atomic replacement, not a guarantee against every possible
+filesystem or power failure. Do not mutate entries while saving. Filesystem errors
+propagate normally. The save operation replaces an existing file; it does not append.

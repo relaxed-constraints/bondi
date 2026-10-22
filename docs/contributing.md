@@ -47,3 +47,8 @@ and Python docstring examples. Unit tests should remain database-independent. Li
 isolated test data when those backends are introduced.
 
 See the [documentation walkthrough](documentation.md) for a concrete docstring-to-site example.
+
+## Feature branches
+
+Implement new features on a `codex/` feature branch. After verification, commit the
+feature and merge it back into `main`, preserving unrelated user changes.

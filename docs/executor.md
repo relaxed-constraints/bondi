@@ -139,5 +139,5 @@ Only use that test command on a server where creating test data is allowed. It i
 not a read-only check. The implementation was verified on a separate temporary
 local server; no existing research datasets were modified.
 
-Typed explain parsing, warmups, repetitions, workload persistence and execution-result
-persistence remain later steps. See the [API reference](api.md) for signatures.
+Typed explain parsing, warmups, repetitions and execution-result persistence remain
+later steps. Workloads can be saved and loaded through Workload.save/load. See the [API reference](api.md) for signatures.

@@ -120,7 +120,11 @@ list but retains entry/query references, preserving order and duplicates. Explic
 deepcopy is available when isolation is needed. Workload validates a common backend
 at construction and on explicit validate(); different MongoDB named databases and
 collections may coexist. Empty workloads are valid. Later edits are not intercepted.
-Weights, persistence, generic loading and pattern-registry management are deferred.
+Workload.save/load persist one versioned entry per UTF-8 JSONL line. Native query
+objects retain their own envelopes and decoding rules. Loading creates independent
+objects and reports bad entries with line numbers. Saving uses atomic sibling-file
+replacement. Built-in query kinds only are supported; weights and pattern-registry
+management remain deferred.
 
 ## Async MongoDB executor
 
