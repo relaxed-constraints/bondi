@@ -1,0 +1,20 @@
+site_name: Database Research Toolkit
+site_description: Python building blocks for reproducible database research
+watch:
+  - src
+nav:
+  - Overview: index.md
+  - First collection reference: collection-reference.md
+  - Documentation walkthrough: documentation.md
+  - Architecture: architecture.md
+  - Roadmap: roadmap.md
+  - Contributing: contributing.md
+  - API reference: api.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google

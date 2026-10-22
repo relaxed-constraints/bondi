@@ -1,0 +1,29 @@
+[project]
+name = "dbrtoolkit"
+version = "0.1.0"
+description = "Python building blocks for reproducible database research"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.9"]
+docs = ["mkdocs>=1.6", "mkdocstrings[python]>=0.28"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dbrtoolkit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "src/dbrtoolkit"]
+addopts = "--import-mode=importlib --doctest-modules"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
