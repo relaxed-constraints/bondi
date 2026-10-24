@@ -133,17 +133,99 @@ class names except `object`, `array`, and `null`. Unsupported BSON types such as
 `Decimal128` currently raise `TypeError`; they are not silently normalized.
 
 Pass already-decoded documents. JSON text parsing and conversion policies belong
-to the caller. With either executor:
+to the caller. The following queries use the shared `demo` data from our
+[local Docker setup](local-databases.md). Use a MongoDB executor for the first two
+and a Couchbase executor for the others; see the [MongoDB](executor.md) and
+[Couchbase](couchbase-executor.md) connection examples.
+
+### MongoDB: a bounded preview
 
 ```python
-result = await executor.run(sample_query, collect_results=True)
-schema = Schema.from_documents(result.documents)
+from dbrtoolkit.mongodb import MongoCollectionRef, MongoFindQuery
+
+sample_query = MongoFindQuery(
+    MongoCollectionRef("demo", "business"),
+    filter={},
+    limit=100,
+)
 ```
 
-Choose a query that returns whole document bodies, not scalar results, projections
-or Couchbase alias wrappers. Sampling remains a separate task: a limited query is
-not automatically a random sample. No database sampling helper, schema persistence,
-merging, or validation-schema export is introduced here.
+This returns up to 100 whole documents. A limit alone is not a random sample;
+without an explicit sort, do not assume a stable selection or representative coverage.
+
+### MongoDB: random sampling
+
+```python
+from dbrtoolkit.mongodb import MongoAggregateQuery, MongoCollectionRef
+
+sample_query = MongoAggregateQuery(
+    MongoCollectionRef("demo", "business"),
+    pipeline=[{"$sample": {"size": 100}}],
+)
+```
+
+MongoDB's [`$sample`](https://www.mongodb.com/docs/v8.0/reference/operator/aggregation/sample/)
+selects documents randomly. With `$sample` first, a collection larger than 100 documents
+and a requested sample smaller than 5% of the collection, MongoDB can use a
+pseudo-random cursor; otherwise sampling can require scanning and a random top-k sort.
+The tiny demo collection contains only eight documents, so it cannot supply 100
+distinct source documents. Repeated sampling calls need not return the same documents.
+
+### Couchbase: a bounded preview
+
+```python
+from dbrtoolkit.couchbase import CouchbaseQuery
+
+sample_query = CouchbaseQuery(
+    "SELECT RAW b FROM `demo`.`_default`.`business` AS b LIMIT 100"
+)
+```
+
+`SELECT RAW b` returns whole document bodies rather than `{ "b": ... }` alias wrappers.
+This matters because the parser would otherwise infer an extra field named `b`.
+As with MongoDB's limit, this is a bounded preview, not random sampling.
+
+### Couchbase: random selection through SQL++
+
+For the current SQL++ executor, random ordering followed by a limit is an option:
+
+```python
+sample_query = CouchbaseQuery(
+    "SELECT RAW b FROM `demo`.`_default`.`business` AS b "
+    "ORDER BY RANDOM() LIMIT 100"
+)
+```
+
+[`RANDOM()`](https://docs.couchbase.com/server/7.6/n1ql/n1ql-language-reference/numericfun.html)
+produces pseudo-random numbers. This query is useful for small datasets but may
+scan and randomly sort a large candidate set; LIMIT bounds the output, not the
+amount of database work. It is not an efficient sampling primitive equivalent to
+MongoDB's random-cursor path. This query was checked against both local 7.6.2 editions.
+
+Couchbase also offers a dedicated
+[`SamplingScan`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_rangescan.html)
+with a limit and optional seed, via the SDK's key-value collection scan API.
+It is not a SQL++ query operator and is not currently exposed by
+`AsyncCouchbaseExecutor`. Supporting that would be a separate sampling feature;
+its suitability and statistical properties should be evaluated before adopting it.
+
+### Infer the schema from any of these queries
+
+Inside the corresponding executor context or notebook:
+
+```python
+from dbrtoolkit.schema import Schema
+
+result = await executor.run(sample_query, collect_results=True)
+schema = Schema.from_documents(result.documents)
+print(schema.document_count)
+print(list(schema.primitive_fields))
+```
+
+Retrieve whole document bodies: projections change the schema you observe. Save
+sampled documents when an experiment must reuse exactly the same input. No database
+sampling helper, schema persistence, merging, or validation-schema export is
+introduced here.
 
 Run `notebooks/schema_demo.ipynb` to explore all modes using a tiny in-memory dataset;
 no database or Couchbase SDK is needed.
