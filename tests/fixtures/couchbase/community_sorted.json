@@ -1,0 +1,131 @@
+{
+  "edition": "community",
+  "server_version": "7.6.2",
+  "sdk_version": "4.6.3",
+  "statement": "SELECT RAW b.name FROM `demo`.`_default`.`business` b WHERE city = \"Sydney\" ORDER BY b.name LIMIT 1 OFFSET 1",
+  "explain": {
+    "plan": {
+      "#operator": "Sequence",
+      "~children": [
+        {
+          "#operator": "Sequence",
+          "~children": [
+            {
+              "#operator": "IndexScan3",
+              "as": "b",
+              "bucket": "demo",
+              "index": "city_stars",
+              "index_id": "c514d2b0a5fe6d47",
+              "index_projection": {
+                "primary_key": true
+              },
+              "keyspace": "business",
+              "namespace": "default",
+              "scope": "_default",
+              "spans": [
+                {
+                  "exact": true,
+                  "range": [
+                    {
+                      "high": "\"Sydney\"",
+                      "inclusion": 3,
+                      "index_key": "`city`",
+                      "low": "\"Sydney\""
+                    }
+                  ]
+                }
+              ],
+              "using": "gsi"
+            },
+            {
+              "#operator": "Fetch",
+              "as": "b",
+              "bucket": "demo",
+              "early_projection": [
+                "city",
+                "name"
+              ],
+              "keyspace": "business",
+              "namespace": "default",
+              "scope": "_default"
+            },
+            {
+              "#operator": "Parallel",
+              "~child": {
+                "#operator": "Sequence",
+                "~children": [
+                  {
+                    "#operator": "Filter",
+                    "condition": "((`b`.`city`) = \"Sydney\")"
+                  },
+                  {
+                    "#operator": "InitialProject",
+                    "preserve_order": true,
+                    "raw": true,
+                    "result_terms": [
+                      {
+                        "expr": "(`b`.`name`)"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "#operator": "Order",
+          "flags": 6,
+          "limit": "1",
+          "offset": "1",
+          "sort_terms": [
+            {
+              "expr": "(`b`.`name`)"
+            }
+          ]
+        },
+        {
+          "#operator": "Limit",
+          "expr": "1"
+        }
+      ]
+    },
+    "text": "SELECT RAW b.name FROM `demo`.`_default`.`business` b WHERE city = \"Sydney\" ORDER BY b.name LIMIT 1 OFFSET 1"
+  },
+  "run": {
+    "request_id": "dda619d8-a46c-4ab2-92e2-5ede7b1fb480",
+    "client_context_id": "a57558-2c69-0849-ad56-7305020ce03a79",
+    "status": "success",
+    "signature": "json",
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 1.883,
+      "execution_ms": 1.863,
+      "result_count": 1,
+      "result_size": 14,
+      "sort_count": 3,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  },
+  "profile": {
+    "request_id": "26f85230-0675-47f1-a8c8-4c6845df4b9d",
+    "client_context_id": "2b4ba9-b5b1-1041-ffdd-ae47b6919a6dcf",
+    "status": "success",
+    "signature": "json",
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 1.532,
+      "execution_ms": 1.51,
+      "result_count": 1,
+      "result_size": 14,
+      "sort_count": 3,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  }
+}

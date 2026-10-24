@@ -196,7 +196,10 @@ native plan; profile requests TIMINGS and returns execution metadata. Run/profil
 fully consume rows and optionally retain them, including scalar and array rows.
 Missing detailed profiling yields a warning and preserves basic metrics. Metadata
 uses public SDK accessors converted to JSON-compatible values; profile trees stay
-native. Summaries remain explicit and Couchbase parsing is the next phase.
+native. Explicit `summarize_explain()` and `summarize_execution()` functions return
+QuerySummary offline without the SDK. Supported native operator trees supply plan
+fields; SDK execution_ms/result_count supply time and output counts. Document/index
+examination totals stay unavailable. Unknown plan layouts preserve valid basic metrics.
 
 SDK consistency defaults remain in force unless query_kwargs overrides them.
 Per-query deadlines cover consumption and SDK execution. Statement bindings,

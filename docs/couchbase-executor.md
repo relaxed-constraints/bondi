@@ -82,7 +82,8 @@ EXPLAIN request metrics measure planning, so they are deliberately not exposed a
 underlying-query execution metrics. Native warnings are retained as code/message
 pairs in execution metadata and readable strings in `result.warnings`.
 `elapsed_ms` on the result is client-observed time through consumption and metadata
-collection; connection setup is excluded. Parsing into `QuerySummary` is phase 4.
+collection; connection setup is excluded. See [Couchbase query summaries](couchbase-summaries.md)
+for explicit offline parsing into `QuerySummary`.
 
 ## Workloads, failures and options
 

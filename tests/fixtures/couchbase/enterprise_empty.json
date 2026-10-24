@@ -1,0 +1,322 @@
+{
+  "edition": "enterprise",
+  "server_version": "7.6.2",
+  "sdk_version": "4.6.3",
+  "statement": "SELECT RAW b.name FROM `demo`.`_default`.`business` b WHERE city = \"Missing City\"",
+  "explain": {
+    "cardinality": 8.673617379884035e-19,
+    "cost": 3.146723730321134e-17,
+    "plan": {
+      "#operator": "Sequence",
+      "~children": [
+        {
+          "#operator": "IndexScan3",
+          "as": "b",
+          "bucket": "demo",
+          "index": "city_stars",
+          "index_id": "c597330af1f94d1e",
+          "index_projection": {
+            "primary_key": true
+          },
+          "keyspace": "business",
+          "namespace": "default",
+          "optimizer_estimates": {
+            "cardinality": 8.673617379884035e-19,
+            "cost": 1.0531004329195512e-17,
+            "fr_cost": 1.0531004329195512e-17,
+            "size": 8
+          },
+          "scope": "_default",
+          "spans": [
+            {
+              "exact": true,
+              "range": [
+                {
+                  "high": "\"Missing City\"",
+                  "inclusion": 3,
+                  "index_key": "`city`",
+                  "low": "\"Missing City\""
+                }
+              ]
+            }
+          ],
+          "using": "gsi"
+        },
+        {
+          "#operator": "Fetch",
+          "as": "b",
+          "bucket": "demo",
+          "early_projection": [
+            "city",
+            "name"
+          ],
+          "keyspace": "business",
+          "namespace": "default",
+          "optimizer_estimates": {
+            "cardinality": 8.673617379884035e-19,
+            "cost": 3.127767559877051e-17,
+            "fr_cost": 3.127767559877051e-17,
+            "size": 11941
+          },
+          "scope": "_default"
+        },
+        {
+          "#operator": "Parallel",
+          "~child": {
+            "#operator": "Sequence",
+            "~children": [
+              {
+                "#operator": "Filter",
+                "condition": "((`b`.`city`) = \"Missing City\")",
+                "optimizer_estimates": {
+                  "cardinality": 8.673617379884035e-19,
+                  "cost": 3.1372456450990924e-17,
+                  "fr_cost": 3.1372456450990924e-17,
+                  "size": 11941
+                }
+              },
+              {
+                "#operator": "InitialProject",
+                "discard_original": true,
+                "optimizer_estimates": {
+                  "cardinality": 8.673617379884035e-19,
+                  "cost": 3.146723730321134e-17,
+                  "fr_cost": 3.146723730321134e-17,
+                  "size": 11941
+                },
+                "preserve_order": true,
+                "raw": true,
+                "result_terms": [
+                  {
+                    "expr": "(`b`.`name`)"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "text": "SELECT RAW b.name FROM `demo`.`_default`.`business` b WHERE city = \"Missing City\""
+  },
+  "run": {
+    "request_id": "26593454-d7f1-414f-8e58-34e9490d24ce",
+    "client_context_id": "b48992-b5de-334b-a223-c0331b915edfae",
+    "status": "success",
+    "signature": "json",
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 0.775,
+      "execution_ms": 0.756,
+      "result_count": 0,
+      "result_size": 0,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  },
+  "profile": {
+    "request_id": "251cea95-37ac-4690-a7f1-209095014745",
+    "client_context_id": "9b58eb-f9fb-2844-9dae-edb17a8497ee1a",
+    "status": "success",
+    "signature": "json",
+    "warnings": [],
+    "profile": {
+      "cpuTime": "6.666\u00b5s",
+      "executionTimings": {
+        "#operator": "Authorize",
+        "#planPreparedTime": "2026-10-24T01:35:22.529Z",
+        "#stats": {
+          "#phaseSwitches": 4,
+          "execTime": "291ns",
+          "servTime": "542ns"
+        },
+        "privileges": {
+          "List": [
+            {
+              "Priv": 7,
+              "Props": 0,
+              "Target": "default:demo._default.business"
+            }
+          ]
+        },
+        "~child": {
+          "#operator": "Sequence",
+          "#stats": {
+            "#phaseSwitches": 2,
+            "execTime": "458ns"
+          },
+          "~children": [
+            {
+              "#operator": "IndexScan3",
+              "#stats": {
+                "#phaseSwitches": 3,
+                "execTime": "1.375\u00b5s",
+                "servTime": "364.875\u00b5s"
+              },
+              "as": "b",
+              "bucket": "demo",
+              "index": "city_stars",
+              "index_id": "c597330af1f94d1e",
+              "index_projection": {
+                "primary_key": true
+              },
+              "keyspace": "business",
+              "namespace": "default",
+              "optimizer_estimates": {
+                "cardinality": 8.673617379884035e-19,
+                "cost": 1.0531004329195512e-17,
+                "fr_cost": 1.0531004329195512e-17,
+                "size": 8
+              },
+              "scope": "_default",
+              "spans": [
+                {
+                  "exact": true,
+                  "range": [
+                    {
+                      "high": "\"Missing City\"",
+                      "inclusion": 3,
+                      "index_key": "`city`",
+                      "low": "\"Missing City\""
+                    }
+                  ]
+                }
+              ],
+              "using": "gsi"
+            },
+            {
+              "#operator": "Fetch",
+              "#stats": {
+                "#phaseSwitches": 4,
+                "execTime": "1.125\u00b5s",
+                "kernTime": "367.875\u00b5s"
+              },
+              "as": "b",
+              "bucket": "demo",
+              "early_projection": [
+                "city",
+                "name"
+              ],
+              "keyspace": "business",
+              "namespace": "default",
+              "optimizer_estimates": {
+                "cardinality": 8.673617379884035e-19,
+                "cost": 3.127767559877051e-17,
+                "fr_cost": 3.127767559877051e-17,
+                "size": 11941
+              },
+              "scope": "_default"
+            },
+            {
+              "#operator": "Sequence",
+              "#stats": {
+                "#phaseSwitches": 1,
+                "execTime": "959ns"
+              },
+              "~children": [
+                {
+                  "#operator": "Filter",
+                  "#stats": {
+                    "#phaseSwitches": 4,
+                    "execTime": "1.666\u00b5s",
+                    "kernTime": "370.167\u00b5s"
+                  },
+                  "condition": "((`b`.`city`) = \"Missing City\")",
+                  "optimizer_estimates": {
+                    "cardinality": 8.673617379884035e-19,
+                    "cost": 3.1372456450990924e-17,
+                    "fr_cost": 3.1372456450990924e-17,
+                    "size": 11941
+                  }
+                },
+                {
+                  "#operator": "InitialProject",
+                  "#stats": {
+                    "#phaseSwitches": 4,
+                    "execTime": "666ns",
+                    "kernTime": "373.042\u00b5s"
+                  },
+                  "discard_original": true,
+                  "optimizer_estimates": {
+                    "cardinality": 8.673617379884035e-19,
+                    "cost": 3.146723730321134e-17,
+                    "fr_cost": 3.146723730321134e-17,
+                    "size": 11941
+                  },
+                  "preserve_order": true,
+                  "raw": true,
+                  "result_terms": [
+                    {
+                      "expr": "(`b`.`name`)"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "#operator": "Stream",
+              "#stats": {
+                "#phaseSwitches": 2,
+                "execTime": "126ns"
+              },
+              "optimizer_estimates": {
+                "cardinality": 8.673617379884035e-19,
+                "cost": 3.146723730321134e-17,
+                "fr_cost": 3.146723730321134e-17,
+                "size": 11941
+              },
+              "serializable": true
+            }
+          ]
+        },
+        "~versions": [
+          "7.6.2-N1QL",
+          "7.6.2-3721-enterprise"
+        ]
+      },
+      "optimizerEstimates": {
+        "cardinality": 8.673617379884035e-19,
+        "cost": 3.146723730321134e-17
+      },
+      "phaseOperators": {
+        "authorize": 1,
+        "fetch": 1,
+        "filter": 1,
+        "indexScan": 1,
+        "indexScan.GSI": 1,
+        "project": 1,
+        "stream": 1
+      },
+      "phaseTimes": {
+        "authorize": "833ns",
+        "fetch": "1.125\u00b5s",
+        "filter": "1.666\u00b5s",
+        "indexScan": "366.25\u00b5s",
+        "indexScan.GSI": "366.25\u00b5s",
+        "instantiate": "2.417\u00b5s",
+        "parse": "119.334\u00b5s",
+        "plan": "50.292\u00b5s",
+        "plan.index.metadata": "2.334\u00b5s",
+        "plan.keyspace.metadata": "709ns",
+        "project": "666ns",
+        "run": "380.333\u00b5s",
+        "stream": "126ns"
+      },
+      "requestTime": "2026-10-24T01:35:22.529Z",
+      "servicingHost": "127.0.0.1:8091"
+    },
+    "metrics": {
+      "elapsed_ms": 0.5680000000000001,
+      "execution_ms": 0.555,
+      "result_count": 0,
+      "result_size": 0,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  }
+}

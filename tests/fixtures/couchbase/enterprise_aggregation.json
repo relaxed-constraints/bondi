@@ -1,0 +1,406 @@
+{
+  "edition": "enterprise",
+  "server_version": "7.6.2",
+  "sdk_version": "4.6.3",
+  "statement": "SELECT city, COUNT(*) AS n FROM `demo`.`_default`.`business` GROUP BY city",
+  "explain": {
+    "cardinality": 2.791549646331595,
+    "cost": 130.44811606889496,
+    "plan": {
+      "#operator": "Sequence",
+      "~children": [
+        {
+          "#operator": "PrimaryScan3",
+          "bucket": "demo",
+          "index": "#primary",
+          "index_projection": {
+            "primary_key": true
+          },
+          "keyspace": "business",
+          "namespace": "default",
+          "optimizer_estimates": {
+            "cardinality": 8,
+            "cost": 13.131370849898476,
+            "fr_cost": 12.14142135623731,
+            "size": 8
+          },
+          "scope": "_default",
+          "using": "gsi"
+        },
+        {
+          "#operator": "Fetch",
+          "bucket": "demo",
+          "early_projection": [
+            "city"
+          ],
+          "keyspace": "business",
+          "namespace": "default",
+          "optimizer_estimates": {
+            "cardinality": 8,
+            "cost": 120.48563849551485,
+            "fr_cost": 36.06070481193936,
+            "size": 11941
+          },
+          "scope": "_default"
+        },
+        {
+          "#operator": "Parallel",
+          "~child": {
+            "#operator": "Sequence",
+            "~children": [
+              {
+                "#operator": "InitialGroup",
+                "aggregates": [
+                  "count(*)"
+                ],
+                "flags": 4,
+                "group_keys": [
+                  "(`business`.`city`)"
+                ],
+                "optimizer_estimates": {
+                  "cardinality": 2.791549646331595,
+                  "cost": 129.30762911550525,
+                  "fr_cost": 129.30762911550525,
+                  "size": 11941
+                }
+              }
+            ]
+          }
+        },
+        {
+          "#operator": "IntermediateGroup",
+          "aggregates": [
+            "count(*)"
+          ],
+          "flags": 4,
+          "group_keys": [
+            "(`business`.`city`)"
+          ],
+          "optimizer_estimates": {
+            "cardinality": 2.791549646331595,
+            "cost": 129.7821925553816,
+            "fr_cost": 129.7821925553816,
+            "size": 11941
+          }
+        },
+        {
+          "#operator": "FinalGroup",
+          "aggregates": [
+            "count(*)"
+          ],
+          "flags": 4,
+          "group_keys": [
+            "(`business`.`city`)"
+          ],
+          "optimizer_estimates": {
+            "cardinality": 2.791549646331595,
+            "cost": 129.83802354830826,
+            "fr_cost": 129.83802354830826,
+            "size": 11941
+          }
+        },
+        {
+          "#operator": "Parallel",
+          "~child": {
+            "#operator": "Sequence",
+            "~children": [
+              {
+                "#operator": "InitialProject",
+                "discard_original": true,
+                "optimizer_estimates": {
+                  "cardinality": 2.791549646331595,
+                  "cost": 130.44811606889496,
+                  "fr_cost": 130.05657331380803,
+                  "size": 11941
+                },
+                "preserve_order": true,
+                "result_terms": [
+                  {
+                    "expr": "(`business`.`city`)"
+                  },
+                  {
+                    "as": "n",
+                    "expr": "count(*)"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "text": "SELECT city, COUNT(*) AS n FROM `demo`.`_default`.`business` GROUP BY city"
+  },
+  "run": {
+    "request_id": "dd1a24e6-6892-4aa7-8c37-13be4b7919ec",
+    "client_context_id": "28c792-c454-154a-2a40-e809a8a6e1e1de",
+    "status": "success",
+    "signature": {
+      "city": "json",
+      "n": "number"
+    },
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 1.032,
+      "execution_ms": 1.018,
+      "result_count": 3,
+      "result_size": 74,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  },
+  "profile": {
+    "request_id": "163cbaa6-723b-4a6e-bbc3-c372a1efc2fb",
+    "client_context_id": "24ad1a-85a8-fe49-45d2-9505ae9edffc09",
+    "status": "success",
+    "signature": {
+      "city": "json",
+      "n": "number"
+    },
+    "warnings": [],
+    "profile": {
+      "cpuTime": "87.18\u00b5s",
+      "executionTimings": {
+        "#operator": "Authorize",
+        "#planPreparedTime": "2026-10-24T01:35:22.522Z",
+        "#stats": {
+          "#phaseSwitches": 4,
+          "execTime": "374ns",
+          "servTime": "709ns"
+        },
+        "privileges": {
+          "List": [
+            {
+              "Priv": 7,
+              "Props": 0,
+              "Target": "default:demo._default.business"
+            }
+          ]
+        },
+        "~child": {
+          "#operator": "Sequence",
+          "#stats": {
+            "#phaseSwitches": 2,
+            "execTime": "1.167\u00b5s"
+          },
+          "~children": [
+            {
+              "#operator": "PrimaryScan3",
+              "#stats": {
+                "#heartbeatYields": 1,
+                "#itemsIn": 8,
+                "#itemsOut": 8,
+                "#phaseSwitches": 35,
+                "execTime": "7.044\u00b5s",
+                "kernTime": "35.373\u00b5s",
+                "servTime": "370.999\u00b5s"
+              },
+              "bucket": "demo",
+              "index": "#primary",
+              "index_projection": {
+                "primary_key": true
+              },
+              "keyspace": "business",
+              "namespace": "default",
+              "optimizer_estimates": {
+                "cardinality": 8,
+                "cost": 13.131370849898476,
+                "fr_cost": 12.14142135623731,
+                "size": 8
+              },
+              "scope": "_default",
+              "using": "gsi"
+            },
+            {
+              "#operator": "Fetch",
+              "#stats": {
+                "#heartbeatYields": 1,
+                "#itemsIn": 8,
+                "#itemsOut": 8,
+                "#phaseSwitches": 40,
+                "execTime": "15.546\u00b5s",
+                "kernTime": "389.581\u00b5s",
+                "servTime": "402.957\u00b5s"
+              },
+              "bucket": "demo",
+              "early_projection": [
+                "city"
+              ],
+              "keyspace": "business",
+              "namespace": "default",
+              "optimizer_estimates": {
+                "cardinality": 8,
+                "cost": 120.48563849551485,
+                "fr_cost": 36.06070481193936,
+                "size": 11941
+              },
+              "scope": "_default"
+            },
+            {
+              "#operator": "InitialGroup",
+              "#stats": {
+                "#itemsIn": 8,
+                "#itemsOut": 3,
+                "#phaseSwitches": 26,
+                "execTime": "30.295\u00b5s",
+                "kernTime": "792.163\u00b5s"
+              },
+              "aggregates": [
+                "count(*)"
+              ],
+              "flags": 4,
+              "group_keys": [
+                "(`business`.`city`)"
+              ],
+              "optimizer_estimates": {
+                "cardinality": 2.791549646331595,
+                "cost": 129.30762911550525,
+                "fr_cost": 129.30762911550525,
+                "size": 11941
+              }
+            },
+            {
+              "#operator": "IntermediateGroup",
+              "#stats": {
+                "#itemsIn": 3,
+                "#itemsOut": 3,
+                "#phaseSwitches": 16,
+                "execTime": "9.668\u00b5s",
+                "kernTime": "828.206\u00b5s"
+              },
+              "aggregates": [
+                "count(*)"
+              ],
+              "flags": 4,
+              "group_keys": [
+                "(`business`.`city`)"
+              ],
+              "optimizer_estimates": {
+                "cardinality": 2.791549646331595,
+                "cost": 129.7821925553816,
+                "fr_cost": 129.7821925553816,
+                "size": 11941
+              }
+            },
+            {
+              "#operator": "FinalGroup",
+              "#stats": {
+                "#itemsIn": 3,
+                "#itemsOut": 3,
+                "#phaseSwitches": 16,
+                "execTime": "8.502\u00b5s",
+                "kernTime": "839.832\u00b5s"
+              },
+              "aggregates": [
+                "count(*)"
+              ],
+              "flags": 4,
+              "group_keys": [
+                "(`business`.`city`)"
+              ],
+              "optimizer_estimates": {
+                "cardinality": 2.791549646331595,
+                "cost": 129.83802354830826,
+                "fr_cost": 129.83802354830826,
+                "size": 11941
+              }
+            },
+            {
+              "#operator": "InitialProject",
+              "#stats": {
+                "#itemsIn": 3,
+                "#itemsOut": 3,
+                "#phaseSwitches": 13,
+                "execTime": "6.084\u00b5s",
+                "kernTime": "850.124\u00b5s"
+              },
+              "discard_original": true,
+              "optimizer_estimates": {
+                "cardinality": 2.791549646331595,
+                "cost": 130.44811606889496,
+                "fr_cost": 130.05657331380803,
+                "size": 11941
+              },
+              "preserve_order": true,
+              "result_terms": [
+                {
+                  "expr": "(`business`.`city`)"
+                },
+                {
+                  "as": "n",
+                  "expr": "count(*)"
+                }
+              ]
+            },
+            {
+              "#operator": "Stream",
+              "#stats": {
+                "#itemsIn": 3,
+                "#itemsOut": 3,
+                "#phaseSwitches": 4,
+                "execTime": "8.5\u00b5s"
+              },
+              "optimizer_estimates": {
+                "cardinality": 2.791549646331595,
+                "cost": 130.44811606889496,
+                "fr_cost": 130.05657331380803,
+                "size": 11941
+              },
+              "serializable": true
+            }
+          ]
+        },
+        "~versions": [
+          "7.6.2-N1QL",
+          "7.6.2-3721-enterprise"
+        ]
+      },
+      "optimizerEstimates": {
+        "cardinality": 2.791549646331595,
+        "cost": 130.44811606889496
+      },
+      "phaseCounts": {
+        "fetch": 8,
+        "primaryScan": 8,
+        "primaryScan.GSI": 8
+      },
+      "phaseOperators": {
+        "authorize": 1,
+        "fetch": 1,
+        "primaryScan": 1,
+        "primaryScan.GSI": 1,
+        "project": 1,
+        "stream": 1
+      },
+      "phaseTimes": {
+        "authorize": "1.083\u00b5s",
+        "fetch": "418.503\u00b5s",
+        "instantiate": "9.458\u00b5s",
+        "parse": "129.333\u00b5s",
+        "plan": "42.292\u00b5s",
+        "plan.index.metadata": "3.125\u00b5s",
+        "plan.keyspace.metadata": "750ns",
+        "primaryScan": "378.043\u00b5s",
+        "primaryScan.GSI": "378.043\u00b5s",
+        "project": "6.084\u00b5s",
+        "run": "873.416\u00b5s",
+        "stream": "8.5\u00b5s"
+      },
+      "requestTime": "2026-10-24T01:35:22.522Z",
+      "servicingHost": "127.0.0.1:8091"
+    },
+    "metrics": {
+      "elapsed_ms": 1.0759999999999998,
+      "execution_ms": 1.059,
+      "result_count": 3,
+      "result_size": 74,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  }
+}

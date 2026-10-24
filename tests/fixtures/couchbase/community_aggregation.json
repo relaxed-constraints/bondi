@@ -1,0 +1,138 @@
+{
+  "edition": "community",
+  "server_version": "7.6.2",
+  "sdk_version": "4.6.3",
+  "statement": "SELECT city, COUNT(*) AS n FROM `demo`.`_default`.`business` GROUP BY city",
+  "explain": {
+    "plan": {
+      "#operator": "Sequence",
+      "~children": [
+        {
+          "#operator": "PrimaryScan3",
+          "bucket": "demo",
+          "index": "#primary",
+          "index_projection": {
+            "primary_key": true
+          },
+          "keyspace": "business",
+          "namespace": "default",
+          "scope": "_default",
+          "using": "gsi"
+        },
+        {
+          "#operator": "Fetch",
+          "bucket": "demo",
+          "early_projection": [
+            "city"
+          ],
+          "keyspace": "business",
+          "namespace": "default",
+          "scope": "_default"
+        },
+        {
+          "#operator": "Parallel",
+          "~child": {
+            "#operator": "Sequence",
+            "~children": [
+              {
+                "#operator": "InitialGroup",
+                "aggregates": [
+                  "count(*)"
+                ],
+                "flags": 4,
+                "group_keys": [
+                  "(`business`.`city`)"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "#operator": "IntermediateGroup",
+          "aggregates": [
+            "count(*)"
+          ],
+          "flags": 4,
+          "group_keys": [
+            "(`business`.`city`)"
+          ]
+        },
+        {
+          "#operator": "FinalGroup",
+          "aggregates": [
+            "count(*)"
+          ],
+          "flags": 4,
+          "group_keys": [
+            "(`business`.`city`)"
+          ]
+        },
+        {
+          "#operator": "Parallel",
+          "~child": {
+            "#operator": "Sequence",
+            "~children": [
+              {
+                "#operator": "InitialProject",
+                "discard_original": true,
+                "preserve_order": true,
+                "result_terms": [
+                  {
+                    "expr": "(`business`.`city`)"
+                  },
+                  {
+                    "as": "n",
+                    "expr": "count(*)"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "text": "SELECT city, COUNT(*) AS n FROM `demo`.`_default`.`business` GROUP BY city"
+  },
+  "run": {
+    "request_id": "b64182e2-306d-43ab-8af9-84bd83ebba95",
+    "client_context_id": "8a23af-7f39-0c4d-26d5-e5493347742b11",
+    "status": "success",
+    "signature": {
+      "city": "json",
+      "n": "number"
+    },
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 3.0260000000000002,
+      "execution_ms": 2.9949999999999997,
+      "result_count": 3,
+      "result_size": 74,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  },
+  "profile": {
+    "request_id": "556023f3-ec5c-432c-82e0-7e15e5ee0d28",
+    "client_context_id": "203584-d1e5-5749-9969-8c4535db03765c",
+    "status": "success",
+    "signature": {
+      "city": "json",
+      "n": "number"
+    },
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 2.8489999999999998,
+      "execution_ms": 2.814,
+      "result_count": 3,
+      "result_size": 74,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  }
+}

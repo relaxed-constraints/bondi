@@ -1,0 +1,336 @@
+{
+  "edition": "enterprise",
+  "server_version": "7.6.2",
+  "sdk_version": "4.6.3",
+  "statement": "SELECT b.* FROM `demo`.`_default`.`business` b WHERE city = \"Sydney\" AND review_count >= 100",
+  "explain": {
+    "cardinality": 1,
+    "cost": 60.61921396681759,
+    "plan": {
+      "#operator": "Sequence",
+      "~children": [
+        {
+          "#operator": "IndexScan3",
+          "as": "b",
+          "bucket": "demo",
+          "index": "city_stars",
+          "index_id": "c597330af1f94d1e",
+          "index_projection": {
+            "primary_key": true
+          },
+          "keyspace": "business",
+          "namespace": "default",
+          "optimizer_estimates": {
+            "cardinality": 3,
+            "cost": 12.424264068711928,
+            "fr_cost": 12.14142135623731,
+            "size": 8
+          },
+          "scope": "_default",
+          "spans": [
+            {
+              "exact": true,
+              "range": [
+                {
+                  "high": "\"Sydney\"",
+                  "inclusion": 3,
+                  "index_key": "`city`",
+                  "low": "\"Sydney\""
+                }
+              ]
+            }
+          ],
+          "using": "gsi"
+        },
+        {
+          "#operator": "Fetch",
+          "as": "b",
+          "bucket": "demo",
+          "keyspace": "business",
+          "namespace": "default",
+          "optimizer_estimates": {
+            "cardinality": 3,
+            "cost": 60.18211443581807,
+            "fr_cost": 36.06070481193936,
+            "size": 11941
+          },
+          "scope": "_default"
+        },
+        {
+          "#operator": "Parallel",
+          "~child": {
+            "#operator": "Sequence",
+            "~children": [
+              {
+                "#operator": "Filter",
+                "condition": "(((`b`.`city`) = \"Sydney\") and (100 <= (`b`.`review_count`)))",
+                "optimizer_estimates": {
+                  "cardinality": 1,
+                  "cost": 60.50993908406771,
+                  "fr_cost": 36.388529460189,
+                  "size": 11941
+                }
+              },
+              {
+                "#operator": "InitialProject",
+                "discard_original": true,
+                "optimizer_estimates": {
+                  "cardinality": 1,
+                  "cost": 60.61921396681759,
+                  "fr_cost": 36.49780434293888,
+                  "size": 11941
+                },
+                "preserve_order": true,
+                "result_terms": [
+                  {
+                    "expr": "`b`",
+                    "star": true
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "text": "SELECT b.* FROM `demo`.`_default`.`business` b WHERE city = \"Sydney\" AND review_count >= 100"
+  },
+  "run": {
+    "request_id": "264b9e25-ae44-406a-8634-7b4110c75b22",
+    "client_context_id": "6d881e-6541-9946-6cbb-b352ea91a49924",
+    "status": "success",
+    "signature": {
+      "*": "*"
+    },
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 1.838,
+      "execution_ms": 1.82,
+      "result_count": 1,
+      "result_size": 129,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  },
+  "profile": {
+    "request_id": "17f11e2a-7278-45ba-8418-fb07b9cf4454",
+    "client_context_id": "9c7594-8cc9-0944-308e-ab8ea522536b46",
+    "status": "success",
+    "signature": {
+      "*": "*"
+    },
+    "warnings": [],
+    "profile": {
+      "cpuTime": "87.213\u00b5s",
+      "executionTimings": {
+        "#operator": "Authorize",
+        "#planPreparedTime": "2026-10-24T01:35:22.504Z",
+        "#stats": {
+          "#phaseSwitches": 4,
+          "execTime": "418ns",
+          "servTime": "916ns"
+        },
+        "privileges": {
+          "List": [
+            {
+              "Priv": 7,
+              "Props": 0,
+              "Target": "default:demo._default.business"
+            }
+          ]
+        },
+        "~child": {
+          "#operator": "Sequence",
+          "#stats": {
+            "#phaseSwitches": 2,
+            "execTime": "792ns"
+          },
+          "~children": [
+            {
+              "#operator": "IndexScan3",
+              "#stats": {
+                "#itemsIn": 3,
+                "#itemsOut": 3,
+                "#phaseSwitches": 15,
+                "execTime": "9.584\u00b5s",
+                "kernTime": "10.041\u00b5s",
+                "servTime": "755.916\u00b5s"
+              },
+              "as": "b",
+              "bucket": "demo",
+              "index": "city_stars",
+              "index_id": "c597330af1f94d1e",
+              "index_projection": {
+                "primary_key": true
+              },
+              "keyspace": "business",
+              "namespace": "default",
+              "optimizer_estimates": {
+                "cardinality": 3,
+                "cost": 12.424264068711928,
+                "fr_cost": 12.14142135623731,
+                "size": 8
+              },
+              "scope": "_default",
+              "spans": [
+                {
+                  "exact": true,
+                  "range": [
+                    {
+                      "high": "\"Sydney\"",
+                      "inclusion": 3,
+                      "index_key": "`city`",
+                      "low": "\"Sydney\""
+                    }
+                  ]
+                }
+              ],
+              "using": "gsi"
+            },
+            {
+              "#operator": "Fetch",
+              "#stats": {
+                "#itemsIn": 3,
+                "#itemsOut": 3,
+                "#phaseSwitches": 18,
+                "execTime": "16.21\u00b5s",
+                "kernTime": "780.665\u00b5s",
+                "servTime": "401.458\u00b5s"
+              },
+              "as": "b",
+              "bucket": "demo",
+              "keyspace": "business",
+              "namespace": "default",
+              "optimizer_estimates": {
+                "cardinality": 3,
+                "cost": 60.18211443581807,
+                "fr_cost": 36.06070481193936,
+                "size": 11941
+              },
+              "scope": "_default"
+            },
+            {
+              "#operator": "Sequence",
+              "#stats": {
+                "#phaseSwitches": 1,
+                "execTime": "1.292\u00b5s"
+              },
+              "~children": [
+                {
+                  "#operator": "Filter",
+                  "#stats": {
+                    "#itemsIn": 3,
+                    "#itemsOut": 1,
+                    "#phaseSwitches": 12,
+                    "execTime": "21.001\u00b5s",
+                    "kernTime": "1.201917ms"
+                  },
+                  "condition": "(((`b`.`city`) = \"Sydney\") and (100 <= (`b`.`review_count`)))",
+                  "optimizer_estimates": {
+                    "cardinality": 1,
+                    "cost": 60.50993908406771,
+                    "fr_cost": 36.388529460189,
+                    "size": 11941
+                  }
+                },
+                {
+                  "#operator": "InitialProject",
+                  "#stats": {
+                    "#itemsIn": 1,
+                    "#itemsOut": 1,
+                    "#phaseSwitches": 7,
+                    "execTime": "28.291\u00b5s",
+                    "kernTime": "1.225334ms"
+                  },
+                  "discard_original": true,
+                  "optimizer_estimates": {
+                    "cardinality": 1,
+                    "cost": 60.61921396681759,
+                    "fr_cost": 36.49780434293888,
+                    "size": 11941
+                  },
+                  "preserve_order": true,
+                  "result_terms": [
+                    {
+                      "expr": "`b`",
+                      "star": true
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "#operator": "Stream",
+              "#stats": {
+                "#itemsIn": 1,
+                "#itemsOut": 1,
+                "#phaseSwitches": 3,
+                "execTime": "9.625\u00b5s"
+              },
+              "optimizer_estimates": {
+                "cardinality": 1,
+                "cost": 60.61921396681759,
+                "fr_cost": 36.49780434293888,
+                "size": 11941
+              },
+              "serializable": true
+            }
+          ]
+        },
+        "~versions": [
+          "7.6.2-N1QL",
+          "7.6.2-3721-enterprise"
+        ]
+      },
+      "optimizerEstimates": {
+        "cardinality": 1,
+        "cost": 60.61921396681759
+      },
+      "phaseCounts": {
+        "fetch": 3,
+        "filter": 1,
+        "indexScan": 3,
+        "indexScan.GSI": 3
+      },
+      "phaseOperators": {
+        "authorize": 1,
+        "fetch": 1,
+        "filter": 1,
+        "indexScan": 1,
+        "indexScan.GSI": 1,
+        "project": 1,
+        "stream": 1
+      },
+      "phaseTimes": {
+        "authorize": "1.334\u00b5s",
+        "fetch": "417.668\u00b5s",
+        "filter": "21.001\u00b5s",
+        "indexScan": "765.5\u00b5s",
+        "indexScan.GSI": "765.5\u00b5s",
+        "instantiate": "3.666\u00b5s",
+        "parse": "132.041\u00b5s",
+        "plan": "87.75\u00b5s",
+        "plan.index.metadata": "4.25\u00b5s",
+        "plan.keyspace.metadata": "917ns",
+        "project": "28.291\u00b5s",
+        "run": "1.275375ms",
+        "stream": "9.625\u00b5s"
+      },
+      "requestTime": "2026-10-24T01:35:22.504Z",
+      "servicingHost": "127.0.0.1:8091"
+    },
+    "metrics": {
+      "elapsed_ms": 1.521,
+      "execution_ms": 1.503,
+      "result_count": 1,
+      "result_size": 129,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  }
+}

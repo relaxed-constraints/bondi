@@ -1,0 +1,73 @@
+{
+  "edition": "community",
+  "server_version": "7.6.2",
+  "sdk_version": "4.6.3",
+  "statement": "SELECT RAW 1",
+  "explain": {
+    "plan": {
+      "#operator": "Sequence",
+      "~children": [
+        {
+          "#operator": "DummyScan"
+        },
+        {
+          "#operator": "Parallel",
+          "maxParallelism": 1,
+          "~child": {
+            "#operator": "Sequence",
+            "~children": [
+              {
+                "#operator": "InitialProject",
+                "discard_original": true,
+                "preserve_order": true,
+                "raw": true,
+                "result_terms": [
+                  {
+                    "expr": "1"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "text": "SELECT RAW 1"
+  },
+  "run": {
+    "request_id": "f2588049-db83-4131-9ff0-ef0c1cd2df9c",
+    "client_context_id": "c4cc40-23b5-6a4f-3b0a-9178dd9ba5b513",
+    "status": "success",
+    "signature": "number",
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 0.102,
+      "execution_ms": 0.085,
+      "result_count": 1,
+      "result_size": 1,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  },
+  "profile": {
+    "request_id": "c7d4cd19-ed5e-44c1-8796-5ebff9344977",
+    "client_context_id": "afb315-adc5-e141-6bae-c6d445d204e92b",
+    "status": "success",
+    "signature": "number",
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 0.097,
+      "execution_ms": 0.079,
+      "result_count": 1,
+      "result_size": 1,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  }
+}

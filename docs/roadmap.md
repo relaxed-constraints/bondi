@@ -30,9 +30,11 @@ plans and conservative aggregation summaries, with saved explain fixtures. Raw
 responses remain available. Sharded and nested-read metric interpretation, warmups
 and repetitions are deferred.
 
-Step 9 starts with optional Docker Compose environments for both databases, shared
-synthetic sample data and repeatable initialization. Couchbase executor and explain
-parsing will follow the phased plan below.
+Step 9 is implemented: optional Docker environments, shared synthetic sample data,
+async Couchbase execution and explicit explain/execution summaries. Community basic
+metrics and Enterprise detailed profiles are covered by saved fixtures and live tests.
+Complex Couchbase plan layouts and examination-counter interpretation remain deferred.
+Step 10 (sampling and schemas) is the next discussion.
 
 ## First functional milestone
 
@@ -61,7 +63,7 @@ shared `QuerySummary`. There is no nested summary or summary-merging API.
 | 1 | Shared result contract: introduce `QuerySummary`, rename the output count to `rows_returned`, replace `ExecutionResult.explain` with `raw`, allow arbitrary output rows and add `warnings`. Adapt MongoDB parsing, examples and tests. | Implemented |
 | 2 | Split MongoDB operations into `run()`, planning-only `explain()` and instrumented `profile()`, plus the three workload methods. Keep parsing separate. | Implemented |
 | 3 | Add `AsyncCouchbaseExecutor` with the same six methods, optional SDK dependency, native metadata, deadlines, concurrency and failure handling. Support Enterprise profiling and report unavailable detailed profiling explicitly. | Implemented |
-| 4 | Add Couchbase offline `summarize_explain()` and `summarize_execution()` parsers, fixtures and student examples, using `QuerySummary` and conservative metric definitions. | Next |
+| 4 | Add Couchbase offline `summarize_explain()` and `summarize_execution()` parsers, fixtures and student examples, using `QuerySummary` and conservative metric definitions. | Implemented |
 
 Phase 2 separates planning from instrumented execution. Replace
 `explain(..., verbosity="executionStats")` with `profile(...)`, and use

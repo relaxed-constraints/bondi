@@ -1,0 +1,189 @@
+{
+  "edition": "enterprise",
+  "server_version": "7.6.2",
+  "sdk_version": "4.6.3",
+  "statement": "SELECT RAW 1",
+  "explain": {
+    "cardinality": 1,
+    "cost": 0.001,
+    "plan": {
+      "#operator": "Sequence",
+      "~children": [
+        {
+          "#operator": "DummyScan",
+          "optimizer_estimates": {
+            "cardinality": 1,
+            "cost": 1.0842021724855044e-19,
+            "fr_cost": 1.0842021724855044e-19,
+            "size": 1
+          }
+        },
+        {
+          "#operator": "Parallel",
+          "maxParallelism": 1,
+          "~child": {
+            "#operator": "Sequence",
+            "~children": [
+              {
+                "#operator": "InitialProject",
+                "discard_original": true,
+                "optimizer_estimates": {
+                  "cardinality": 1,
+                  "cost": 0.001,
+                  "fr_cost": 0.001,
+                  "size": 1
+                },
+                "preserve_order": true,
+                "raw": true,
+                "result_terms": [
+                  {
+                    "expr": "1"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "text": "SELECT RAW 1"
+  },
+  "run": {
+    "request_id": "612d0e7b-399a-4382-be83-e20f98e4b52f",
+    "client_context_id": "653644-0c38-c542-7657-818979a3e224f3",
+    "status": "success",
+    "signature": "number",
+    "warnings": [],
+    "profile": null,
+    "metrics": {
+      "elapsed_ms": 0.082,
+      "execution_ms": 0.06899999999999999,
+      "result_count": 1,
+      "result_size": 1,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  },
+  "profile": {
+    "request_id": "b0d47adf-a19b-42ee-843a-3a5993e1671b",
+    "client_context_id": "d3a3e0-d7b3-214f-7106-687590d3fa9310",
+    "status": "success",
+    "signature": "number",
+    "warnings": [],
+    "profile": {
+      "cpuTime": "14.125\u00b5s",
+      "executionTimings": {
+        "#operator": "Authorize",
+        "#planPreparedTime": "2026-10-24T01:35:22.534Z",
+        "#stats": {
+          "#phaseSwitches": 4,
+          "execTime": "334ns",
+          "servTime": "166ns"
+        },
+        "privileges": {
+          "List": []
+        },
+        "~child": {
+          "#operator": "Sequence",
+          "#stats": {
+            "#phaseSwitches": 2,
+            "execTime": "10.083\u00b5s"
+          },
+          "~children": [
+            {
+              "#operator": "DummyScan",
+              "#stats": {
+                "#itemsOut": 1,
+                "#phaseSwitches": 3,
+                "execTime": "750ns",
+                "kernTime": "208ns"
+              },
+              "optimizer_estimates": {
+                "cardinality": 1,
+                "cost": 1.0842021724855044e-19,
+                "fr_cost": 1.0842021724855044e-19,
+                "size": 1
+              }
+            },
+            {
+              "#operator": "InitialProject",
+              "#stats": {
+                "#itemsIn": 1,
+                "#itemsOut": 1,
+                "#phaseSwitches": 7,
+                "execTime": "1.375\u00b5s",
+                "kernTime": "2.083\u00b5s"
+              },
+              "discard_original": true,
+              "optimizer_estimates": {
+                "cardinality": 1,
+                "cost": 0.001,
+                "fr_cost": 0.001,
+                "size": 1
+              },
+              "preserve_order": true,
+              "raw": true,
+              "result_terms": [
+                {
+                  "expr": "1"
+                }
+              ]
+            },
+            {
+              "#operator": "Stream",
+              "#stats": {
+                "#itemsIn": 1,
+                "#itemsOut": 1,
+                "#phaseSwitches": 2,
+                "execTime": "1.583\u00b5s"
+              },
+              "optimizer_estimates": {
+                "cardinality": 1,
+                "cost": 0.001,
+                "fr_cost": 0.001,
+                "size": 1
+              },
+              "serializable": true
+            }
+          ]
+        },
+        "~versions": [
+          "7.6.2-N1QL",
+          "7.6.2-3721-enterprise"
+        ]
+      },
+      "optimizerEstimates": {
+        "cardinality": 1,
+        "cost": 0.001
+      },
+      "phaseOperators": {
+        "authorize": 1,
+        "project": 1,
+        "stream": 1
+      },
+      "phaseTimes": {
+        "authorize": "500ns",
+        "instantiate": "2.208\u00b5s",
+        "parse": "53.292\u00b5s",
+        "plan": "6.416\u00b5s",
+        "project": "1.375\u00b5s",
+        "run": "20.083\u00b5s",
+        "stream": "1.583\u00b5s"
+      },
+      "requestTime": "2026-10-24T01:35:22.535Z",
+      "servicingHost": "127.0.0.1:8091"
+    },
+    "metrics": {
+      "elapsed_ms": 0.097,
+      "execution_ms": 0.08399999999999999,
+      "result_count": 1,
+      "result_size": 1,
+      "sort_count": 0,
+      "mutation_count": 0,
+      "error_count": 0,
+      "warning_count": 0
+    }
+  }
+}

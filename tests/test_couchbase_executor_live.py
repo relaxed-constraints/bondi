@@ -10,7 +10,12 @@ pytest.importorskip("couchbase")
 from couchbase.exceptions import ParsingFailedException  # noqa: E402
 from couchbase.n1ql import QueryScanConsistency  # noqa: E402
 
-from dbrtoolkit.couchbase import AsyncCouchbaseExecutor, CouchbaseQuery  # noqa: E402
+from dbrtoolkit.couchbase import (  # noqa: E402
+    AsyncCouchbaseExecutor,
+    CouchbaseQuery,
+    summarize_execution,
+    summarize_explain,
+)
 from dbrtoolkit.workload import Workload, WorkloadEntry  # noqa: E402
 
 
@@ -51,6 +56,12 @@ def test_live_couchbase(edition):
             else:
                 assert profile.raw["profile"] is None
                 assert "executionTimings" in profile.warnings[-1]
+            assert summarize_explain(plan.raw).index_names == ("city_stars",)
+            assert summarize_execution(run.raw).rows_returned == 3
+            summary = summarize_execution(profile.raw)
+            assert summary.rows_returned == 3
+            assert summary.index_names == (("city_stars",) if edition == "ENTERPRISE" else None)
+            assert summary.documents_examined is summary.keys_examined is None
             json.dumps(profile.raw)
             positional = CouchbaseQuery("SELECT RAW $1", positional_parameters=[[1, None]])
             work = Workload([WorkloadEntry(query), WorkloadEntry(positional)])
