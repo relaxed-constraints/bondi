@@ -160,7 +160,7 @@ Package/module names beyond the initial root are provisional.
 
 `QuerySummary` lives in `dbrtoolkit.summary` and is a frozen six-field value object
 returned by the pure
-`summarize_explain(raw)` function. The executor continues to return raw documents;
+`summarize(raw)` function. The executor continues to return raw documents;
 summary extraction is explicit and offline. None means unavailable, not zero.
 Winning-plan stages exclude pipeline operators and SBE textual/physical stage names.
 Examination counts describe whole-operation work only when scope is understood;
@@ -196,7 +196,7 @@ native plan; profile requests TIMINGS and returns execution metadata. Run/profil
 fully consume rows and optionally retain them, including scalar and array rows.
 Missing detailed profiling yields a warning and preserves basic metrics. Metadata
 uses public SDK accessors converted to JSON-compatible values; profile trees stay
-native. Explicit `summarize_explain()` and `summarize_execution()` functions return
+native. The explicit `summarize()` function detects plan vs execution metadata and returns
 QuerySummary offline without the SDK. Supported native operator trees supply plan
 fields; SDK execution_ms/result_count supply time and output counts. Document/index
 examination totals stay unavailable. Unknown plan layouts preserve valid basic metrics.
@@ -204,3 +204,7 @@ examination totals stay unavailable. Unknown plan layouts preserve valid basic m
 SDK consistency defaults remain in force unless query_kwargs overrides them.
 Per-query deadlines cover consumption and SDK execution. Statement bindings,
 context and operation modes cannot be overridden through the options escape hatch.
+
+Each backend exposes one `summarize(raw)` function. `None` denotes absent diagnostics
+and yields an empty summary; callers check execution status separately. Unknown or
+malformed responses raise, while unsupported plan layouts retain available metrics.

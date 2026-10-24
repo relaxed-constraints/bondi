@@ -13,8 +13,7 @@ from couchbase.n1ql import QueryScanConsistency  # noqa: E402
 from dbrtoolkit.couchbase import (  # noqa: E402
     AsyncCouchbaseExecutor,
     CouchbaseQuery,
-    summarize_execution,
-    summarize_explain,
+    summarize,
 )
 from dbrtoolkit.workload import Workload, WorkloadEntry  # noqa: E402
 
@@ -56,9 +55,9 @@ def test_live_couchbase(edition):
             else:
                 assert profile.raw["profile"] is None
                 assert "executionTimings" in profile.warnings[-1]
-            assert summarize_explain(plan.raw).index_names == ("city_stars",)
-            assert summarize_execution(run.raw).rows_returned == 3
-            summary = summarize_execution(profile.raw)
+            assert summarize(plan.raw).index_names == ("city_stars",)
+            assert summarize(run.raw).rows_returned == 3
+            summary = summarize(profile.raw)
             assert summary.rows_returned == 3
             assert summary.index_names == (("city_stars",) if edition == "ENTERPRISE" else None)
             assert summary.documents_examined is summary.keys_examined is None

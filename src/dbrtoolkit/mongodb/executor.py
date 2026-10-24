@@ -242,7 +242,7 @@ class AsyncMongoDBExecutor:
 
         Defaults to executionStats; allPlansExecution also includes candidate-plan
         trial statistics. This does not enable MongoDB's database profiler. It returns
-        no query documents or row_count; use summarize_explain(raw) explicitly for
+        no query documents or row_count; use summarize(raw) explicitly for
         server counts. elapsed_ms measures this diagnostic request, not ordinary run
         latency. Options and exception handling follow explain().
         """

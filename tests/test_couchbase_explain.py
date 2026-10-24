@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from dbrtoolkit.couchbase import summarize_execution, summarize_explain
+from dbrtoolkit.couchbase import summarize
 from dbrtoolkit.summary import QuerySummary
 
 FIXTURES = Path(__file__).parent / "fixtures" / "couchbase"
@@ -28,12 +28,12 @@ def test_real_server_fixtures(path):
     expected_indexes = (
         () if case == "scalar" else (("#primary",) if case == "aggregation" else ("city_stars",))
     )
-    plan = summarize_explain(fixture["explain"])
+    plan = summarize(fixture["explain"])
     assert plan.plan_stages[0] == "Sequence"
     assert plan.index_names == expected_indexes
     assert plan.execution_time_ms is plan.rows_returned is None
     for mode in ("run", "profile"):
-        summary = summarize_execution(fixture[mode])
+        summary = summarize(fixture[mode])
         assert isinstance(summary, QuerySummary)
         assert summary.rows_returned == expected_rows
         assert summary.execution_time_ms == fixture[mode]["metrics"]["execution_ms"]
@@ -74,7 +74,7 @@ def test_root_first_order_repeats_and_ignore_embedded_data():
         },
         "metrics": {"execution_ms": 99, "result_count": 1},
     }
-    summary = summarize_explain(raw)
+    summary = summarize(raw)
     assert summary.plan_stages == (
         "Sequence",
         "IndexScan3",
@@ -92,14 +92,14 @@ def test_root_first_order_repeats_and_ignore_embedded_data():
     "profile", [None, {}, {"phaseCounts": {"fetch": 30}, "phaseTimes": {"run": "9s"}}]
 )
 def test_basic_metrics_without_operator_tree(profile):
-    assert summarize_execution(
+    assert summarize(
         {"status": "success", "metrics": {"execution_ms": 0, "result_count": 0}, "profile": profile}
     ) == QuerySummary(execution_time_ms=0.0, rows_returned=0)
-    assert summarize_execution({"metrics": None, "profile": profile}) == QuerySummary()
+    assert summarize({"metrics": None, "profile": profile}) == QuerySummary()
 
 
 def test_do_not_infer_counts_or_time_from_operators():
-    summary = summarize_execution(
+    summary = summarize(
         {
             "profile": {
                 "executionTimings": {
@@ -129,14 +129,14 @@ def test_do_not_infer_counts_or_time_from_operators():
     ],
 )
 def test_unsupported_layout_keeps_basic_metrics(root):
-    assert summarize_explain({"plan": root}) == QuerySummary()
-    assert summarize_execution(
+    assert summarize({"plan": root}) == QuerySummary()
+    assert summarize(
         {"metrics": {"result_count": 2}, "profile": {"executionTimings": root}}
     ) == QuerySummary(rows_returned=2)
 
 
 def test_missing_index_name_is_unavailable_not_no_index():
-    assert summarize_explain({"plan": {"#operator": "PrimaryScan3"}}) == QuerySummary(
+    assert summarize({"plan": {"#operator": "PrimaryScan3"}}) == QuerySummary(
         plan_stages=("PrimaryScan3",)
     )
 
@@ -144,7 +144,6 @@ def test_missing_index_name_is_unavailable_not_no_index():
 @pytest.mark.parametrize(
     "raw",
     [
-        None,
         [],
         {},
         {"results": []},
@@ -160,7 +159,7 @@ def test_missing_index_name_is_unavailable_not_no_index():
 )
 def test_malformed_explains(raw):
     with pytest.raises(ValueError):
-        summarize_explain(raw)
+        summarize(raw)
 
 
 @pytest.mark.parametrize(
@@ -180,16 +179,14 @@ def test_malformed_explains(raw):
 )
 def test_invalid_metrics(key, value):
     with pytest.raises(ValueError):
-        summarize_execution({"metrics": {key: value}})
+        summarize({"metrics": {key: value}})
 
 
 @pytest.mark.parametrize(
     "raw",
     [
-        None,
         [],
         {},
-        {"plan": {}},
         {"status": "running"},
         {"status": "timeout"},
         {"metrics": []},
@@ -201,11 +198,11 @@ def test_invalid_metrics(key, value):
 )
 def test_wrong_execution_shape_or_failure(raw):
     with pytest.raises(ValueError):
-        summarize_execution(raw)
+        summarize(raw)
 
 
 def test_cycle_is_rejected():
     root = {"#operator": "Parallel"}
     root["~child"] = root
     with pytest.raises(ValueError, match="cycle"):
-        summarize_explain({"plan": root})
+        summarize({"plan": root})

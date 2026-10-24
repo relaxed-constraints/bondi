@@ -1,22 +1,22 @@
 # Couchbase query summaries
 
-Parsing is an explicit, offline step. Both functions return the shared frozen
-`QuerySummary`, require no Couchbase SDK or connection, and leave the source intact.
+Parsing is an explicit, offline step. `summarize()` detects the response format and returns the shared frozen
+`QuerySummary`, without the SDK, a connection, or source mutation.
 
 ```python
-from dbrtoolkit.couchbase import summarize_explain, summarize_execution
+from dbrtoolkit.couchbase import summarize
 
 # Inside an executor context:
 plan = await executor.explain(query)
 measured = await executor.profile(query)
 
-plan_summary = summarize_explain(plan.raw)
-execution_summary = summarize_execution(measured.raw)
+plan_summary = summarize(plan.raw)
+execution_summary = summarize(measured.raw)
 print(plan_summary.index_names)
 print(execution_summary.execution_time_ms, execution_summary.rows_returned)
 ```
 
-`summarize_execution()` also accepts `run().raw`. Basic metrics are useful on
+`summarize()` also accepts `run().raw`. Basic metrics are useful on
 Community; a detailed Enterprise profile adds operator and index information.
 Keep `.raw` for research-specific counters. There is no automatic summary creation,
 second query, or merge of separately collected explain and profile results.
@@ -49,9 +49,9 @@ native differences when comparing experiments.
 
 ## Supported inputs and limits
 
-- `summarize_explain()` accepts the single result row returned as `explain().raw`,
+- `summarize()` accepts the single result row returned as `explain().raw`,
   containing a `plan` object. It does not accept a list of rows or an HTTP envelope.
-- `summarize_execution()` accepts the toolkit's JSON-compatible SDK metadata from
+- `summarize()` accepts the toolkit's JSON-compatible SDK metadata from
   `run().raw` / `profile().raw`, including restored JSON. It does not parse raw REST
   duration strings such as `executionTime: "1ms"`.
 - Fixtures cover Community and Enterprise 7.6.2 using SDK 4.6.3: filtered and covering
@@ -75,4 +75,16 @@ operator layout.
 Couchbase defines `#itemsIn` and `#itemsOut` as operator input/output counts. See the
 [Query Service response reference](https://docs.couchbase.com/server/current/n1ql-rest-query/index.html)
 and [profiling documentation](https://docs.couchbase.com/server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html).
-The notebook `notebooks/couchbase_demo.ipynb` shows both parsers alongside raw metadata.
+The notebook `notebooks/couchbase_demo.ipynb` shows automatic format detection alongside raw metadata.
+
+
+## No diagnostics and failures
+
+`summarize(None)` returns an empty `QuerySummary`. Check `result.status` before
+summarizing workload results: failures also have `raw=None`, so an empty summary
+alone does not imply success. Unrecognized or malformed dictionaries raise
+`ValueError`; they are not silently treated as absent diagnostics.
+
+A top-level `plan` selects EXPLAIN interpretation, even when request metrics are
+attached. Otherwise the parser reads toolkit execution metadata. It does not merge
+both shapes or infer execution statistics from EXPLAIN request timing.

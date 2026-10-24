@@ -64,7 +64,7 @@
       heading_level: 2
       members: []
 
-::: dbrtoolkit.mongodb.summarize_explain
+::: dbrtoolkit.mongodb.summarize
     options:
       show_root_heading: true
       heading_level: 2
@@ -77,12 +77,7 @@
       members: [from_uri, close, run, run_workload, explain, explain_workload, profile, profile_workload]
 
 
-::: dbrtoolkit.couchbase.summarize_explain
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: dbrtoolkit.couchbase.summarize_execution
+::: dbrtoolkit.couchbase.summarize
     options:
       show_root_heading: true
       heading_level: 2

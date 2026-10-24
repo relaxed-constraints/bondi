@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from bson import Int64
 
-from dbrtoolkit.mongodb import summarize_explain
+from dbrtoolkit.mongodb import summarize
 from dbrtoolkit.summary import QuerySummary
 
 FIXTURES = Path(__file__).parent / "fixtures" / "explain"
@@ -30,7 +30,7 @@ def fixture(name):
 def test_real_top_level_explains(name, stages, indexes, returned):
     raw = fixture(name)
     before = deepcopy(raw)
-    summary = summarize_explain(raw)
+    summary = summarize(raw)
     stats = raw["executionStats"]
     assert summary == QuerySummary(
         stats["executionTimeMillis"],
@@ -47,7 +47,7 @@ def test_real_top_level_explains(name, stages, indexes, returned):
 
 @pytest.mark.parametrize("name,returned", [("aggregate_facet", 1), ("aggregate_lookup", 2)])
 def test_real_split_pipelines_do_not_claim_cursor_totals(name, returned):
-    summary = summarize_explain(fixture(name))
+    summary = summarize(fixture(name))
     assert summary.rows_returned == returned
     assert summary.execution_time_ms is None
     assert summary.documents_examined is None
@@ -61,7 +61,7 @@ def test_planner_only_and_rejected_candidates():
     raw = fixture("find_collscan")
     del raw["executionStats"]
     raw["queryPlanner"]["rejectedPlans"] = [{"stage": "IXSCAN", "indexName": "rejected"}]
-    summary = summarize_explain(raw)
+    summary = summarize(raw)
     assert summary == QuerySummary(plan_stages=("LIMIT", "COLLSCAN"), index_names=())
 
 
@@ -78,7 +78,7 @@ def test_branching_order_repeated_stages_and_unique_indexes():
             }
         }
     }
-    summary = summarize_explain(raw)
+    summary = summarize(raw)
     assert summary.plan_stages == ("OR", "IXSCAN", "FETCH", "IXSCAN", "IXSCAN")
     assert summary.index_names == ("a", "b")
 
@@ -90,7 +90,7 @@ def test_read_free_pipeline_final_output_and_no_time_estimate_sum():
             {"$group": {"_id": "$city"}, "nReturned": 2, "executionTimeMillisEstimate": 123},
         ]
     }
-    summary = summarize_explain(raw)
+    summary = summarize(raw)
     assert summary.rows_returned == 2
     assert (
         summary.documents_examined
@@ -101,12 +101,12 @@ def test_read_free_pipeline_final_output_and_no_time_estimate_sum():
     assert summary.execution_time_ms is None
     assert summary.plan_stages == ("LIMIT", "COLLSCAN")
     del raw["stages"][1]["nReturned"]
-    assert summarize_explain(raw).rows_returned is None
+    assert summarize(raw).rows_returned is None
 
 
 def test_unknown_pipeline_prevents_false_index_and_examination_totals():
     raw = {"stages": [{"$cursor": fixture("find_index")}, {"$futureStage": {}, "nReturned": 1}]}
-    summary = summarize_explain(raw)
+    summary = summarize(raw)
     assert summary.rows_returned == 1
     assert summary.index_names is None
     assert summary.keys_examined is None
@@ -118,7 +118,7 @@ def test_zero_missing_and_bson_integer_metrics():
         "queryPlanner": {"winningPlan": {"stage": "EOF"}},
         "executionStats": {"nReturned": Int64(0), "executionTimeMillis": Int64(0)},
     }
-    assert summarize_explain(raw) == QuerySummary(0.0, 0, None, None, ("EOF",), ())
+    assert summarize(raw) == QuerySummary(0.0, 0, None, None, ("EOF",), ())
 
 
 @pytest.mark.parametrize(
@@ -132,13 +132,12 @@ def test_zero_missing_and_bson_integer_metrics():
     ],
 )
 def test_unsupported_layouts(raw):
-    assert summarize_explain(raw) == QuerySummary()
+    assert summarize(raw) == QuerySummary()
 
 
 @pytest.mark.parametrize(
     "raw",
     [
-        None,
         [],
         {},
         {"unrelated": 1},
@@ -159,7 +158,7 @@ def test_unsupported_layouts(raw):
 )
 def test_malformed_input(raw):
     with pytest.raises(ValueError):
-        summarize_explain(raw)
+        summarize(raw)
 
 
 @pytest.mark.parametrize(
@@ -168,10 +167,10 @@ def test_malformed_input(raw):
 @pytest.mark.parametrize("value", [-1, True, "5", None, float("nan"), float("inf")])
 def test_bad_metrics(key, value):
     with pytest.raises(ValueError):
-        summarize_explain({"ok": 1, "executionStats": {key: value}})
+        summarize({"ok": 1, "executionStats": {key: value}})
 
 
 def test_incomplete_index_metadata_is_unknown_not_empty():
-    summary = summarize_explain({"queryPlanner": {"winningPlan": {"stage": "IXSCAN"}}})
+    summary = summarize({"queryPlanner": {"winningPlan": {"stage": "IXSCAN"}}})
     assert summary.plan_stages == ("IXSCAN",)
     assert summary.index_names is None

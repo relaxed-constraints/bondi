@@ -14,11 +14,11 @@ def without_sdk(name, *args, **kwargs):
     return original_import(name, *args, **kwargs)
 builtins.__import__ = without_sdk
 from dbrtoolkit.couchbase import (CouchbaseQuery, AsyncCouchbaseExecutor,
-                                summarize_explain, summarize_execution)
+                                summarize)
 from dbrtoolkit.workload import Workload, WorkloadEntry
 from dbrtoolkit.execution import ExecutionResult
-assert summarize_explain({'plan': {'#operator': 'DummyScan'}}).index_names == ()
-assert summarize_execution({'metrics': {'result_count': 0}}).rows_returned == 0
+assert summarize({'plan': {'#operator': 'DummyScan'}}).index_names == ()
+assert summarize({'metrics': {'result_count': 0}}).rows_returned == 0
 query = CouchbaseQuery('SELECT RAW 1')
 assert CouchbaseQuery.from_json(query.to_json()) == query
 assert len(Workload([WorkloadEntry(query)])) == 1

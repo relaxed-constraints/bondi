@@ -97,7 +97,7 @@ def _plan(planner: dict) -> tuple[tuple[str, ...] | None, tuple[str, ...] | None
     )
 
 
-def summarize_explain(explain: dict[str, Any]) -> QuerySummary:
+def summarize(raw: dict[str, Any] | None) -> QuerySummary:
     """Summarize a successful MongoDB explain without a connection or source mutation.
 
     Supports standalone classic/SBE structured winning plans, top-level execution
@@ -112,7 +112,9 @@ def summarize_explain(explain: dict[str, Any]) -> QuerySummary:
     This is structural validation of the fields consumed, not the entire MongoDB schema.
 
     Args:
-        explain: Raw explain document, for example ExecutionResult.raw.
+        raw: ExecutionResult.raw from explain/profile, or None from ordinary run.
+            None returns an empty summary. Check result.status first: failed workload
+            entries also have raw=None.
 
     Returns:
         A frozen summary; keep the raw document for project-specific analysis.
@@ -121,7 +123,9 @@ def summarize_explain(explain: dict[str, Any]) -> QuerySummary:
         ValueError: Input is not an explain document, reports failure, or contains
             malformed fields in a supported layout.
     """
-    raw = _document(explain, "explain")
+    if raw is None:
+        return QuerySummary()
+    raw = _document(raw, "raw")
     if not raw or not any(k in raw for k in ("queryPlanner", "stages", "shards", "ok")):
         raise ValueError("Expected a MongoDB explain document")
     if "ok" in raw and raw["ok"] != 1:

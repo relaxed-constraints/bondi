@@ -49,7 +49,7 @@ it for statistics. `profile()` requests `executionStats` by default, or accepts
 `verbosity="allPlansExecution"` for candidate-plan trial statistics. It uses MongoDB's
 explain command, not the database profiler, and issues no additional normal query.
 Both return diagnostics in `raw`, with `documents` and `row_count` left as `None`.
-Call `summarize_explain(result.raw)` explicitly to extract server measurements.
+Call `summarize(result.raw)` explicitly to extract server measurements.
 Profiling timings are not interchangeable with ordinary execution timing.
 
 Single-query methods raise driver/server exceptions. Structural validation occurs

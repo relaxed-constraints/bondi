@@ -120,7 +120,7 @@ def _successful(raw: dict) -> None:
         raise ValueError("Couchbase response reports errors")
 
 
-def summarize_explain(explain: dict[str, Any]) -> QuerySummary:
+def _summarize_explain(explain: dict[str, Any]) -> QuerySummary:
     """Extract native operators and index names from a Couchbase EXPLAIN result row.
 
     Args:
@@ -148,7 +148,7 @@ def summarize_explain(explain: dict[str, Any]) -> QuerySummary:
     return QuerySummary(plan_stages=stages, index_names=indexes)
 
 
-def summarize_execution(metadata: dict[str, Any]) -> QuerySummary:
+def _summarize_execution(metadata: dict[str, Any]) -> QuerySummary:
     """Summarize run/profile metadata produced by AsyncCouchbaseExecutor.
 
     Args:
@@ -188,3 +188,36 @@ def summarize_execution(metadata: dict[str, Any]) -> QuerySummary:
     return QuerySummary(
         execution_time_ms=elapsed, rows_returned=returned, plan_stages=stages, index_names=indexes
     )
+
+
+def summarize(raw: dict[str, Any] | None) -> QuerySummary:
+    """Summarize native EXPLAIN rows or toolkit run/profile metadata automatically.
+
+    Args:
+        raw: ExecutionResult.raw, or the same data restored from JSON. None means
+            no diagnostics and returns an empty summary; check result.status first
+            because failed workload entries also have raw=None.
+
+    Returns:
+        A frozen QuerySummary. A top-level plan selects EXPLAIN interpretation and
+        contributes no execution metrics, even when request metrics are attached.
+        Otherwise toolkit execution metadata supplies server time and row count,
+        plus plan information when a supported executionTimings tree is present.
+        Missing or unsupported measurements remain None. Examination totals are
+        unavailable; operator output counts are not treated as examined totals.
+
+    Raises:
+        ValueError: Unrecognized input, reported failure, invalid consumed metrics
+            or malformed supported plan structures.
+
+    Runs offline without the SDK, mutation, database calls or merging. Accepts
+    toolkit SDK metadata, not REST envelopes/duration strings. Plan traversal is
+    root-first with repeated operators and deduplicated index names. Unknown plan
+    layouts leave plan fields unavailable while retaining valid execution metrics.
+    """
+    if raw is None:
+        return QuerySummary()
+    document = _document(raw, "raw")
+    if "plan" in document:
+        return _summarize_explain(document)
+    return _summarize_execution(document)

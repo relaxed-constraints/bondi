@@ -55,7 +55,7 @@ milestones, keeping reusable implementations in the library.
 ## Second-backend implementation plan
 
 Parsing stays explicit: executors return `ExecutionResult`, including native `raw`
-data; callers invoke backend-specific `summarize_*()` functions to produce a
+data; callers invoke backend-specific `summarize()` functions to produce a
 shared `QuerySummary`. There is no nested summary or summary-merging API.
 
 | Phase | Scope | Status |
@@ -63,7 +63,7 @@ shared `QuerySummary`. There is no nested summary or summary-merging API.
 | 1 | Shared result contract: introduce `QuerySummary`, rename the output count to `rows_returned`, replace `ExecutionResult.explain` with `raw`, allow arbitrary output rows and add `warnings`. Adapt MongoDB parsing, examples and tests. | Implemented |
 | 2 | Split MongoDB operations into `run()`, planning-only `explain()` and instrumented `profile()`, plus the three workload methods. Keep parsing separate. | Implemented |
 | 3 | Add `AsyncCouchbaseExecutor` with the same six methods, optional SDK dependency, native metadata, deadlines, concurrency and failure handling. Support Enterprise profiling and report unavailable detailed profiling explicitly. | Implemented |
-| 4 | Add Couchbase offline `summarize_explain()` and `summarize_execution()` parsers, fixtures and student examples, using `QuerySummary` and conservative metric definitions. | Implemented |
+| 4 | Add Couchbase offline `summarize()` parser, fixtures and student examples, using `QuerySummary` and conservative metric definitions. | Implemented |
 
 Phase 2 separates planning from instrumented execution. Replace
 `explain(..., verbosity="executionStats")` with `profile(...)`, and use
@@ -82,3 +82,12 @@ to the explicit parser call and do not change a successful execution result.
   the server-reported output count extracted by a parser.
 
 These names change directly, without compatibility aliases, while the API is young.
+
+
+### Unified summary API
+
+Each backend now exports only `summarize(raw)`. Replace the earlier
+`summarize_explain()` / `summarize_execution()` calls with this function; Couchbase
+selects the format internally. `None` returns an empty summary, while malformed,
+unrecognized or explicitly failed responses raise. Check execution status first.
+No compatibility aliases are retained.

@@ -1,15 +1,15 @@
 # MongoDB explain summaries
 
-The executor collects raw explains. `summarize_explain()` interprets them offline;
+The executor collects raw explains. `summarize()` interprets them offline;
 it neither connects to MongoDB nor changes the source document.
 
 ```python
 from dataclasses import asdict
-from dbrtoolkit.mongodb import summarize_explain
+from dbrtoolkit.mongodb import summarize
 
 # Inside an async function or notebook:
 result = await executor.profile(query, verbosity="executionStats")
-summary = summarize_explain(result.raw)
+summary = summarize(result.raw)
 print(summary.plan_stages)
 print(summary.index_names)
 print(asdict(summary))  # A convenient row for a research table.
@@ -83,3 +83,11 @@ future server layouts; extend fixture coverage before relying on a new layout.
 See MongoDB's [explain reference](https://www.mongodb.com/docs/manual/reference/explain-results/)
 for the source fields. The notebook `notebooks/workload_demo.ipynb` demonstrates
 planner-only and measured summaries alongside the raw response.
+
+
+## One parser for each operation
+
+Use `summarize(result.raw)` for both `explain()` and `profile()`. Ordinary MongoDB
+`run()` supplies `raw=None`, which returns an empty `QuerySummary`. Check status
+first for workload results, since failed entries also have `raw=None`. Malformed
+or unrecognized documents still raise `ValueError`.

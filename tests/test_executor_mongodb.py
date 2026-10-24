@@ -15,7 +15,7 @@ from dbrtoolkit.mongodb import (
     MongoAggregateQuery,
     MongoCollectionRef,
     MongoFindQuery,
-    summarize_explain,
+    summarize,
 )
 from dbrtoolkit.workload import Workload, WorkloadEntry
 
@@ -51,10 +51,10 @@ def test_executor_against_mongodb():
                 work, verbosity="executionStats", command_kwargs={"maxTimeMS": 5000}
             )
             assert all(r.status == "success" and r.raw["ok"] == 1 for r in explains)
-            assert [summarize_explain(r.raw).rows_returned for r in explains] == [5, 20]
+            assert [summarize(r.raw).rows_returned for r in explains] == [5, 20]
             plans = await executor.explain_workload(work)
             assert all("executionStats" not in r.raw for r in plans)
-            assert all(summarize_explain(r.raw).rows_returned is None for r in plans)
+            assert all(summarize(r.raw).rows_returned is None for r in plans)
             bad = MongoFindQuery(target, {"$invalidOperator": 1})
             results = await executor.run_workload(
                 Workload([WorkloadEntry(bad), WorkloadEntry(find)])

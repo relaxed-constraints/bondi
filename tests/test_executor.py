@@ -13,7 +13,7 @@ from dbrtoolkit.mongodb import (
     MongoAggregateQuery,
     MongoCollectionRef,
     MongoFindQuery,
-    summarize_explain,
+    summarize,
 )
 from dbrtoolkit.workload import Workload, WorkloadEntry
 
@@ -383,7 +383,7 @@ def test_explain_preserves_raw_without_implicit_parsing():
         assert result.status == "success"
         assert result.warnings == ()
         with pytest.raises(ValueError):
-            summarize_explain(result.raw)
+            summarize(result.raw)
         assert result.status == "success"
         assert result.raw is raw
 
