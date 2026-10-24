@@ -154,9 +154,10 @@ feature. PyMongo >=4.13 is required for the stable async API.
 
 Package/module names beyond the initial root are provisional.
 
-## MongoDB explain summaries
+## Shared summaries and explicit parsing
 
-`MongoExplainSummary` is a frozen six-field value object returned by the pure
+`QuerySummary` lives in `dbrtoolkit.summary` and is a frozen six-field value object
+returned by the pure
 `summarize_explain(raw)` function. The executor continues to return raw documents;
 summary extraction is explicit and offline. None means unavailable, not zero.
 Winning-plan stages exclude pipeline operators and SBE textual/physical stage names.
@@ -173,3 +174,8 @@ images, localhost ports and named volumes. A shared synthetic fixture is loaded
 through native database interfaces. Initialization is repeatable and separate from
 container startup; no database dependencies are added to the library. Development
 credentials and resource limits are intentionally local-only.
+
+Execution results store native diagnostics in `raw`, optional collected output in
+`documents` (including scalar or array rows), and nonfatal operation `warnings`.
+They do not contain a parsed summary. Backend parsers remain independently usable
+on saved responses; unknown or non-comparable measurements remain `None`.

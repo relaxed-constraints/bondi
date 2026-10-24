@@ -35,7 +35,7 @@ result = await executor.run(query, collect_results=True)
 print(result.row_count, result.elapsed_ms)
 
 explanation = await executor.explain(query, verbosity="executionStats")
-print(explanation.explain)
+print(explanation.raw)
 ```
 
 Both find and aggregation queries are supported. Run always consumes the complete

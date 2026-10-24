@@ -12,9 +12,12 @@ class ExecutionResult:
 
     Args:
         elapsed_ms: Client-observed monotonic elapsed time, not server execution time.
-        row_count: Fully consumed document count for a successful run; otherwise None.
-        documents: Collected documents when requested; otherwise None.
-        explain: Raw explain response for a successful explain; otherwise None.
+        row_count: Fully consumed output-row count for a successful run; otherwise None.
+        documents: Collected output rows when requested; otherwise None. Rows may be
+            documents, scalars or arrays, depending on the backend.
+        raw: Backend-native diagnostic response or execution metadata when available.
+            Parsing is explicit; this result does not contain a QuerySummary.
+        warnings: Nonfatal operation warnings; empty when none were reported.
         error: Original exception for a failed workload entry; otherwise None.
 
     Partial documents and counts are discarded on failure. Exception objects are
@@ -23,8 +26,9 @@ class ExecutionResult:
 
     elapsed_ms: float
     row_count: int | None = None
-    documents: list[dict[str, Any]] | None = None
-    explain: dict[str, Any] | None = None
+    documents: list[Any] | None = None
+    raw: dict[str, Any] | None = None
+    warnings: tuple[str, ...] = ()
     error: Exception | None = None
 
     @property

@@ -25,14 +25,14 @@ Steps 0–6 are implemented, including atomic JSONL workload saves and loading
 through the native query-kind loaders. Step 7 now implements async MongoDB
 find/aggregation execution and raw explains, single-query and workload operations,
 bounded concurrency, configurable failure continuation, deadlines and client ownership.
-Step 8 now provides an offline MongoExplainSummary parser for standalone winning
+Step 8 now provides an offline QuerySummary parser for standalone winning
 plans and conservative aggregation summaries, with saved explain fixtures. Raw
 responses remain available. Sharded and nested-read metric interpretation, warmups
 and repetitions are deferred.
 
 Step 9 starts with optional Docker Compose environments for both databases, shared
 synthetic sample data and repeatable initialization. Couchbase executor and explain
-parsing contracts remain the next increment.
+parsing will follow the phased plan below.
 
 ## First functional milestone
 
@@ -49,3 +49,32 @@ it and understand every class involved, without running a database.
 
 Do not implement later steps in the background. Add tutorial notebooks at coherent
 milestones, keeping reusable implementations in the library.
+
+## Second-backend implementation plan
+
+Parsing stays explicit: executors return `ExecutionResult`, including native `raw`
+data; callers invoke backend-specific `summarize_*()` functions to produce a
+shared `QuerySummary`. There is no nested summary or summary-merging API.
+
+| Phase | Scope | Status |
+| --- | --- | --- |
+| 1 | Shared result contract: introduce `QuerySummary`, rename the output count to `rows_returned`, replace `ExecutionResult.explain` with `raw`, allow arbitrary output rows and add `warnings`. Adapt MongoDB parsing, examples and tests. | Implemented |
+| 2 | Split MongoDB operations into `run()`, planning-only `explain()` and instrumented `profile()`, plus the three workload methods. Keep parsing separate. | Next |
+| 3 | Add `AsyncCouchbaseExecutor` with the same six methods, optional SDK dependency, native metadata, deadlines, concurrency and failure handling. Support Enterprise profiling and report unavailable detailed profiling explicitly. | Planned |
+| 4 | Add Couchbase offline `summarize_explain()` and `summarize_execution()` parsers, fixtures and student examples, using `QuerySummary` and conservative metric definitions. | Planned |
+
+Phase 1 does not change MongoDB explain verbosity: `executionStats` remains
+available through `explain()` until phase 2 introduces `profile()`. No additional
+queries are issued to populate summaries. Parsing failures belong to the explicit
+parser call and do not turn a successful database operation into a failed result.
+
+### Phase 1 API migration
+
+- Import `QuerySummary` from `dbrtoolkit.summary` instead of `MongoExplainSummary`
+  from `dbrtoolkit.mongodb`.
+- Read `summary.rows_returned` instead of `summary.documents_returned`.
+- Read `result.raw` instead of `result.explain`.
+- `result.row_count` still counts rows consumed by `run()`; it is independent of
+  the server-reported output count extracted by a parser.
+
+These names change directly, without compatibility aliases, while the API is young.

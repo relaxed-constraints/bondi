@@ -1,38 +1,9 @@
 """Conservative, offline summaries of MongoDB explain documents."""
 
 import math
-from dataclasses import dataclass
 from typing import Any
 
-
-@dataclass(frozen=True)
-class MongoExplainSummary:
-    """Common metrics from a winning plan, without replacing the raw explain.
-
-    Attributes:
-        execution_time_ms: Server executionTimeMillis, including plan selection when
-            applicable. Not client elapsed time, normal query latency or a sum of estimates.
-        documents_returned: Final query/pipeline output count, not cursor input to a pipeline.
-        documents_examined: Whole-operation document examinations, not distinct documents.
-        keys_examined: Whole-operation index entries examined, not distinct values.
-        plan_stages: Root-first stage names from the structured winning query plan.
-            Repetitions are preserved. Excludes pipeline operators, rejected plans and
-            slot-based engine internals; may cover only the cursor part of an aggregation.
-        index_names: Unique winning-plan index names in first-encounter order. None
-            when additional pipeline reads or an unsupported plan prevent full extraction.
-
-    None means unavailable or unsupported, never zero. An empty index_names tuple
-    means no named index use was found in the supported plan, not necessarily COLLSCAN.
-    No source document is copied or retained; the caller keeps the raw explain.
-    """
-
-    execution_time_ms: float | None = None
-    documents_returned: int | None = None
-    documents_examined: int | None = None
-    keys_examined: int | None = None
-    plan_stages: tuple[str, ...] | None = None
-    index_names: tuple[str, ...] | None = None
-
+from dbrtoolkit.summary import QuerySummary
 
 # These stages do not introduce additional collection reads. Unknown stages (including
 # nested pipelines) conservatively prevent reporting cursor counts as operation totals.
@@ -126,7 +97,7 @@ def _plan(planner: dict) -> tuple[tuple[str, ...] | None, tuple[str, ...] | None
     )
 
 
-def summarize_explain(explain: dict[str, Any]) -> MongoExplainSummary:
+def summarize_explain(explain: dict[str, Any]) -> QuerySummary:
     """Summarize a successful MongoDB explain without a connection or source mutation.
 
     Supports standalone classic/SBE structured winning plans, top-level execution
@@ -141,7 +112,7 @@ def summarize_explain(explain: dict[str, Any]) -> MongoExplainSummary:
     This is structural validation of the fields consumed, not the entire MongoDB schema.
 
     Args:
-        explain: Raw explain document, for example ExecutionResult.explain.
+        explain: Raw explain document, for example ExecutionResult.raw.
 
     Returns:
         A frozen summary; keep the raw document for project-specific analysis.
@@ -156,7 +127,7 @@ def summarize_explain(explain: dict[str, Any]) -> MongoExplainSummary:
     if "ok" in raw and raw["ok"] != 1:
         raise ValueError("Explain command did not succeed")
     if "shards" in raw:
-        return MongoExplainSummary()
+        return QuerySummary()
 
     source = raw
     pipeline = None
@@ -170,7 +141,7 @@ def summarize_explain(explain: dict[str, Any]) -> MongoExplainSummary:
             if len([k for k in stage if k.startswith("$")]) != 1:
                 raise ValueError("pipeline stage must contain one operator")
         if not pipeline or "$cursor" not in pipeline[0]:
-            return MongoExplainSummary()
+            return QuerySummary()
         source = _document(pipeline[0]["$cursor"], "$cursor")
         safe_reads = all(
             next(k for k in stage if k.startswith("$")) in _CURSOR_ONLY_READS
@@ -181,7 +152,7 @@ def summarize_explain(explain: dict[str, Any]) -> MongoExplainSummary:
     stages, indexes = _plan(planner)
     # Distributed plan statistics have different scope; do not interpret them as local totals.
     if stages is None and "winningPlan" in planner:
-        return MongoExplainSummary()
+        return QuerySummary()
     stats = _document(source.get("executionStats", {}), "executionStats")
     if stats.get("executionSuccess") is False:
         raise ValueError("Explained execution did not succeed")
@@ -194,4 +165,4 @@ def summarize_explain(explain: dict[str, Any]) -> MongoExplainSummary:
         returned = _metric(pipeline[-1], "nReturned")
     if not safe_reads:
         documents, keys, indexes = None, None, None
-    return MongoExplainSummary(elapsed, returned, documents, keys, stages, indexes)
+    return QuerySummary(elapsed, returned, documents, keys, stages, indexes)

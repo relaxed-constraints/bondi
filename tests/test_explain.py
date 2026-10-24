@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 from bson import Int64
 
-from dbrtoolkit.mongodb import MongoExplainSummary, summarize_explain
+from dbrtoolkit.mongodb import summarize_explain
+from dbrtoolkit.summary import QuerySummary
 
 FIXTURES = Path(__file__).parent / "fixtures" / "explain"
 
@@ -31,7 +32,7 @@ def test_real_top_level_explains(name, stages, indexes, returned):
     before = deepcopy(raw)
     summary = summarize_explain(raw)
     stats = raw["executionStats"]
-    assert summary == MongoExplainSummary(
+    assert summary == QuerySummary(
         stats["executionTimeMillis"],
         returned,
         stats["totalDocsExamined"],
@@ -47,7 +48,7 @@ def test_real_top_level_explains(name, stages, indexes, returned):
 @pytest.mark.parametrize("name,returned", [("aggregate_facet", 1), ("aggregate_lookup", 2)])
 def test_real_split_pipelines_do_not_claim_cursor_totals(name, returned):
     summary = summarize_explain(fixture(name))
-    assert summary.documents_returned == returned
+    assert summary.rows_returned == returned
     assert summary.execution_time_ms is None
     assert summary.documents_examined is None
     assert summary.keys_examined is None
@@ -61,7 +62,7 @@ def test_planner_only_and_rejected_candidates():
     del raw["executionStats"]
     raw["queryPlanner"]["rejectedPlans"] = [{"stage": "IXSCAN", "indexName": "rejected"}]
     summary = summarize_explain(raw)
-    assert summary == MongoExplainSummary(plan_stages=("LIMIT", "COLLSCAN"), index_names=())
+    assert summary == QuerySummary(plan_stages=("LIMIT", "COLLSCAN"), index_names=())
 
 
 def test_branching_order_repeated_stages_and_unique_indexes():
@@ -90,7 +91,7 @@ def test_read_free_pipeline_final_output_and_no_time_estimate_sum():
         ]
     }
     summary = summarize_explain(raw)
-    assert summary.documents_returned == 2
+    assert summary.rows_returned == 2
     assert (
         summary.documents_examined
         == raw["stages"][0]["$cursor"]["executionStats"]["totalDocsExamined"]
@@ -100,13 +101,13 @@ def test_read_free_pipeline_final_output_and_no_time_estimate_sum():
     assert summary.execution_time_ms is None
     assert summary.plan_stages == ("LIMIT", "COLLSCAN")
     del raw["stages"][1]["nReturned"]
-    assert summarize_explain(raw).documents_returned is None
+    assert summarize_explain(raw).rows_returned is None
 
 
 def test_unknown_pipeline_prevents_false_index_and_examination_totals():
     raw = {"stages": [{"$cursor": fixture("find_index")}, {"$futureStage": {}, "nReturned": 1}]}
     summary = summarize_explain(raw)
-    assert summary.documents_returned == 1
+    assert summary.rows_returned == 1
     assert summary.index_names is None
     assert summary.keys_examined is None
     assert summary.documents_examined is None
@@ -117,7 +118,7 @@ def test_zero_missing_and_bson_integer_metrics():
         "queryPlanner": {"winningPlan": {"stage": "EOF"}},
         "executionStats": {"nReturned": Int64(0), "executionTimeMillis": Int64(0)},
     }
-    assert summarize_explain(raw) == MongoExplainSummary(0.0, 0, None, None, ("EOF",), ())
+    assert summarize_explain(raw) == QuerySummary(0.0, 0, None, None, ("EOF",), ())
 
 
 @pytest.mark.parametrize(
@@ -131,7 +132,7 @@ def test_zero_missing_and_bson_integer_metrics():
     ],
 )
 def test_unsupported_layouts(raw):
-    assert summarize_explain(raw) == MongoExplainSummary()
+    assert summarize_explain(raw) == QuerySummary()
 
 
 @pytest.mark.parametrize(

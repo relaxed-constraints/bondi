@@ -9,26 +9,27 @@ from dbrtoolkit.mongodb import summarize_explain
 
 # Inside an async function or notebook:
 result = await executor.explain(query, verbosity="executionStats")
-summary = summarize_explain(result.explain)
+summary = summarize_explain(result.raw)
 print(summary.plan_stages)
 print(summary.index_names)
 print(asdict(summary))  # A convenient row for a research table.
 ```
 
-Keep `result.explain` for further analysis. A project can extract additional metrics
+Keep `result.raw` for further analysis. A project can extract additional metrics
 from it without subclassing the summary or changing the executor. Workload results
 can be summarized individually; first check for unstarted entries (`None`) and errors.
 
 ## Field definitions
 
-`MongoExplainSummary` is a frozen dataclass. Each field defaults to `None`, meaning
+`QuerySummary` (from `dbrtoolkit.summary`) is a shared frozen dataclass.
+The definitions below describe how the MongoDB parser populates it. Each field defaults to `None`, meaning
 unavailable or not reliably interpretable. A reported zero stays zero; missing
 values never become zero.
 
 | Field | Meaning |
 | --- | --- |
 | `execution_time_ms` | Server `executionTimeMillis`, including plan selection when applicable. Not client elapsed time, ordinary query latency, or a sum of stage estimates. |
-| `documents_returned` | Final query or pipeline output count. For a split pipeline, use the last stage's `nReturned`, never the cursor's input count. |
+| `rows_returned` | Final query or pipeline output count. For a split pipeline, use the last stage's `nReturned`, never the cursor's input count. |
 | `documents_examined` | Whole-operation document examinations, not distinct documents. |
 | `keys_examined` | Whole-operation index entries examined, not distinct values. |
 | `plan_stages` | Structured winning query plan stage names in root-first order, preserving repetitions. |

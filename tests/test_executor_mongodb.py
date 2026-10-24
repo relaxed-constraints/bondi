@@ -49,7 +49,7 @@ def test_executor_against_mongodb():
             explains = await executor.explain_workload(
                 work, verbosity="executionStats", command_kwargs={"maxTimeMS": 5000}
             )
-            assert all(r.status == "success" and r.explain["ok"] == 1 for r in explains)
+            assert all(r.status == "success" and r.raw["ok"] == 1 for r in explains)
             bad = MongoFindQuery(target, {"$invalidOperator": 1})
             results = await executor.run_workload(
                 Workload([WorkloadEntry(bad), WorkloadEntry(find)])

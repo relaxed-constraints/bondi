@@ -252,7 +252,7 @@ class AsyncMongoDBExecutor:
         start = perf_counter()
         with self._timeout():
             response = await db.command({"explain": inner, "verbosity": verbosity}, **outer_options)
-        return ExecutionResult((perf_counter() - start) * 1000, explain=response)
+        return ExecutionResult((perf_counter() - start) * 1000, raw=response)
 
     async def run_workload(
         self,

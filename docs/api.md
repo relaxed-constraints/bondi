@@ -58,7 +58,7 @@
       heading_level: 2
       members: [from_uri, close, run, run_workload, explain, explain_workload]
 
-::: dbrtoolkit.mongodb.MongoExplainSummary
+::: dbrtoolkit.summary.QuerySummary
     options:
       show_root_heading: true
       heading_level: 2

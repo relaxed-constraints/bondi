@@ -13,6 +13,7 @@ from dbrtoolkit.mongodb import (
     MongoAggregateQuery,
     MongoCollectionRef,
     MongoFindQuery,
+    summarize_explain,
 )
 from dbrtoolkit.workload import Workload, WorkloadEntry
 
@@ -127,7 +128,7 @@ def test_explain_command_routing(aggregate):
         else:
             assert list(command["explain"]["sort"]) == ["b", "a"]
             assert command["explain"]["limit"] == 5
-        assert result.explain == {"ok": 1, "queryPlanner": {}}
+        assert result.raw == {"ok": 1, "queryPlanner": {}}
         assert result.row_count is result.documents is None
 
     asyncio.run(scenario())
@@ -310,7 +311,7 @@ def test_explain_workload_and_empty_workload():
         executor = AsyncMongoDBExecutor(client, continue_on_error=True)
         db.command.side_effect = [{"ok": 1}, OperationFailure("bad")]
         results = await executor.explain_workload(workload(2))
-        assert results[0].explain == {"ok": 1}
+        assert results[0].raw == {"ok": 1}
         assert results[1].status == "error"
         assert await executor.run_workload(Workload()) == []
         with pytest.raises(ValueError):
@@ -370,3 +371,20 @@ def test_result_status():
     assert ExecutionResult(1).status == "success"
     assert ExecutionResult(1, error=TimeoutError()).status == "timeout"
     assert ExecutionResult(1, error=OperationFailure("bad")).status == "error"
+
+
+def test_explain_preserves_raw_without_implicit_parsing():
+    async def scenario():
+        client, db, _ = driver()
+        raw = {"ok": 1, "queryPlanner": {"winningPlan": {"stage": 42}}}
+        db.command.return_value = raw
+        result = await AsyncMongoDBExecutor(client).explain(MongoFindQuery(TARGET, {}))
+        assert result.raw is raw
+        assert result.status == "success"
+        assert result.warnings == ()
+        with pytest.raises(ValueError):
+            summarize_explain(result.raw)
+        assert result.status == "success"
+        assert result.raw is raw
+
+    asyncio.run(scenario())
