@@ -1,6 +1,6 @@
 # Async MongoDB executor
 
-`AsyncMongoDBExecutor` runs or explains individual MongoDB queries and complete
+`AsyncMongoDBExecutor` runs, explains or profiles individual MongoDB queries and complete
 workloads. It uses bounded asyncio workers, not threads. One `ExecutionResult`
 class describes successes and captured workload failures.
 
@@ -34,7 +34,8 @@ first operation's timing. Warmups are not implemented yet.
 result = await executor.run(query, collect_results=True)
 print(result.row_count, result.elapsed_ms)
 
-explanation = await executor.explain(query, verbosity="executionStats")
+plan = await executor.explain(query)
+explanation = await executor.profile(query)
 print(explanation.raw)
 ```
 
@@ -43,9 +44,13 @@ cursor and closes it, including on error or cancellation. `collect_results=False
 is the default: documents are counted but not retained. On success, an empty
 collected result is `[]`; when collection is disabled, documents is None.
 
-Explain accepts queryPlanner (default), executionStats or allPlansExecution and
-returns the raw server response. It does not also execute the normal query. Explain
-statistics are not interchangeable with ordinary execution timing.
+`explain()` always requests `queryPlanner`: it collects a plan without executing
+it for statistics. `profile()` requests `executionStats` by default, or accepts
+`verbosity="allPlansExecution"` for candidate-plan trial statistics. It uses MongoDB's
+explain command, not the database profiler, and issues no additional normal query.
+Both return diagnostics in `raw`, with `documents` and `row_count` left as `None`.
+Call `summarize_explain(result.raw)` explicitly to extract server measurements.
+Profiling timings are not interchangeable with ordinary execution timing.
 
 Single-query methods raise driver/server exceptions. Structural validation occurs
 before database operations. The executor uses input references, not snapshots:
@@ -64,7 +69,7 @@ for entry, result in zip(workload, results):
         print(result.status, result.error)
 ```
 
-`explain_workload()` has the same scheduling/error policy. Results have exactly one
+`explain_workload()` and `profile_workload()` have the same scheduling/error policy. Results have exactly one
 slot per input entry, in input order, including duplicate queries. There is no
 separate workload result object. All entries and query types are validated before
 starting. A custom Query implementation is not automatically executable here:
@@ -105,7 +110,7 @@ arbitrary Python computation or proof the server stopped immediately.
 
 ```python
 await executor.run(query, query_kwargs={"hint": "stars_1"})
-await executor.explain(
+await executor.profile(
     query,
     verbosity="executionStats",
     query_kwargs={"hint": "stars_1"},

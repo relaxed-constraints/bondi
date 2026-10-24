@@ -8,7 +8,7 @@ from dataclasses import asdict
 from dbrtoolkit.mongodb import summarize_explain
 
 # Inside an async function or notebook:
-result = await executor.explain(query, verbosity="executionStats")
+result = await executor.profile(query, verbosity="executionStats")
 summary = summarize_explain(result.raw)
 print(summary.plan_stages)
 print(summary.index_names)

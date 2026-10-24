@@ -112,7 +112,7 @@ def test_explain_command_routing(aggregate):
             if aggregate
             else MongoFindQuery(TARGET, {}, sort=(("b", -1), ("a", 1)), limit=5)
         )
-        result = await AsyncMongoDBExecutor(client).explain(
+        result = await AsyncMongoDBExecutor(client).profile(
             query,
             verbosity="executionStats",
             query_kwargs={"hint": "idx"},
@@ -317,7 +317,7 @@ def test_explain_workload_and_empty_workload():
         with pytest.raises(ValueError):
             await executor.explain_workload(workload(1), command_kwargs={"check": False})
         with pytest.raises(ValueError):
-            await executor.explain_workload(workload(1), verbosity="invalid")
+            await executor.profile_workload(workload(1), verbosity="invalid")
 
     asyncio.run(scenario())
 
@@ -386,5 +386,59 @@ def test_explain_preserves_raw_without_implicit_parsing():
             summarize_explain(result.raw)
         assert result.status == "success"
         assert result.raw is raw
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(
+    "method,verbosity",
+    [
+        ("explain", "queryPlanner"),
+        ("profile", "executionStats"),
+    ],
+)
+@pytest.mark.parametrize("aggregate", [False, True])
+def test_diagnostic_modes(method, verbosity, aggregate):
+    async def scenario():
+        client, db, _ = driver()
+        query = MongoAggregateQuery(TARGET, []) if aggregate else MongoFindQuery(TARGET, {})
+        result = await getattr(AsyncMongoDBExecutor(client), method)(query)
+        db.command.assert_awaited_once()
+        assert db.command.call_args.args[0]["verbosity"] == verbosity
+        assert result.row_count is result.documents is None
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("method", ["explain_workload", "profile_workload"])
+@pytest.mark.parametrize("keep_going", [False, True])
+def test_diagnostic_workload_errors(method, keep_going):
+    async def scenario():
+        client, db, _ = driver()
+        db.command.side_effect = [ExecutionTimeout("slow", code=50), {"ok": 1}]
+        results = await getattr(AsyncMongoDBExecutor(client, continue_on_error=keep_going), method)(
+            workload(2)
+        )
+        assert results[0].status == "timeout"
+        assert (results[1].status == "success") if keep_going else results[1] is None
+        assert db.command.await_count == (2 if keep_going else 1)
+
+    asyncio.run(scenario())
+
+
+def test_profile_verbosity_and_reserved_options():
+    async def scenario():
+        client, db, _ = driver()
+        executor = AsyncMongoDBExecutor(client)
+        for kwargs in (
+            {"verbosity": "queryPlanner"},
+            {"query_kwargs": {"verbosity": "queryPlanner"}},
+            {"command_kwargs": {"verbosity": "queryPlanner"}},
+        ):
+            with pytest.raises(ValueError):
+                await executor.profile_workload(workload(2), **kwargs)
+        db.command.assert_not_awaited()
+        await executor.profile_workload(workload(2), verbosity="allPlansExecution")
+        assert all(c.args[0]["verbosity"] == "allPlansExecution" for c in db.command.call_args_list)
 
     asyncio.run(scenario())

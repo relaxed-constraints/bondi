@@ -17,7 +17,7 @@ from dbrtoolkit.mongodb.query import MongoFindQuery
 from dbrtoolkit.workload import Workload
 
 MongoQuery = MongoFindQuery | MongoAggregateQuery
-Verbosity = Literal["queryPlanner", "executionStats", "allPlansExecution"]
+ProfileVerbosity = Literal["executionStats", "allPlansExecution"]
 
 # Driver/server operation failures are data; invalid API use and programming
 # errors (TypeError, ConfigurationError, InvalidOperation, etc.) must propagate.
@@ -54,7 +54,7 @@ def _options(value: Mapping[str, Any] | None, forbidden: set[str], name: str) ->
 
 
 class AsyncMongoDBExecutor:
-    """Run/explain native queries and single-backend workloads using PyMongo async.
+    """Run, explain and profile native queries and single-backend workloads using PyMongo async.
 
     Args:
         client: Borrowed AsyncMongoClient; caller retains ownership and closes it.
@@ -154,9 +154,9 @@ class AsyncMongoDBExecutor:
         )
 
     @staticmethod
-    def _verbosity(value: str) -> None:
-        if value not in ("queryPlanner", "executionStats", "allPlansExecution"):
-            raise ValueError("Unsupported explain verbosity")
+    def _profile_verbosity(value: str) -> None:
+        if value not in ("executionStats", "allPlansExecution"):
+            raise ValueError("Unsupported profile verbosity")
 
     async def run(
         self,
@@ -218,21 +218,45 @@ class AsyncMongoDBExecutor:
         self,
         query: MongoQuery,
         *,
-        verbosity: Verbosity = "queryPlanner",
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> ExecutionResult:
-        """Collect a raw explain document without parsing it or running a second query.
+        """Collect a planning-only queryPlanner explain in result.raw.
 
-        query_kwargs supplies native command fields inside find/aggregate (not
-        cursor options). command_kwargs goes to Database.command for the outer
-        explain request, e.g. maxTimeMS. Represented fields and verbosity cannot
-        be overridden. Timing measures the explain request, not normal query latency.
-        Driver/server exceptions propagate. Execution-statistics verbosity performs
-        server work according to MongoDB's explain semantics.
+        Does not execute the winning plan for execution statistics. Native inner
+        command options go in query_kwargs; outer command options (e.g. maxTimeMS)
+        go in command_kwargs. Reserved fields cannot override the operation mode.
+        Parsing is explicit. Driver/server exceptions propagate.
         """
+        return await self._explain_command(query, "queryPlanner", query_kwargs, command_kwargs)
+
+    async def profile(
+        self,
+        query: MongoQuery,
+        *,
+        verbosity: ProfileVerbosity = "executionStats",
+        query_kwargs: Mapping[str, Any] | None = None,
+        command_kwargs: Mapping[str, Any] | None = None,
+    ) -> ExecutionResult:
+        """Execute an instrumented explain and retain its diagnostics in result.raw.
+
+        Defaults to executionStats; allPlansExecution also includes candidate-plan
+        trial statistics. This does not enable MongoDB's database profiler. It returns
+        no query documents or row_count; use summarize_explain(raw) explicitly for
+        server counts. elapsed_ms measures this diagnostic request, not ordinary run
+        latency. Options and exception handling follow explain().
+        """
+        self._profile_verbosity(verbosity)
+        return await self._explain_command(query, verbosity, query_kwargs, command_kwargs)
+
+    async def _explain_command(
+        self,
+        query: MongoQuery,
+        verbosity: str,
+        query_kwargs: Mapping[str, Any] | None,
+        command_kwargs: Mapping[str, Any] | None,
+    ) -> ExecutionResult:
         self._validate_query(query)
-        self._verbosity(verbosity)
         inner_options = _options(query_kwargs, _QUERY_FIELDS, "query_kwargs")
         outer_options = _options(command_kwargs, _COMMAND_FIELDS, "command_kwargs")
         if isinstance(query, MongoFindQuery):
@@ -280,21 +304,39 @@ class AsyncMongoDBExecutor:
         self,
         workload: Workload,
         *,
-        verbosity: Verbosity = "queryPlanner",
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Explain entries with the same scheduling and error policy as run_workload.
+        """Collect planning-only explains with run_workload's scheduling/error policy.
 
-        Prevalidates verbosity, supported query types and reserved-option collisions
-        before issuing any operations. Successful results contain raw explain documents.
+        Validate all query types and reserved options before issuing operations.
         """
-        self._verbosity(verbosity)
         inner = _options(query_kwargs, _QUERY_FIELDS, "query_kwargs")
         outer = _options(command_kwargs, _COMMAND_FIELDS, "command_kwargs")
         return await self._workload(
             workload,
-            lambda query: self.explain(
+            lambda query: self.explain(query, query_kwargs=inner, command_kwargs=outer),
+        )
+
+    async def profile_workload(
+        self,
+        workload: Workload,
+        *,
+        verbosity: ProfileVerbosity = "executionStats",
+        query_kwargs: Mapping[str, Any] | None = None,
+        command_kwargs: Mapping[str, Any] | None = None,
+    ) -> list[ExecutionResult | None]:
+        """Profile entries with run_workload's concurrency and failure policy.
+
+        Validate verbosity, query types and reserved options before issuing operations.
+        Results contain raw diagnostics, without automatic parsing or query documents.
+        """
+        self._profile_verbosity(verbosity)
+        inner = _options(query_kwargs, _QUERY_FIELDS, "query_kwargs")
+        outer = _options(command_kwargs, _COMMAND_FIELDS, "command_kwargs")
+        return await self._workload(
+            workload,
+            lambda query: self.profile(
                 query, verbosity=verbosity, query_kwargs=inner, command_kwargs=outer
             ),
         )

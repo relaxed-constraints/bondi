@@ -134,7 +134,9 @@ one via from_uri, closed through async context management or close(). Inputs are
 used by reference and must not be mutated during execution. Workloads prevalidate
 all query types and use bounded asyncio workers, returning input-aligned lists of
 ExecutionResult or None for unstarted entries. Successful runs consume all cursor
-batches, optionally retaining documents. Explain returns the raw response.
+batches, optionally retaining documents. Explain collects queryPlanner diagnostics; profile collects executionStats (or
+allPlansExecution) diagnostics. Both return raw responses, without query rows or
+automatic parsing, and have corresponding workload methods.
 
 Expected database/timeout failures become workload results; single operations raise.
 Stop-on-error drains in-flight operations but stops scheduling. Caller cancellation
