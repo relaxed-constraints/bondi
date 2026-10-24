@@ -181,3 +181,23 @@ Execution results store native diagnostics in `raw`, optional collected output i
 `documents` (including scalar or array rows), and nonfatal operation `warnings`.
 They do not contain a parsed summary. Backend parsers remain independently usable
 on saved responses; unknown or non-comparable measurements remain `None`.
+
+
+## Async Couchbase executor
+
+The optional `couchbase` extra supplies the SDK; importing native queries does not
+require it. `AsyncCouchbaseExecutor` supports borrowed clusters and an awaited
+`from_uri()` factory for owned clusters. All six operations retain the established
+workload ordering, concurrency and error policy. No common public executor base
+class is introduced.
+
+Run requests basic metrics; explain prefixes SQL++ with EXPLAIN and returns the
+native plan; profile requests TIMINGS and returns execution metadata. Run/profile
+fully consume rows and optionally retain them, including scalar and array rows.
+Missing detailed profiling yields a warning and preserves basic metrics. Metadata
+uses public SDK accessors converted to JSON-compatible values; profile trees stay
+native. Summaries remain explicit and Couchbase parsing is the next phase.
+
+SDK consistency defaults remain in force unless query_kwargs overrides them.
+Per-query deadlines cover consumption and SDK execution. Statement bindings,
+context and operation modes cannot be overridden through the options escape hatch.

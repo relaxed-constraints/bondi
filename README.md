@@ -7,7 +7,9 @@ generation, database execution, explain parsing and index management. Research
 algorithms and experiment pipelines live in separate repositories that depend on
 this toolkit.
 
-**Status:** foundation, `MongoCollectionRef`, `MongoFindQuery`, `MongoAggregateQuery` and `CouchbaseQuery` implemented. The shared query protocol, in-memory workloads and async MongoDB executor are available.
+**Status:** foundation, `MongoCollectionRef`, `MongoFindQuery`, `MongoAggregateQuery` and `CouchbaseQuery` implemented. The shared query protocol, in-memory workloads and async MongoDB/Couchbase executors are available.
+Couchbase execution requires `uv sync --extra couchbase`; see the
+[Couchbase executor guide](docs/couchbase-executor.md).
 See the [executor guide](docs/executor.md) for database execution and testing. See the [collection reference guide](docs/collection-reference.md).
 
 ## Start developing
@@ -42,7 +44,8 @@ uv run --group docs mkdocs build --strict
 ```
 
 API reference pages are generated from Python docstrings using mkdocstrings.
-Tutorial notebooks will be added when there is a coherent working example.
+Tutorials are available in `notebooks/workload_demo.ipynb` (MongoDB) and
+`notebooks/couchbase_demo.ipynb` (Couchbase).
 
 ## Repository layout
 

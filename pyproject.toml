@@ -8,6 +8,9 @@ dependencies = [
     "pymongo>=4.13,<5",
 ]
 
+[project.optional-dependencies]
+couchbase = ["couchbase>=4.6.3,<5"]
+
 [build-system]
 requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"

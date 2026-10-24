@@ -22,7 +22,9 @@ The [workload guide](workloads.md) explains the Query protocol, reference owners
 and single-backend validation.
 
 The [executor guide](executor.md) covers async MongoDB execution, raw explains and
-concurrent workloads. Database connections are needed only for execution.
+concurrent workloads. The [Couchbase executor guide](couchbase-executor.md) shows
+the same operations for SQL++, including optional Enterprise profiling. Database
+connections are needed only for execution.
 
 ## Where to start
 

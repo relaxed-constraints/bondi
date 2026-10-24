@@ -12,6 +12,7 @@ nav:
       - Couchbase query: couchbase-query.md
       - Queries and workloads: workloads.md
       - Async MongoDB executor: executor.md
+      - Async Couchbase executor: couchbase-executor.md
       - MongoDB explain summaries: explain.md
   - Documentation walkthrough: documentation.md
   - Architecture: architecture.md

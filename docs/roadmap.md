@@ -60,8 +60,8 @@ shared `QuerySummary`. There is no nested summary or summary-merging API.
 | --- | --- | --- |
 | 1 | Shared result contract: introduce `QuerySummary`, rename the output count to `rows_returned`, replace `ExecutionResult.explain` with `raw`, allow arbitrary output rows and add `warnings`. Adapt MongoDB parsing, examples and tests. | Implemented |
 | 2 | Split MongoDB operations into `run()`, planning-only `explain()` and instrumented `profile()`, plus the three workload methods. Keep parsing separate. | Implemented |
-| 3 | Add `AsyncCouchbaseExecutor` with the same six methods, optional SDK dependency, native metadata, deadlines, concurrency and failure handling. Support Enterprise profiling and report unavailable detailed profiling explicitly. | Next |
-| 4 | Add Couchbase offline `summarize_explain()` and `summarize_execution()` parsers, fixtures and student examples, using `QuerySummary` and conservative metric definitions. | Planned |
+| 3 | Add `AsyncCouchbaseExecutor` with the same six methods, optional SDK dependency, native metadata, deadlines, concurrency and failure handling. Support Enterprise profiling and report unavailable detailed profiling explicitly. | Implemented |
+| 4 | Add Couchbase offline `summarize_explain()` and `summarize_execution()` parsers, fixtures and student examples, using `QuerySummary` and conservative metric definitions. | Next |
 
 Phase 2 separates planning from instrumented execution. Replace
 `explain(..., verbosity="executionStats")` with `profile(...)`, and use

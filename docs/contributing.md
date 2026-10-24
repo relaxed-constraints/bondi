@@ -42,9 +42,11 @@ complete workflow exists; exploratory notebooks belong in research repositories.
 
 ## Test boundaries
 
-The current suite checks package installation/import, collection-reference contracts
-and Python docstring examples. Unit tests should remain database-independent. Live backend tests will require explicit opt-in and
-isolated test data when those backends are introduced.
+The offline suite checks query contracts, persistence, parsers and executor behavior
+at SDK boundaries. Run `uv run --extra couchbase pytest` to include Couchbase SDK
+tests; they are skipped without the optional dependency. Live backend tests require
+explicit environment-variable opt-in. See the executor guides for setup; Couchbase
+checks use read-only queries against the initialized Compose demo data.
 
 See the [documentation walkthrough](documentation.md) for a concrete docstring-to-site example.
 

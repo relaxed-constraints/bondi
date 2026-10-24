@@ -12,7 +12,8 @@ class ExecutionResult:
 
     Args:
         elapsed_ms: Client-observed monotonic elapsed time, not server execution time.
-        row_count: Fully consumed output-row count for a successful run; otherwise None.
+        row_count: Fully consumed output-row count for a successful run or Couchbase
+            profile; otherwise None.
         documents: Collected output rows when requested; otherwise None. Rows may be
             documents, scalars or arrays, depending on the backend.
         raw: Backend-native diagnostic response or execution metadata when available.
@@ -33,11 +34,25 @@ class ExecutionResult:
 
     @property
     def status(self) -> Literal["success", "timeout", "error"]:
-        """Derive status from the exception, including PyMongo's timeout flag."""
+        """Derive status from built-in, PyMongo and optional Couchbase timeout exceptions."""
         if self.error is None:
             return "success"
         if isinstance(self.error, TimeoutError) or (
             isinstance(self.error, PyMongoError) and self.error.timeout
         ):
             return "timeout"
+        try:
+            from couchbase.exceptions import (
+                AmbiguousTimeoutException,
+                TimeoutException,
+                UnAmbiguousTimeoutException,
+            )
+        except ImportError:
+            pass  # Couchbase execution is optional.
+        else:
+            if isinstance(
+                self.error,
+                (TimeoutException, AmbiguousTimeoutException, UnAmbiguousTimeoutException),
+            ):
+                return "timeout"
         return "error"

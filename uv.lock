@@ -21,11 +21,51 @@ wheels = [
 ]
 
 [[package]]
+name = "couchbase"
+version = "4.6.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/23/cc/3bbd2f3fde058b5720be6f44d9622bad34c7fc24cc9aa9e7cc5b3968356a/couchbase-4.6.3.tar.gz", hash = "sha256:c027821d1d6a89ffd80f21d81903cd3f6ba164c0217c022ca3323748369f8789", size = 6725143 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/3a/5af724236f570824637a320d7e684d8d86b78c82bf0879028047fd30749a/couchbase-4.6.3-cp311-cp311-macosx_10_15_x86_64.whl", hash = "sha256:e254169ad28fec524ee6a9f1b3425351e02583071a6747d5da0d4e0b339ff1dd", size = 5796510 },
+    { url = "https://files.pythonhosted.org/packages/6a/f8/1d42bc683e03ed408a1ecef006cbbc91c5984f604bb03543716a5e01efee/couchbase-4.6.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:67fb01084e9a8b0c6f449349c9a6786854c4883266e02cc542ae6ec118a1baf1", size = 4937606 },
+    { url = "https://files.pythonhosted.org/packages/0d/13/c629ffef038f82d3051fdc92aa30995725300b30c1935642c32ee6456c72/couchbase-4.6.3-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:3648461c714e2396db2fd0c7d3301dc38704314ee679de2b04b2e67444675ba6", size = 5760169 },
+    { url = "https://files.pythonhosted.org/packages/30/6f/11e4e1925e317bb1f1f1efc7b73ba17e37dd9a5debefa191a57696d8a499/couchbase-4.6.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5b91ecf488f6920ffa178bee740febaeddce717519cb1440495dcb6adad28b1d", size = 6045811 },
+    { url = "https://files.pythonhosted.org/packages/68/61/7bca35ee6bee0b284c0f64cc17127422d4a6d55640cd41d31329ce89eca1/couchbase-4.6.3-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:f79011b87553b13d34b90011403801d9102652b38e1710644dc7b71f5ee31f31", size = 7596559 },
+    { url = "https://files.pythonhosted.org/packages/52/92/1fc30af14231012d3c7013b12fbb55789013719c3b24e30fd403825362e0/couchbase-4.6.3-cp311-cp311-win_amd64.whl", hash = "sha256:d02c32d00024c4fcebde37896c916c20771fb6f8030afabb90014c18c2e3acb1", size = 5140282 },
+    { url = "https://files.pythonhosted.org/packages/3d/91/93550a39b3b09d4ebc3ad7c5e80cf10d52501a52ed1d88b0bdabb392929f/couchbase-4.6.3-cp312-cp312-macosx_10_15_x86_64.whl", hash = "sha256:9ad48c028768e681371aaac3d358d1659343a3a9cdf45b6a55e715bc97bb7b5a", size = 5795320 },
+    { url = "https://files.pythonhosted.org/packages/48/3e/a75309536c863b9e2b793899d54fcd0f264307112797fa31e5ace3821a6c/couchbase-4.6.3-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:de571b1fba505166ce37f578d0ac9ce5ebe2e192e9379a97e8fff4111b63eeff", size = 4937836 },
+    { url = "https://files.pythonhosted.org/packages/f3/d1/6d8c0b9b0953f95a9eafc0de6869cd086914a8f2aec64d959e48ed72b7ce/couchbase-4.6.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:1f223cd0dfab67843c48b48e94a360d3e737d3809203d76e8b9a0400bedb48bd", size = 5765288 },
+    { url = "https://files.pythonhosted.org/packages/11/16/0019fc07afedcaacae030405e175419aa5040492927b492a2ddb687ddd94/couchbase-4.6.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:c7457ccfc2d3ad82bafebae940c448e62dca66ba606c1d215616acec9efebaeb", size = 6052368 },
+    { url = "https://files.pythonhosted.org/packages/75/db/1417353f538ceac11734c6ee60682f6739987a5497cf9c29f74533d122d1/couchbase-4.6.3-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:d7062e51ab779752d1074ef601b70d7f850167296fb17f2dd89242f92f2842fb", size = 7601788 },
+    { url = "https://files.pythonhosted.org/packages/e6/c5/b170415bbc34676d6bba5e1364fef2f08e6779ab469a472160faf16b490d/couchbase-4.6.3-cp312-cp312-win_amd64.whl", hash = "sha256:fdda5b864f2924e5b4990874449cb291555b7829fb95357d0d675719c583f65e", size = 5138010 },
+    { url = "https://files.pythonhosted.org/packages/38/e9/e802bc449fd95d774da26dd28fc9fab89ec13b89558e4d431f310ff8a87e/couchbase-4.6.3-cp313-cp313-macosx_10_15_x86_64.whl", hash = "sha256:8d85813f6605c7cbdb28524352fbb90f1a7aba5a1dcc64968f881f77da398038", size = 5711442 },
+    { url = "https://files.pythonhosted.org/packages/4c/f7/f074d8107145ecbc62faed0ee539be5734ca8a62a3779741494c1f09d807/couchbase-4.6.3-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:f030959329a8cded5864f94e68398295b8ab9b1adbcbb605cb3cf5dd44410f36", size = 4937833 },
+    { url = "https://files.pythonhosted.org/packages/87/7c/3ba6b8dc8613f00dab2821adfdcf4479388e1b97e29089ad16da37cb4ecb/couchbase-4.6.3-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:5505ec2d1624b5689a4b10081b49a7c676bb9d102b639b15b6b49b088bee6e7d", size = 5765293 },
+    { url = "https://files.pythonhosted.org/packages/c8/7e/de53d494b19022a1ca4c8546956c89b869bccd9b0d692b2d53593d69f3e1/couchbase-4.6.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:23d2987a143fbd08cd2acb4420d90384e0d91200f5b09a7416da77d3162622ca", size = 6052364 },
+    { url = "https://files.pythonhosted.org/packages/54/97/1a2b42f76f8a6c36b703e60c369c73725398acd96d0d2fba5ab499e102e1/couchbase-4.6.3-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:712c09d99e3f345c19308aea51b295fa060b4ad3a3a2342e39bc51cf016e58be", size = 7601787 },
+    { url = "https://files.pythonhosted.org/packages/5c/15/37091adbc2c5c772b24eb12db422f94c0cce2bf1da79eda99911491a5e4f/couchbase-4.6.3-cp313-cp313-win_amd64.whl", hash = "sha256:668f81b5de543d00622dacd468c1a3f00b3d784fd872d82f9467a371292d1be6", size = 5136433 },
+    { url = "https://files.pythonhosted.org/packages/20/5a/c82c5efc20dd5181e5fcd53aeaf9cea6160230591501870e8f18a1c941a0/couchbase-4.6.3-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:252ac4f00d981a8ab0843d39e40a7f3c25d49e6f3435421b0d60627de547f211", size = 5712672 },
+    { url = "https://files.pythonhosted.org/packages/71/96/fa69d089251edf64505668063b9d76b92fa93cdb44ad29f64fdc82c6b661/couchbase-4.6.3-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:19e4ae64a5dcfaf39946cb5d895c0fc5b02ae726429ed237d700433afd49943d", size = 4937977 },
+    { url = "https://files.pythonhosted.org/packages/2b/0c/2c591a3340a13076fe542f7f59f808e53e90cd9f9d67988cff1d7dc6261a/couchbase-4.6.3-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:a9ac2f2569da20bd2804440a71a21cf08fcaba378332f5be6c9a7523e9b34f2d", size = 5765538 },
+    { url = "https://files.pythonhosted.org/packages/6c/90/e20b5d1fda20c1bba22c210efd20d8e223dfbb41cbf88006447131fdd759/couchbase-4.6.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bc43af4ce2bd16d6f3b9f804df9c4f7315cc8ce2ce2664928d29513f8487e550", size = 6052195 },
+    { url = "https://files.pythonhosted.org/packages/88/bf/e254e91dcc7e14ca238c3af145cc25c30aa9258f03a0194ae1d85d6d1843/couchbase-4.6.3-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:52b00223dec10299f66d7190626d35e69b2804a222b2a409c10f143a9708e77d", size = 7602227 },
+    { url = "https://files.pythonhosted.org/packages/bb/22/bf077d5b6aff88e0915278b7b87ce8c2d2214bbc8799f0a3137bc01eb731/couchbase-4.6.3-cp314-cp314-win_amd64.whl", hash = "sha256:e06d5dd6ebf4997fe32abe8053ee57b5a2efbf357a5f2737407d6d5695f4b060", size = 5282207 },
+]
+
+[[package]]
 name = "dbrtoolkit"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pymongo" },
+]
+
+[package.optional-dependencies]
+couchbase = [
+    { name = "couchbase" },
 ]
 
 [package.dev-dependencies]
@@ -39,7 +79,11 @@ docs = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pymongo", specifier = ">=4.13,<5" }]
+requires-dist = [
+    { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.6.3,<5" },
+    { name = "pymongo", specifier = ">=4.13,<5" },
+]
+provides-extras = ["couchbase"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -603,6 +647,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050 },
+]
+
+[[package]]
+name = "typing-extensions"
+version = "4.16.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/cc/6253133b5bb138fc3306cebfbda2c520f545d36b5be2c7255cc528bb45d6/typing_extensions-4.16.0.tar.gz", hash = "sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5", size = 113555 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl", hash = "sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8", size = 45571 },
 ]
 
 [[package]]

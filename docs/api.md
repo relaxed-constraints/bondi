@@ -56,7 +56,7 @@
     options:
       show_root_heading: true
       heading_level: 2
-      members: [from_uri, close, run, run_workload, explain, explain_workload]
+      members: [from_uri, close, run, run_workload, explain, explain_workload, profile, profile_workload]
 
 ::: dbrtoolkit.summary.QuerySummary
     options:
@@ -68,3 +68,10 @@
     options:
       show_root_heading: true
       heading_level: 2
+
+
+::: dbrtoolkit.couchbase.AsyncCouchbaseExecutor
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [from_uri, close, run, run_workload, explain, explain_workload, profile, profile_workload]
