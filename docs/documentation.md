@@ -65,3 +65,18 @@ option, the `>>>` examples in the Python source.
 
 Building is local; it does not publish the documentation. Hosting can be chosen
 later.
+
+
+## Documentation theme
+
+The site uses Material for MkDocs, installed through the `docs` dependency group.
+Theme settings live in `mkdocs.yml`. We retain the existing navigation and enable
+code-copy buttons. `font: false` uses system fonts without fetching Google Fonts.
+
+After a dependency or theme change, restart the local server:
+
+```sh
+uv run --group docs mkdocs serve
+```
+
+The theme affects documentation only; installing the toolkit does not install it.

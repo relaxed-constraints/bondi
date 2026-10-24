@@ -1,5 +1,10 @@
 site_name: Database Research Toolkit
 site_description: Python building blocks for reproducible database research
+theme:
+  name: material
+  font: false
+  features:
+    - content.code.copy
 watch:
   - src
 nav:
