@@ -208,3 +208,20 @@ context and operation modes cannot be overridden through the options escape hatc
 Each backend exposes one `summarize(raw)` function. `None` denotes absent diagnostics
 and yields an empty summary; callers check execution status separately. Unknown or
 malformed responses raise, while unsupported plan layouts retain available metrics.
+
+
+## Observed schemas
+
+Schema inference accepts iterable Python dictionaries and has no database interactions
+or mdbrtools dependency. Schema, FieldSchema and TypeSchema use composition. Exact
+structured paths distinguish field names from array traversal, with escaped dotted
+strings for convenience. Counts describe occurrences; missingness is relative to
+immediate parent objects, not root-document coverage. Null and missing are distinct.
+
+Retention is fixed per schema: none by default, distinct scalar values, or full
+value frequencies. Values are separated by type and exposed read-only. Mixed
+primitive/container paths remain in primitive_fields. Updates avoid sorting or
+rebuilding the entire tree; parent-derived missing counts remain live. Per-document
+validation precedes accumulation, so invalid documents cannot partially update
+counts. Memory grows with schema size and, when enabled, distinct retained values.
+Sampling policies and backend query semantics stay outside the schema module.

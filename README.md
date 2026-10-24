@@ -46,6 +46,8 @@ uv run --group docs mkdocs build --strict
 API reference pages are generated from Python docstrings using mkdocstrings.
 Tutorials are available in `notebooks/workload_demo.ipynb` (MongoDB) and
 `notebooks/couchbase_demo.ipynb` (Couchbase).
+For database-independent inference and inspection, see the [schema guide](docs/schemas.md)
+and `notebooks/schema_demo.ipynb`.
 
 ## Repository layout
 

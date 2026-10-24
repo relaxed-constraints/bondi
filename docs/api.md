@@ -81,3 +81,22 @@
     options:
       show_root_heading: true
       heading_level: 2
+
+
+::: dbrtoolkit.schema.Schema
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [from_documents, update, document_count, value_mode, fields, flat_fields, primitive_fields, __getitem__]
+
+::: dbrtoolkit.schema.FieldSchema
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [types, parent_count, missing_count, has_missing, is_multi_type]
+
+::: dbrtoolkit.schema.TypeSchema
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [fields, values, value_counts]

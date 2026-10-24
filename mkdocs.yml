@@ -10,6 +10,7 @@ nav:
       - Find query: find-query.md
       - Aggregation query: aggregate-query.md
       - Couchbase query: couchbase-query.md
+      - Inspecting schemas: schemas.md
       - Queries and workloads: workloads.md
       - Async MongoDB executor: executor.md
       - Async Couchbase executor: couchbase-executor.md

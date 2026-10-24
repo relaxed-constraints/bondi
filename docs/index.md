@@ -26,6 +26,9 @@ concurrent workloads. The [Couchbase executor guide](couchbase-executor.md) show
 the same operations for SQL++, including optional Enterprise profiling. Database
 connections are needed only for execution.
 
+The [schema guide](schemas.md) shows how to inspect nested Python documents, count
+missing fields and optionally retain typed values without a database.
+
 ## Where to start
 
 - [Architecture](architecture.md): scope and agreed design boundaries.

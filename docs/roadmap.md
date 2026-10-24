@@ -34,7 +34,10 @@ Step 9 is implemented: optional Docker environments, shared synthetic sample dat
 async Couchbase execution and explicit explain/execution summaries. Community basic
 metrics and Enterprise detailed profiles are covered by saved fixtures and live tests.
 Complex Couchbase plan layouts and examination-counter interpretation remain deferred.
-Step 10 (sampling and schemas) is the next discussion.
+Step 10 now includes database-independent schema inference, explicit paths, incremental
+counts and optional distinct/full value retention. Database sampling helpers remain
+deferred; executors can supply document batches. Bounded value sampling, persistence
+and merging are also deferred.
 
 ## First functional milestone
 
