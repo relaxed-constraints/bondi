@@ -1,0 +1,775 @@
+{
+  "sdk": "4.6.3",
+  "enterprise": {
+    "explain": {
+      "statement": "EXPLAIN SELECT b.* FROM `demo`.`_default`.`business` b WHERE city = $city AND review_count >= $minimum",
+      "rows": [
+        {
+          "plan": {
+            "#operator": "Sequence",
+            "~children": [
+              {
+                "#operator": "IndexScan3",
+                "as": "b",
+                "bucket": "demo",
+                "index": "city_stars",
+                "index_id": "c597330af1f94d1e",
+                "index_projection": {
+                  "primary_key": true
+                },
+                "keyspace": "business",
+                "namespace": "default",
+                "scope": "_default",
+                "spans": [
+                  {
+                    "exact": true,
+                    "range": [
+                      {
+                        "high": "$city",
+                        "inclusion": 3,
+                        "index_key": "`city`",
+                        "low": "$city"
+                      }
+                    ]
+                  }
+                ],
+                "using": "gsi"
+              },
+              {
+                "#operator": "Fetch",
+                "as": "b",
+                "bucket": "demo",
+                "keyspace": "business",
+                "namespace": "default",
+                "scope": "_default"
+              },
+              {
+                "#operator": "Parallel",
+                "~child": {
+                  "#operator": "Sequence",
+                  "~children": [
+                    {
+                      "#operator": "Filter",
+                      "condition": "(((`b`.`city`) = $city) and ($minimum <= (`b`.`review_count`)))"
+                    },
+                    {
+                      "#operator": "InitialProject",
+                      "discard_original": true,
+                      "preserve_order": true,
+                      "result_terms": [
+                        {
+                          "expr": "`b`",
+                          "star": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "text": "SELECT b.* FROM `demo`.`_default`.`business` b WHERE city = $city AND review_count >= $minimum"
+        }
+      ],
+      "status": "QueryStatus.SUCCESS",
+      "warnings": [],
+      "profile": null,
+      "metrics": {
+        "elapsed_ms": 0.5900000000000001,
+        "execution_ms": 0.545,
+        "result_count": 1,
+        "result_size": 887
+      }
+    },
+    "ordinary": {
+      "statement": "SELECT b.* FROM `demo`.`_default`.`business` b WHERE city = $city AND review_count >= $minimum",
+      "rows": [
+        {
+          "business_id": "demo-001",
+          "categories": [
+            "Cafe",
+            "Breakfast"
+          ],
+          "city": "Sydney",
+          "name": "Harbour Cafe",
+          "review_count": 120,
+          "stars": 4.5
+        }
+      ],
+      "status": "QueryStatus.SUCCESS",
+      "warnings": [],
+      "profile": null,
+      "metrics": {
+        "elapsed_ms": 1.0430000000000001,
+        "execution_ms": 1.027,
+        "result_count": 1,
+        "result_size": 129
+      }
+    },
+    "phases": {
+      "statement": "SELECT b.* FROM `demo`.`_default`.`business` b WHERE city = $city AND review_count >= $minimum",
+      "rows": [
+        {
+          "business_id": "demo-001",
+          "categories": [
+            "Cafe",
+            "Breakfast"
+          ],
+          "city": "Sydney",
+          "name": "Harbour Cafe",
+          "review_count": 120,
+          "stars": 4.5
+        }
+      ],
+      "status": "QueryStatus.SUCCESS",
+      "warnings": [],
+      "profile": {
+        "cpuTime": "40.334\u00b5s",
+        "phaseCounts": {
+          "fetch": 3,
+          "filter": 1,
+          "indexScan": 3,
+          "indexScan.GSI": 3
+        },
+        "phaseOperators": {
+          "authorize": 1,
+          "fetch": 1,
+          "filter": 1,
+          "indexScan": 1,
+          "indexScan.GSI": 1,
+          "project": 1,
+          "stream": 1
+        },
+        "phaseTimes": {
+          "authorize": "1.834\u00b5s",
+          "fetch": "101.502\u00b5s",
+          "filter": "10.04\u00b5s",
+          "indexScan": "411.042\u00b5s",
+          "indexScan.GSI": "411.042\u00b5s",
+          "instantiate": "4.708\u00b5s",
+          "parse": "163.5\u00b5s",
+          "plan": "110.375\u00b5s",
+          "plan.index.metadata": "4.917\u00b5s",
+          "plan.keyspace.metadata": "1.25\u00b5s",
+          "project": "9.041\u00b5s",
+          "run": "557.958\u00b5s",
+          "stream": "5.458\u00b5s"
+        },
+        "requestTime": "2026-10-24T00:47:54.557Z",
+        "servicingHost": "127.0.0.1:8091"
+      },
+      "metrics": {
+        "elapsed_ms": 0.86,
+        "execution_ms": 0.843,
+        "result_count": 1,
+        "result_size": 129
+      }
+    },
+    "timings": {
+      "statement": "SELECT b.* FROM `demo`.`_default`.`business` b WHERE city = $city AND review_count >= $minimum",
+      "rows": [
+        {
+          "business_id": "demo-001",
+          "categories": [
+            "Cafe",
+            "Breakfast"
+          ],
+          "city": "Sydney",
+          "name": "Harbour Cafe",
+          "review_count": 120,
+          "stars": 4.5
+        }
+      ],
+      "status": "QueryStatus.SUCCESS",
+      "warnings": [],
+      "profile": {
+        "cpuTime": "45.546\u00b5s",
+        "executionTimings": {
+          "#operator": "Authorize",
+          "#planPreparedTime": "2026-10-24T00:47:54.561Z",
+          "#stats": {
+            "#phaseSwitches": 4,
+            "execTime": "584ns",
+            "servTime": "1.292\u00b5s"
+          },
+          "privileges": {
+            "List": [
+              {
+                "Priv": 7,
+                "Props": 0,
+                "Target": "default:demo._default.business"
+              }
+            ]
+          },
+          "~child": {
+            "#operator": "Sequence",
+            "#stats": {
+              "#phaseSwitches": 2,
+              "execTime": "792ns"
+            },
+            "~children": [
+              {
+                "#operator": "IndexScan3",
+                "#stats": {
+                  "#itemsIn": 3,
+                  "#itemsOut": 3,
+                  "#phaseSwitches": 15,
+                  "execTime": "3.874\u00b5s",
+                  "kernTime": "459ns",
+                  "servTime": "536.542\u00b5s"
+                },
+                "as": "b",
+                "bucket": "demo",
+                "index": "city_stars",
+                "index_id": "c597330af1f94d1e",
+                "index_projection": {
+                  "primary_key": true
+                },
+                "keyspace": "business",
+                "namespace": "default",
+                "scope": "_default",
+                "spans": [
+                  {
+                    "exact": true,
+                    "range": [
+                      {
+                        "high": "$city",
+                        "inclusion": 3,
+                        "index_key": "`city`",
+                        "low": "$city"
+                      }
+                    ]
+                  }
+                ],
+                "using": "gsi"
+              },
+              {
+                "#operator": "Fetch",
+                "#stats": {
+                  "#itemsIn": 3,
+                  "#itemsOut": 3,
+                  "#phaseSwitches": 18,
+                  "execTime": "8.086\u00b5s",
+                  "kernTime": "543.373\u00b5s",
+                  "servTime": "100.208\u00b5s"
+                },
+                "as": "b",
+                "bucket": "demo",
+                "keyspace": "business",
+                "namespace": "default",
+                "scope": "_default"
+              },
+              {
+                "#operator": "Sequence",
+                "#stats": {
+                  "#phaseSwitches": 1,
+                  "execTime": "1.334\u00b5s"
+                },
+                "~children": [
+                  {
+                    "#operator": "Filter",
+                    "#stats": {
+                      "#itemsIn": 3,
+                      "#itemsOut": 1,
+                      "#phaseSwitches": 12,
+                      "execTime": "9.667\u00b5s",
+                      "kernTime": "654.166\u00b5s"
+                    },
+                    "condition": "(((`b`.`city`) = $city) and ($minimum <= (`b`.`review_count`)))"
+                  },
+                  {
+                    "#operator": "InitialProject",
+                    "#stats": {
+                      "#itemsIn": 1,
+                      "#itemsOut": 1,
+                      "#phaseSwitches": 7,
+                      "execTime": "10.5\u00b5s",
+                      "kernTime": "665.875\u00b5s"
+                    },
+                    "discard_original": true,
+                    "preserve_order": true,
+                    "result_terms": [
+                      {
+                        "expr": "`b`",
+                        "star": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "#operator": "Stream",
+                "#stats": {
+                  "#itemsIn": 1,
+                  "#itemsOut": 1,
+                  "#phaseSwitches": 3,
+                  "execTime": "10.709\u00b5s"
+                },
+                "serializable": true
+              }
+            ]
+          },
+          "~versions": [
+            "7.6.2-N1QL",
+            "7.6.2-3721-enterprise"
+          ]
+        },
+        "phaseCounts": {
+          "fetch": 3,
+          "filter": 1,
+          "indexScan": 3,
+          "indexScan.GSI": 3
+        },
+        "phaseOperators": {
+          "authorize": 1,
+          "fetch": 1,
+          "filter": 1,
+          "indexScan": 1,
+          "indexScan.GSI": 1,
+          "project": 1,
+          "stream": 1
+        },
+        "phaseTimes": {
+          "authorize": "1.876\u00b5s",
+          "fetch": "108.294\u00b5s",
+          "filter": "9.667\u00b5s",
+          "indexScan": "540.416\u00b5s",
+          "indexScan.GSI": "540.416\u00b5s",
+          "instantiate": "4.542\u00b5s",
+          "parse": "144.625\u00b5s",
+          "plan": "110.667\u00b5s",
+          "plan.index.metadata": "8.459\u00b5s",
+          "plan.keyspace.metadata": "1.042\u00b5s",
+          "project": "10.5\u00b5s",
+          "run": "699.666\u00b5s",
+          "stream": "10.709\u00b5s"
+        },
+        "requestTime": "2026-10-24T00:47:54.561Z",
+        "servicingHost": "127.0.0.1:8091"
+      },
+      "metrics": {
+        "elapsed_ms": 0.9890000000000001,
+        "execution_ms": 0.9650000000000001,
+        "result_count": 1,
+        "result_size": 129
+      }
+    },
+    "covering": {
+      "statement": "SELECT city, stars FROM `demo`.`_default`.`business` WHERE city = $city",
+      "rows": [
+        {
+          "city": "Sydney",
+          "stars": 4.5
+        },
+        {
+          "city": "Sydney",
+          "stars": 4
+        },
+        {
+          "city": "Sydney",
+          "stars": 3.5
+        }
+      ],
+      "status": "QueryStatus.SUCCESS",
+      "warnings": [],
+      "profile": {
+        "cpuTime": "33.795\u00b5s",
+        "executionTimings": {
+          "#operator": "Authorize",
+          "#planPreparedTime": "2026-10-24T00:47:54.564Z",
+          "#stats": {
+            "#phaseSwitches": 4,
+            "execTime": "417ns",
+            "servTime": "1.25\u00b5s"
+          },
+          "privileges": {
+            "List": [
+              {
+                "Priv": 7,
+                "Props": 0,
+                "Target": "default:demo._default.business"
+              }
+            ]
+          },
+          "~child": {
+            "#operator": "Sequence",
+            "#stats": {
+              "#phaseSwitches": 2,
+              "execTime": "583ns"
+            },
+            "~children": [
+              {
+                "#operator": "IndexScan3",
+                "#stats": {
+                  "#itemsIn": 3,
+                  "#itemsOut": 3,
+                  "#phaseSwitches": 15,
+                  "execTime": "8.959\u00b5s",
+                  "kernTime": "542ns",
+                  "servTime": "381.624\u00b5s"
+                },
+                "bucket": "demo",
+                "covers": [
+                  "cover ((`business`.`city`))",
+                  "cover ((`business`.`stars`))",
+                  "cover ((meta(`business`).`id`))"
+                ],
+                "index": "city_stars",
+                "index_id": "c597330af1f94d1e",
+                "index_projection": {
+                  "entry_keys": [
+                    0,
+                    1
+                  ]
+                },
+                "keyspace": "business",
+                "namespace": "default",
+                "scope": "_default",
+                "spans": [
+                  {
+                    "exact": true,
+                    "range": [
+                      {
+                        "high": "$city",
+                        "inclusion": 3,
+                        "index_key": "`city`",
+                        "low": "$city"
+                      }
+                    ]
+                  }
+                ],
+                "using": "gsi"
+              },
+              {
+                "#operator": "Sequence",
+                "#stats": {
+                  "#phaseSwitches": 1,
+                  "execTime": "8.958\u00b5s"
+                },
+                "~children": [
+                  {
+                    "#operator": "Filter",
+                    "#stats": {
+                      "#itemsIn": 3,
+                      "#itemsOut": 3,
+                      "#phaseSwitches": 16,
+                      "execTime": "4.668\u00b5s",
+                      "kernTime": "393.124\u00b5s"
+                    },
+                    "condition": "(cover ((`business`.`city`)) = $city)"
+                  },
+                  {
+                    "#operator": "InitialProject",
+                    "#stats": {
+                      "#itemsIn": 3,
+                      "#itemsOut": 3,
+                      "#phaseSwitches": 13,
+                      "execTime": "5.96\u00b5s",
+                      "kernTime": "400.083\u00b5s"
+                    },
+                    "discard_original": true,
+                    "preserve_order": true,
+                    "result_terms": [
+                      {
+                        "expr": "cover ((`business`.`city`))"
+                      },
+                      {
+                        "expr": "cover ((`business`.`stars`))"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "#operator": "Stream",
+                "#stats": {
+                  "#itemsIn": 3,
+                  "#itemsOut": 3,
+                  "#phaseSwitches": 5,
+                  "execTime": "4.25\u00b5s"
+                },
+                "serializable": true
+              }
+            ]
+          },
+          "~versions": [
+            "7.6.2-N1QL",
+            "7.6.2-3721-enterprise"
+          ]
+        },
+        "phaseCounts": {
+          "filter": 3,
+          "indexScan": 3,
+          "indexScan.GSI": 3
+        },
+        "phaseOperators": {
+          "authorize": 1,
+          "filter": 1,
+          "indexScan": 1,
+          "indexScan.GSI": 1,
+          "project": 1,
+          "stream": 1
+        },
+        "phaseTimes": {
+          "authorize": "1.667\u00b5s",
+          "filter": "4.668\u00b5s",
+          "indexScan": "390.583\u00b5s",
+          "indexScan.GSI": "390.583\u00b5s",
+          "instantiate": "4.25\u00b5s",
+          "parse": "122.875\u00b5s",
+          "plan": "259.542\u00b5s",
+          "plan.index.metadata": "4.417\u00b5s",
+          "plan.keyspace.metadata": "1.084\u00b5s",
+          "project": "5.96\u00b5s",
+          "run": "430.042\u00b5s",
+          "stream": "4.25\u00b5s"
+        },
+        "requestTime": "2026-10-24T00:47:54.564Z",
+        "servicingHost": "127.0.0.1:8091"
+      },
+      "metrics": {
+        "elapsed_ms": 0.843,
+        "execution_ms": 0.8220000000000001,
+        "result_count": 3,
+        "result_size": 85
+      }
+    },
+    "aggregation": {
+      "statement": "SELECT city, COUNT(*) AS n FROM `demo`.`_default`.`business` GROUP BY city",
+      "rows": [
+        {
+          "city": "Sydney",
+          "n": 3
+        },
+        {
+          "city": "Brisbane",
+          "n": 2
+        },
+        {
+          "city": "Melbourne",
+          "n": 3
+        }
+      ],
+      "status": "QueryStatus.SUCCESS",
+      "warnings": [],
+      "profile": {
+        "cpuTime": "77.165\u00b5s",
+        "executionTimings": {
+          "#operator": "Authorize",
+          "#planPreparedTime": "2026-10-24T00:47:54.568Z",
+          "#stats": {
+            "#phaseSwitches": 4,
+            "execTime": "625ns",
+            "servTime": "1.333\u00b5s"
+          },
+          "privileges": {
+            "List": [
+              {
+                "Priv": 7,
+                "Props": 0,
+                "Target": "default:demo._default.business"
+              }
+            ]
+          },
+          "~child": {
+            "#operator": "Sequence",
+            "#stats": {
+              "#phaseSwitches": 2,
+              "execTime": "5.875\u00b5s"
+            },
+            "~children": [
+              {
+                "#operator": "PrimaryScan3",
+                "#stats": {
+                  "#heartbeatYields": 1,
+                  "#itemsIn": 8,
+                  "#itemsOut": 8,
+                  "#phaseSwitches": 35,
+                  "execTime": "6.916\u00b5s",
+                  "kernTime": "21.918\u00b5s",
+                  "servTime": "518.083\u00b5s"
+                },
+                "bucket": "demo",
+                "index": "#primary",
+                "index_projection": {
+                  "primary_key": true
+                },
+                "keyspace": "business",
+                "namespace": "default",
+                "scope": "_default",
+                "using": "gsi"
+              },
+              {
+                "#operator": "Fetch",
+                "#stats": {
+                  "#heartbeatYields": 1,
+                  "#itemsIn": 8,
+                  "#itemsOut": 8,
+                  "#phaseSwitches": 40,
+                  "execTime": "15.752\u00b5s",
+                  "kernTime": "532.539\u00b5s",
+                  "servTime": "205.917\u00b5s"
+                },
+                "bucket": "demo",
+                "early_projection": [
+                  "city"
+                ],
+                "keyspace": "business",
+                "namespace": "default",
+                "scope": "_default"
+              },
+              {
+                "#operator": "InitialGroup",
+                "#stats": {
+                  "#itemsIn": 8,
+                  "#itemsOut": 3,
+                  "#phaseSwitches": 26,
+                  "execTime": "25.791\u00b5s",
+                  "kernTime": "738.001\u00b5s"
+                },
+                "aggregates": [
+                  "count(*)"
+                ],
+                "flags": 4,
+                "group_keys": [
+                  "(`business`.`city`)"
+                ]
+              },
+              {
+                "#operator": "IntermediateGroup",
+                "#stats": {
+                  "#itemsIn": 3,
+                  "#itemsOut": 3,
+                  "#phaseSwitches": 16,
+                  "execTime": "5.831\u00b5s",
+                  "kernTime": "766.377\u00b5s"
+                },
+                "aggregates": [
+                  "count(*)"
+                ],
+                "flags": 4,
+                "group_keys": [
+                  "(`business`.`city`)"
+                ]
+              },
+              {
+                "#operator": "FinalGroup",
+                "#stats": {
+                  "#itemsIn": 3,
+                  "#itemsOut": 3,
+                  "#phaseSwitches": 16,
+                  "execTime": "7.375\u00b5s",
+                  "kernTime": "774.666\u00b5s"
+                },
+                "aggregates": [
+                  "count(*)"
+                ],
+                "flags": 4,
+                "group_keys": [
+                  "(`business`.`city`)"
+                ]
+              },
+              {
+                "#operator": "InitialProject",
+                "#stats": {
+                  "#itemsIn": 3,
+                  "#itemsOut": 3,
+                  "#phaseSwitches": 13,
+                  "execTime": "5.29\u00b5s",
+                  "kernTime": "784.959\u00b5s"
+                },
+                "discard_original": true,
+                "preserve_order": true,
+                "result_terms": [
+                  {
+                    "expr": "(`business`.`city`)"
+                  },
+                  {
+                    "as": "n",
+                    "expr": "count(*)"
+                  }
+                ]
+              },
+              {
+                "#operator": "Stream",
+                "#stats": {
+                  "#itemsIn": 3,
+                  "#itemsOut": 3,
+                  "#phaseSwitches": 4,
+                  "execTime": "3.71\u00b5s"
+                },
+                "serializable": true
+              }
+            ]
+          },
+          "~versions": [
+            "7.6.2-N1QL",
+            "7.6.2-3721-enterprise"
+          ]
+        },
+        "phaseCounts": {
+          "fetch": 8,
+          "primaryScan": 8,
+          "primaryScan.GSI": 8
+        },
+        "phaseOperators": {
+          "authorize": 1,
+          "fetch": 1,
+          "primaryScan": 1,
+          "primaryScan.GSI": 1,
+          "project": 1,
+          "stream": 1
+        },
+        "phaseTimes": {
+          "authorize": "1.958\u00b5s",
+          "fetch": "221.669\u00b5s",
+          "instantiate": "30.75\u00b5s",
+          "parse": "162.208\u00b5s",
+          "plan": "64.042\u00b5s",
+          "plan.index.metadata": "5.708\u00b5s",
+          "plan.keyspace.metadata": "1.375\u00b5s",
+          "primaryScan": "524.999\u00b5s",
+          "primaryScan.GSI": "524.999\u00b5s",
+          "project": "5.29\u00b5s",
+          "run": "818.041\u00b5s",
+          "stream": "3.71\u00b5s"
+        },
+        "requestTime": "2026-10-24T00:47:54.568Z",
+        "servicingHost": "127.0.0.1:8091"
+      },
+      "metrics": {
+        "elapsed_ms": 1.105,
+        "execution_ms": 1.082,
+        "result_count": 3,
+        "result_size": 74
+      }
+    }
+  },
+  "community": {
+    "timings": {
+      "statement": "SELECT b.* FROM `demo`.`_default`.`business` b WHERE city = $city AND review_count >= $minimum",
+      "rows": [
+        {
+          "business_id": "demo-001",
+          "categories": [
+            "Cafe",
+            "Breakfast"
+          ],
+          "city": "Sydney",
+          "name": "Harbour Cafe",
+          "review_count": 120,
+          "stars": 4.5
+        }
+      ],
+      "status": "QueryStatus.SUCCESS",
+      "warnings": [],
+      "profile": null,
+      "metrics": {
+        "elapsed_ms": 1.5070000000000001,
+        "execution_ms": 1.47,
+        "result_count": 1,
+        "result_size": 129
+      }
+    }
+  }
+}

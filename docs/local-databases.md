@@ -153,3 +153,47 @@ DBRTOOLKIT_TEST_MONGODB_URI=mongodb://127.0.0.1:27017 \
 That test creates and removes its own uniquely named database. Never point it at
 a database server where test writes are forbidden. Couchbase integration tests will
 arrive with its executor; initialization already verifies a SQL++ query and explain.
+
+## Optional Enterprise evaluation
+
+Community remains the default. An isolated Enterprise 7.6.2 environment is available
+for evaluating profiling during toolkit development. It uses a separate Compose
+project and volume, so neither its initialization nor cleanup affects Community.
+Use it under the applicable Enterprise license; this setup does not establish
+permission for ongoing research, teaching, or testing uses. See the
+[license terms](https://www.couchbase.com/license-agreement/).
+
+```sh
+docker compose -f compose.enterprise.yaml up -d --wait
+uv run python scripts/init_databases.py couchbase-enterprise
+```
+
+- Console: <http://127.0.0.1:9091>
+- Credentials: **Administrator / dbrtoolkit-local**
+- Query HTTP endpoint: `http://127.0.0.1:9093/query/service`
+- SDK connection: `couchbase://127.0.0.1:11211?network=external`
+- Volume: `dbrtoolkit-enterprise_couchbase-data`
+
+This adds another container with a 4 GB memory limit. Initialize with
+`couchbase-enterprise` explicitly; `init_databases.py all` still targets only the
+default Community and MongoDB environments. The Enterprise node advertises its
+separate host ports to SDK clients and uses Plasma index storage.
+
+```sh
+# Stop, preserving data:
+docker compose -f compose.enterprise.yaml stop
+# Remove only the Enterprise environment and its evaluation data:
+docker compose -f compose.enterprise.yaml down -v
+```
+
+The read-only edition probe can be rerun with an isolated SDK installation:
+
+```sh
+uv run --with couchbase==4.6.3 --no-project python \
+  scripts/probe_couchbase_profile.py /tmp/couchbase-editions.json
+```
+
+Both environments must be initialized. It checks ordinary execution, EXPLAIN,
+phase profiling, detailed profiling, a covering query and grouping. Saved responses
+and observations are in `dev/probes/`. Enterprise 7.6.2 returned detailed profiles;
+Community 7.6.2 silently omitted them. The toolkit API remains unchanged.

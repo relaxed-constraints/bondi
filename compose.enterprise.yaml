@@ -1,0 +1,23 @@
+# Optional Enterprise evaluation; separate project, ports and data from Community.
+name: dbrtoolkit-enterprise
+services:
+  couchbase:
+    image: couchbase:enterprise-7.6.2
+    ports:
+      - "127.0.0.1:9091:8091"
+      - "127.0.0.1:9093:8093"
+      - "127.0.0.1:11211:11210"
+    volumes:
+      - couchbase-data:/opt/couchbase/var
+    stop_grace_period: 60s
+    mem_limit: 4g
+    cpus: 2
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --user, "Administrator:dbrtoolkit-local", http://localhost:8091/pools]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+volumes:
+  couchbase-data:

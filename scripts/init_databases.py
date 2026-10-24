@@ -1,6 +1,6 @@
 """Initialize only this repository's running Compose services and verify sample queries.
 
-Run: uv run python scripts/init_databases.py mongodb|couchbase|all
+Run: uv run python scripts/init_databases.py mongodb|couchbase|couchbase-enterprise|all
 No Couchbase Python SDK or host database tools are needed.
 """
 
@@ -17,11 +17,23 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 USERNAME = "Administrator"
 PASSWORD = "dbrtoolkit-local"
+# CLI-selected evaluation environment; "all" continues to mean Community + MongoDB.
+ENTERPRISE = False
+
+
+def host_port(port: int) -> int:
+    return {8091: 9091, 8093: 9093, 11210: 11211}.get(port, port) if ENTERPRISE else port
 
 
 def compose(*args: str, **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["docker", "compose", "-f", str(ROOT / "compose.yaml"), *args],
+        [
+            "docker",
+            "compose",
+            "-f",
+            str(ROOT / ("compose.enterprise.yaml" if ENTERPRISE else "compose.yaml")),
+            *args,
+        ],
         cwd=ROOT,
         text=True,
         check=True,
@@ -37,7 +49,7 @@ def require_container(service: str) -> None:
     if service == "couchbase":
         for port in (8091, 8093):
             mapping = compose("port", service, str(port), capture_output=True).stdout.strip()
-            if mapping != f"127.0.0.1:{port}":
+            if mapping != f"127.0.0.1:{host_port(port)}":
                 raise RuntimeError(f"Unexpected Couchbase port mapping: {mapping}")
 
 
@@ -54,7 +66,9 @@ def request(
         token = base64.b64encode(f"{USERNAME}:{PASSWORD}".encode()).decode()
         headers["Authorization"] = f"Basic {token}"
     body = urlencode(data).encode() if data is not None else None
-    req = Request(f"http://127.0.0.1:{port}{path}", data=body, headers=headers, method=method)
+    req = Request(
+        f"http://127.0.0.1:{host_port(port)}{path}", data=body, headers=headers, method=method
+    )
     with urlopen(req, timeout=10) as response:
         payload = response.read()
         return json.loads(payload) if payload else None
@@ -67,7 +81,7 @@ def wait_for(description: str, operation, timeout: int = 180):
         try:
             return operation()
         except HTTPError as error:
-            if error.code not in (404, 424, 429, 502, 503, 504):
+            if error.code not in (404, 424, 429, 500, 502, 503, 504):
                 raise
             last_error = error
             time.sleep(2)
@@ -119,11 +133,11 @@ def couchbase(documents: list[dict]) -> None:
                 "hostname": "127.0.0.1",
                 "username": USERNAME,
                 "password": PASSWORD,
-                "clusterName": "dbrtoolkit-local",
+                "clusterName": "dbrtoolkit-enterprise" if ENTERPRISE else "dbrtoolkit-local",
                 "services": "kv,n1ql,index",
                 "memoryQuota": 512,
                 "indexMemoryQuota": 512,
-                "indexerStorageMode": "forestdb",
+                "indexerStorageMode": "plasma" if ENTERPRISE else "forestdb",
                 "port": "SAME",
             },
             auth=False,
@@ -134,9 +148,9 @@ def couchbase(documents: list[dict]) -> None:
         "/node/controller/setupAlternateAddresses/external",
         {
             "hostname": "127.0.0.1",
-            "mgmt": 8091,
-            "n1ql": 8093,
-            "kv": 11210,
+            "mgmt": host_port(8091),
+            "n1ql": host_port(8093),
+            "kv": host_port(11210),
         },
         method="PUT",
     )
@@ -175,9 +189,13 @@ def couchbase(documents: list[dict]) -> None:
 
 
 def main() -> None:
+    global ENTERPRISE
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("backend", choices=("mongodb", "couchbase", "all"))
+    parser.add_argument("backend", choices=("mongodb", "couchbase", "couchbase-enterprise", "all"))
     args = parser.parse_args()
+    ENTERPRISE = args.backend == "couchbase-enterprise"
+    if ENTERPRISE:
+        args.backend = "couchbase"
     documents = json.loads((ROOT / "dev" / "business.json").read_text())
     for name, initialize in (("mongodb", mongodb), ("couchbase", couchbase)):
         if args.backend in (name, "all"):
