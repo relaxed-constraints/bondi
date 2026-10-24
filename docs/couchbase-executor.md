@@ -12,8 +12,11 @@ Query descriptions, serialization and workloads still work without this extra.
 
 ## Connect and execute
 
-Set `COUCHBASE_USERNAME` and `COUCHBASE_PASSWORD` using the local development
-credentials documented in the database guide. In a notebook or async function:
+The example and notebook default to our local Docker URI and credentials, so no
+environment variables or `.env` file are needed. For another deployment, override
+`COUCHBASE_URI`, `COUCHBASE_USERNAME` and `COUCHBASE_PASSWORD`. These defaults belong
+to the teaching examples; the executor itself still requires explicit credentials.
+In a notebook or async function:
 
 ```python
 import os
@@ -27,9 +30,9 @@ query = CouchbaseQuery(
 )
 
 async with await AsyncCouchbaseExecutor.from_uri(
-    "couchbase://127.0.0.1:11210?network=external",
-    username=os.environ["COUCHBASE_USERNAME"],
-    password=os.environ["COUCHBASE_PASSWORD"],
+    os.environ.get("COUCHBASE_URI", "couchbase://127.0.0.1:11210?network=external"),
+    username=os.environ.get("COUCHBASE_USERNAME", "Administrator"),
+    password=os.environ.get("COUCHBASE_PASSWORD", "dbrtoolkit-local"),
     timeout_seconds=10,
     concurrency=2,
 ) as executor:
