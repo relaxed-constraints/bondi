@@ -26,3 +26,7 @@ create it directly and call `executor.close()` in a `finally` block.
 
 Next: [run a workload](executor.md), [inspect a schema](schemas.md), or
 [describe a Couchbase query](couchbase-query.md).
+
+For a longer runnable example using the same demo data, open
+`notebooks/workload_demo.ipynb` in Jupyter. It covers single queries, workloads,
+profiling, persistence and a deliberate database error.

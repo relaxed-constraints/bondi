@@ -15,28 +15,14 @@ cleans up the sample when finished. It does not modify source documents.
 
 ## Execute the generated workload
 
-After the notebook has produced the live `workload`, run:
+The notebook's final live section runs and profiles `live_workload` in two separate
+passes. This is the workload generated from the actual demo schema, not the earlier
+offline toy example. It checks outcomes and prints a few client timings and parsed
+index-examination counts.
 
-```python
-from bondi.mongodb import MongoExecutor, summarize
-
-with MongoExecutor.from_uri("mongodb://127.0.0.1:27017", concurrency=1) as executor:
-    results = executor.run_workload(workload)
-    profiles = executor.profile_workload(workload)
-
-for entry, result, profile in zip(workload, results, profiles):
-    if result is None or profile is None:
-        continue
-    if result.error is not None or profile.error is not None:
-        print(result.error, profile.error)
-        continue
-    summary = summarize(profile.raw)
-    print(entry.pattern_id, result.elapsed_ms, summary.keys_examined)
-```
-
-These are two separate passes. Execution elapsed time and explain-derived server
-time measure different things. Keep concurrency at one for isolated query behavior;
-increase it only when concurrent load is part of the experiment.
+Execution elapsed time and explain-derived server time measure different things.
+Keep concurrency at one for isolated query behavior; increase it only when
+concurrent load is part of the experiment.
 
 The demo sample is deliberately tiny. Try changing the selectivity bounds and
 inspect `generator.last_stats`: tight bounds may make complete patterns impossible.
