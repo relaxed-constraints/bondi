@@ -94,3 +94,9 @@ Each backend now exports only `summarize(raw)`. Replace the earlier
 selects the format internally. `None` returns an empty summary, while malformed,
 unrecognized or explicitly failed responses raise. Check execution status first.
 No compatibility aliases are retained.
+
+## Before workload generation
+
+Synchronous executor adapters are implemented for both backends, with owned
+connections, explicit cleanup and context management. Next: sampling estimation
+for MongoDB before workload generation. Executor sample() helpers remain deferred.

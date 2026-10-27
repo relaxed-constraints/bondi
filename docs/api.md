@@ -100,3 +100,17 @@
       show_root_heading: true
       heading_level: 2
       members: [fields, values, value_counts]
+
+::: dbrtoolkit.mongodb.MongoDBExecutor
+    options:
+      show_root_heading: true
+      heading_level: 2
+      inherited_members: true
+      members: [from_uri, close, run, run_workload, explain, explain_workload, profile, profile_workload]
+
+::: dbrtoolkit.couchbase.CouchbaseExecutor
+    options:
+      show_root_heading: true
+      heading_level: 2
+      inherited_members: true
+      members: [from_uri, close, run, run_workload, explain, explain_workload, profile, profile_workload]

@@ -225,3 +225,10 @@ rebuilding the entire tree; parent-derived missing counts remain live. Per-docum
 validation precedes accumulation, so invalid documents cannot partially update
 counts. Memory grows with schema size and, when enabled, distinct retained values.
 Sampling policies and backend query semantics stay outside the schema module.
+
+## Synchronous executors
+
+MongoDBExecutor and CouchbaseExecutor delegate to the async implementations using
+a private asyncio.Runner for the entire owned connection lifetime. Explicit
+signatures preserve all six operation contracts. Use from_uri() and either with
+or explicit close(). Calls reject running event loops and other threads.

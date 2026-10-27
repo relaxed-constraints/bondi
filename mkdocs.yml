@@ -17,6 +17,7 @@ nav:
       - Couchbase query: couchbase-query.md
       - Inspecting schemas: schemas.md
       - Queries and workloads: workloads.md
+      - Synchronous executors: sync-executors.md
       - Async MongoDB executor: executor.md
       - Async Couchbase executor: couchbase-executor.md
       - MongoDB explain summaries: explain.md
