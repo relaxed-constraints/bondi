@@ -19,8 +19,8 @@ nav:
       - Queries and workloads: workloads.md
       - MongoDB sampling estimates: mongodb-estimation.md
       - Synchronous executors: sync-executors.md
-      - Async MongoDB executor: executor.md
-      - Async Couchbase executor: couchbase-executor.md
+      - MongoDB executor: executor.md
+      - Couchbase executor: couchbase-executor.md
       - MongoDB explain summaries: explain.md
       - Couchbase query summaries: couchbase-summaries.md
   - Documentation walkthrough: documentation.md

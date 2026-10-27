@@ -1,41 +1,42 @@
-# Async MongoDB executor
+# MongoDB executor
 
-`AsyncMongoExecutor` runs, explains or profiles individual MongoDB queries and complete
-workloads. It uses bounded asyncio workers, not threads. One `ExecutionResult`
+`MongoExecutor` runs, explains or profiles individual MongoDB queries and complete
+workloads. Its synchronous API works in scripts and notebooks; concurrent database work runs
+on an internal background event loop. One `ExecutionResult`
 class describes successes and captured workload failures.
 
-## Own or borrow a client
+## Connect and execute
 
 ```python
-from dbrtoolkit.mongodb import AsyncMongoExecutor
+from dbrtoolkit.mongodb import MongoExecutor
 
-# In a notebook or async function:
-async with AsyncMongoExecutor.from_uri(
+# In a script or notebook:
+with MongoExecutor.from_uri(
     uri,
     concurrency=4,
     continue_on_error=True,
     timeout_seconds=30,
     client_kwargs={"retryReads": False},
 ) as executor:
-    results = await executor.run_workload(workload)
+    results = executor.run_workload(workload)
 ```
 
-The factory creates one owned `AsyncMongoClient` for the executor, not one per
-query. The context manager closes it. Alternatively, pass an existing async client
-to the constructor; closing the executor leaves that borrowed client open. Close
-owned executors only after their active calls finish. Keep clients on one event
-loop; do not share them across threads or successive `asyncio.run()` calls.
+The factory creates one owned client for the executor, not one per query.
+The context manager closes the client and background loop. Alternatively, create
+an executor directly with `from_uri()` and call `close()` when finished. Repeated
+close calls are harmless. See [synchronous executors](sync-executors.md) for
+notebook usage and interruption handling.
 Client creation does not ping the server or exclude connection setup from the
 first operation's timing. Warmups are not implemented yet.
 
 ## Single-query operations
 
 ```python
-result = await executor.run(query, collect_results=True)
+result = executor.run(query, collect_results=True)
 print(result.row_count, result.elapsed_ms)
 
-plan = await executor.explain(query)
-explanation = await executor.profile(query)
+plan = executor.explain(query)
+explanation = executor.profile(query)
 print(explanation.raw)
 ```
 
@@ -59,7 +60,7 @@ before database operations. The executor uses input references, not snapshots:
 ## Workloads and failures
 
 ```python
-results = await executor.run_workload(workload)
+results = executor.run_workload(workload)
 for entry, result in zip(workload, results):
     if result is None:
         print("Not started")
@@ -109,8 +110,8 @@ arbitrary Python computation or proof the server stopped immediately.
 - `explain(..., command_kwargs=...)` supplies outer `Database.command` options.
 
 ```python
-await executor.run(query, query_kwargs={"hint": "stars_1"})
-await executor.profile(
+executor.run(query, query_kwargs={"hint": "stars_1"})
+executor.profile(
     query,
     verbosity="executionStats",
     query_kwargs={"hint": "stars_1"},
@@ -146,3 +147,20 @@ local server; no existing research datasets were modified.
 
 Use [MongoDB explain summaries](explain.md) to parse the raw response offline.
 Warmups, repetitions and execution-result persistence remain later steps. Workloads can be saved and loaded through Workload.save/load. See the [API reference](api.md) for signatures.
+
+## Advanced: async integration and borrowed clients
+
+`AsyncMongoExecutor` remains available when your application needs awaitable calls
+or supplies its own `AsyncMongoClient`. For example:
+
+```python
+from dbrtoolkit.mongodb import AsyncMongoExecutor
+
+async with AsyncMongoExecutor.from_uri(uri, concurrency=4) as executor:
+    results = await executor.run_workload(workload)
+```
+
+Its factory is synchronous; operations and cleanup are awaited. Pass a borrowed
+async client to its constructor to retain ownership of that client. Keep that
+client and executor on one event loop, and close only after active calls finish.
+The six operation contracts and results match the synchronous interface.

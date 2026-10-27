@@ -87,7 +87,7 @@ Assume the source and persisted sample remain unchanged during use; preparation
 and subsequent operations do not share a database snapshot. Recreate the estimator
 after source changes. MongoDB sampling is not controlled by a Python random seed.
 
-## Notebooks and async applications
+## Advanced: async estimation
 
 The synchronous examples above work directly in Jupyter. The estimator shares
 its executor’s background loop. Use the async classes only when you want an
@@ -103,7 +103,7 @@ async with AsyncMongoExecutor.from_uri("mongodb://localhost:27017") as executor:
         estimate = await estimator.estimate(query)
 ```
 
-Or use `await estimator.prepare()`, `await estimator.estimate(query)`, and
+For async callers, use `await estimator.prepare()`, `await estimator.estimate(query)`, and
 `await estimator.close()` across notebook cells. Do not overlap preparation or
 cleanup with estimates. Executor per-operation timeouts apply; single-operation
 failures propagate. A sync estimator reuses its sync executor's loop and thread.

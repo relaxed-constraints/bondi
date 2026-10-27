@@ -252,3 +252,9 @@ estimators are `MongoSampleEstimator` and `AsyncMongoSampleEstimator`.
 This matches `MongoCollectionRef`, `MongoFindQuery`, and `MongoAggregateQuery`.
 The package path remains `dbrtoolkit.mongodb`. This is a direct API rename;
 previous longer executor and estimator names have no compatibility aliases.
+
+## Teaching interface
+
+Guides and demo notebooks default to synchronous executors and estimators in both
+scripts and Jupyter. Public async classes remain supported for advanced integration
+and borrowed async connections; no async APIs are deprecated.

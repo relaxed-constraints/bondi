@@ -1,6 +1,6 @@
-# Async Couchbase executor
+# Couchbase executor
 
-`AsyncCouchbaseExecutor` provides the same six operations as the MongoDB executor,
+`CouchbaseExecutor` provides the same six operations as the MongoDB executor,
 using the optional Couchbase SDK. Start the Community container and load the shared
 sample data using the [local database guide](local-databases.md).
 
@@ -16,11 +16,11 @@ The example and notebook default to our local Docker URI and credentials, so no
 environment variables or `.env` file are needed. For another deployment, override
 `COUCHBASE_URI`, `COUCHBASE_USERNAME` and `COUCHBASE_PASSWORD`. These defaults belong
 to the teaching examples; the executor itself still requires explicit credentials.
-In a notebook or async function:
+In a script or notebook:
 
 ```python
 import os
-from dbrtoolkit.couchbase import AsyncCouchbaseExecutor, CouchbaseQuery
+from dbrtoolkit.couchbase import CouchbaseExecutor, CouchbaseQuery
 from couchbase.n1ql import QueryScanConsistency
 
 query = CouchbaseQuery(
@@ -29,7 +29,7 @@ query = CouchbaseQuery(
     query_context="demo._default",
 )
 
-async with await AsyncCouchbaseExecutor.from_uri(
+with CouchbaseExecutor.from_uri(
     os.environ.get("COUCHBASE_URI", "couchbase://127.0.0.1:11210?network=external"),
     username=os.environ.get("COUCHBASE_USERNAME", "Administrator"),
     password=os.environ.get("COUCHBASE_PASSWORD", "dbrtoolkit-local"),
@@ -37,9 +37,9 @@ async with await AsyncCouchbaseExecutor.from_uri(
     concurrency=2,
 ) as executor:
     options = {"scan_consistency": QueryScanConsistency.REQUEST_PLUS, "read_only": True}
-    result = await executor.run(query, collect_results=True, query_kwargs=options)
-    plan = await executor.explain(query, query_kwargs=options)
-    measured = await executor.profile(query, query_kwargs=options)
+    result = executor.run(query, collect_results=True, query_kwargs=options)
+    plan = executor.explain(query, query_kwargs=options)
+    measured = executor.profile(query, query_kwargs=options)
 
 print(result.documents)  # Three Sydney business names (scalar rows).
 print(plan.raw["plan"])  # Native EXPLAIN plan.
@@ -47,12 +47,11 @@ print(measured.raw["metrics"])
 print(measured.warnings)  # Detailed profiling is unavailable on Community.
 ```
 
-Unlike MongoDB's factory, `from_uri()` is awaited: it connects and waits up to
-30 seconds for the Query service. It closes an owned cluster on context exit or
-readiness failure. Alternatively, pass a borrowed `acouchbase.cluster.Cluster` to
-the constructor; the caller retains responsibility for closing it. `cluster_kwargs`
-passes native `ClusterOptions` other than authentication. Use one event loop and
-close only after active calls finish.
+`from_uri()` connects and waits up to 30 seconds for the Query service.
+The context manager closes the owned cluster and background loop. Explicit
+`executor.close()` is also supported. `cluster_kwargs` passes native
+`ClusterOptions` other than authentication. See [synchronous executors](sync-executors.md)
+for notebook usage and interruption handling.
 
 ## Choose an operation
 
@@ -92,9 +91,9 @@ from dbrtoolkit.workload import Workload, WorkloadEntry
 
 workload = Workload([WorkloadEntry(query), WorkloadEntry(query)])
 # Inside the executor context:
-results = await executor.run_workload(workload)
-plans = await executor.explain_workload(workload)
-profiles = await executor.profile_workload(workload)
+results = executor.run_workload(workload)
+plans = executor.explain_workload(workload)
+profiles = executor.profile_workload(workload)
 ```
 
 All methods share bounded concurrency, input ordering and failure policy. With
@@ -140,3 +139,22 @@ uv run --extra couchbase pytest tests/test_couchbase_executor_live.py
 
 Either URI can be omitted to skip that edition. The notebook
 `notebooks/couchbase_demo.ipynb` demonstrates all six methods on the same sample data.
+
+## Advanced: async integration and borrowed clusters
+
+`AsyncCouchbaseExecutor` remains available for awaitable operations or when using
+a borrowed `acouchbase.cluster.Cluster`:
+
+```python
+from dbrtoolkit.couchbase import AsyncCouchbaseExecutor
+
+async with await AsyncCouchbaseExecutor.from_uri(
+    uri, username=username, password=password,
+) as executor:
+    result = await executor.run(query)
+```
+
+Unlike the async Mongo executor factory, this factory must be awaited because it
+connects and waits for readiness. Passing a cluster to the constructor leaves
+ownership with the caller. Keep the cluster on its event loop, and close it only
+after active calls finish. Operation contracts match the synchronous executor.
