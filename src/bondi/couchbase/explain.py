@@ -3,7 +3,7 @@
 import math
 from typing import Any
 
-from dbrtoolkit.summary import QuerySummary
+from bondi.summary import QuerySummary
 
 # Restrict interpretation to tested shapes. Unknown operators may hide additional
 # branches or index references, so never report a partial traversal as complete.

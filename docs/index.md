@@ -1,6 +1,8 @@
-# Database Research Toolkit
+# BONDI
 
-`dbrtoolkit` provides Python building blocks for students and researchers studying
+*A Python toolkit for document database research.*
+
+`bondi` provides Python building blocks for students and researchers studying
 database queries, query optimization and index selection. Use it to describe native
 queries, run experiments against databases, inspect data, and generate workloads.
 Research models and experiment tracking belong in your project; the toolkit supplies

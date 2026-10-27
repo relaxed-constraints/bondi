@@ -3,11 +3,11 @@
 from collections.abc import Mapping
 from typing import Any, Self
 
-from dbrtoolkit._sync import _SyncExecutor
-from dbrtoolkit.couchbase.executor import AsyncCouchbaseExecutor
-from dbrtoolkit.couchbase.query import CouchbaseQuery
-from dbrtoolkit.execution import ExecutionResult
-from dbrtoolkit.workload import Workload
+from bondi._sync import _SyncExecutor
+from bondi.couchbase.executor import AsyncCouchbaseExecutor
+from bondi.couchbase.query import CouchbaseQuery
+from bondi.execution import ExecutionResult
+from bondi.workload import Workload
 
 
 class CouchbaseExecutor(_SyncExecutor):

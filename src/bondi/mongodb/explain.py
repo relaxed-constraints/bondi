@@ -3,7 +3,7 @@
 import math
 from typing import Any
 
-from dbrtoolkit.summary import QuerySummary
+from bondi.summary import QuerySummary
 
 # These stages do not introduce additional collection reads. Unknown stages (including
 # nested pipelines) conservatively prevent reporting cursor counts as operation totals.

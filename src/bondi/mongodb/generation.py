@@ -13,13 +13,13 @@ from typing import Any, Literal, overload
 
 from bson import Int64, json_util
 
-from dbrtoolkit.estimation import CardinalityEstimate, CardinalityEstimator
-from dbrtoolkit.mongodb.collection import MongoCollectionRef
-from dbrtoolkit.mongodb.generation_config import MongoGenerationConfig, _fraction, _positive
-from dbrtoolkit.mongodb.pattern import MongoQueryPattern, _field_path, _value_type
-from dbrtoolkit.mongodb.query import MongoFindQuery
-from dbrtoolkit.schema import ARRAY_ELEMENT, Schema
-from dbrtoolkit.workload import Workload, WorkloadEntry
+from bondi.estimation import CardinalityEstimate, CardinalityEstimator
+from bondi.mongodb.collection import MongoCollectionRef
+from bondi.mongodb.generation_config import MongoGenerationConfig, _fraction, _positive
+from bondi.mongodb.pattern import MongoQueryPattern, _field_path, _value_type
+from bondi.mongodb.query import MongoFindQuery
+from bondi.schema import ARRAY_ELEMENT, Schema
+from bondi.workload import Workload, WorkloadEntry
 
 _BSON_NAMES = {
     "str": "string",

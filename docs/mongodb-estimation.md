@@ -8,7 +8,7 @@ Couchbase estimation is not implemented yet.
 ## Reuse a sample
 
 ```python
-from dbrtoolkit.mongodb import (
+from bondi.mongodb import (
     MongoCollectionRef, MongoExecutor, MongoFindQuery, MongoSampleEstimator,
 )
 
@@ -22,7 +22,7 @@ with MongoExecutor.from_uri("mongodb://127.0.0.1:27017") as executor:
 
 The four-document sample is for the tiny demo dataset, not a research recommendation.
 Choose `sample_size` or `sample_ratio`, never both. Preparation records the population
-size. A persisted sample is stored in an owned collection under `dbrtoolkit_samples`
+size. A persisted sample is stored in an owned collection under `bondi_samples`
 and removed on context exit; the source collection is unchanged. The database user
 needs permission to create and drop the sample.
 

@@ -4,7 +4,7 @@ Use Python **3.11 or newer** and `uv`. Work from a checkout of this repository;
 the instructions below do not assume a published PyPI release.
 
 ```sh
-cd /path/to/dbrtoolkit
+cd /path/to/bondi
 uv sync --locked
 ```
 
@@ -23,9 +23,9 @@ require a running database. For execution, follow [Local databases](local-databa
 From your research project's directory, add your local checkout as an editable dependency:
 
 ```sh
-uv add --editable /path/to/dbrtoolkit
+uv add --editable /path/to/bondi
 # Include the optional backend if needed:
-uv add --editable '/path/to/dbrtoolkit[couchbase]'
+uv add --editable '/path/to/bondi[couchbase]'
 ```
 
 ## Notebooks

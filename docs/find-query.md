@@ -5,7 +5,7 @@ reference contains only a database and collection name; choose the deployment wh
 creating an executor.
 
 ```python
-from dbrtoolkit.mongodb import MongoAggregateQuery, MongoCollectionRef, MongoFindQuery
+from bondi.mongodb import MongoAggregateQuery, MongoCollectionRef, MongoFindQuery
 
 business = MongoCollectionRef("demo", "business")
 query = MongoFindQuery(

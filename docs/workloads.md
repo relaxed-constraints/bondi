@@ -4,8 +4,8 @@ A workload is an ordered collection of query entries. Entries optionally carry a
 integer `pattern_id`, useful for relating generated query instances to a shared shape.
 
 ```python
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoFindQuery
-from dbrtoolkit.workload import Workload, WorkloadEntry
+from bondi.mongodb import MongoCollectionRef, MongoFindQuery
+from bondi.workload import Workload, WorkloadEntry
 
 business = MongoCollectionRef("demo", "business")
 workload = Workload([

@@ -6,7 +6,7 @@ from datetime import datetime
 import pytest
 from bson import Binary, Decimal128, Int64, ObjectId, Regex, Timestamp
 
-from dbrtoolkit.mongodb import MongoAggregateQuery, MongoCollectionRef, MongoFindQuery
+from bondi.mongodb import MongoAggregateQuery, MongoCollectionRef, MongoFindQuery
 
 TARGET = MongoCollectionRef("research", "businesses")
 

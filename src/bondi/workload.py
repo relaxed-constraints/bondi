@@ -8,14 +8,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Self, overload
 
-from dbrtoolkit.query import Query
+from bondi.query import Query
 
 
 def _query_types() -> dict:
     """Resolve native loaders lazily to avoid importing executors during module setup."""
-    from dbrtoolkit.couchbase import CouchbaseQuery
-    from dbrtoolkit.mongodb.aggregate import MongoAggregateQuery
-    from dbrtoolkit.mongodb.query import MongoFindQuery
+    from bondi.couchbase import CouchbaseQuery
+    from bondi.mongodb.aggregate import MongoAggregateQuery
+    from bondi.mongodb.query import MongoFindQuery
 
     return {
         "mongodb.find": MongoFindQuery,
@@ -116,7 +116,7 @@ class Workload:
     weights or pattern-registry management is provided yet.
 
     Examples:
-        >>> from dbrtoolkit.mongodb import MongoCollectionRef, MongoFindQuery
+        >>> from bondi.mongodb import MongoCollectionRef, MongoFindQuery
         >>> query = MongoFindQuery(MongoCollectionRef("research", "businesses"), {})
         >>> workload = Workload([WorkloadEntry(query, pattern_id=0)])
         >>> query.limit = 10

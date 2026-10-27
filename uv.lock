@@ -26,6 +26,48 @@ wheels = [
 ]
 
 [[package]]
+name = "bondi"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "pymongo" },
+]
+
+[package.optional-dependencies]
+couchbase = [
+    { name = "couchbase" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "ruff" },
+]
+docs = [
+    { name = "mkdocs" },
+    { name = "mkdocs-material" },
+    { name = "mkdocstrings", extra = ["python"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.6.3,<5" },
+    { name = "pymongo", specifier = ">=4.13,<5" },
+]
+provides-extras = ["couchbase"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8" },
+    { name = "ruff", specifier = ">=0.9" },
+]
+docs = [
+    { name = "mkdocs", specifier = ">=1.6,<2" },
+    { name = "mkdocs-material", specifier = ">=9.6,<10" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.28" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.10.23"
 source = { registry = "https://pypi.org/simple" }
@@ -232,48 +274,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/6c/90/e20b5d1fda20c1bba22c210efd20d8e223dfbb41cbf88006447131fdd759/couchbase-4.6.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bc43af4ce2bd16d6f3b9f804df9c4f7315cc8ce2ce2664928d29513f8487e550", size = 6052195 },
     { url = "https://files.pythonhosted.org/packages/88/bf/e254e91dcc7e14ca238c3af145cc25c30aa9258f03a0194ae1d85d6d1843/couchbase-4.6.3-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:52b00223dec10299f66d7190626d35e69b2804a222b2a409c10f143a9708e77d", size = 7602227 },
     { url = "https://files.pythonhosted.org/packages/bb/22/bf077d5b6aff88e0915278b7b87ce8c2d2214bbc8799f0a3137bc01eb731/couchbase-4.6.3-cp314-cp314-win_amd64.whl", hash = "sha256:e06d5dd6ebf4997fe32abe8053ee57b5a2efbf357a5f2737407d6d5695f4b060", size = 5282207 },
-]
-
-[[package]]
-name = "dbrtoolkit"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "pymongo" },
-]
-
-[package.optional-dependencies]
-couchbase = [
-    { name = "couchbase" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "ruff" },
-]
-docs = [
-    { name = "mkdocs" },
-    { name = "mkdocs-material" },
-    { name = "mkdocstrings", extra = ["python"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.6.3,<5" },
-    { name = "pymongo", specifier = ">=4.13,<5" },
-]
-provides-extras = ["couchbase"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8" },
-    { name = "ruff", specifier = ">=0.9" },
-]
-docs = [
-    { name = "mkdocs", specifier = ">=1.6,<2" },
-    { name = "mkdocs-material", specifier = ">=9.6,<10" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.28" },
 ]
 
 [[package]]

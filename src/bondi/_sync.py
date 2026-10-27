@@ -26,7 +26,7 @@ class _SyncExecutor:
                 ready.set()
                 self._loop.run_forever()
 
-        self._worker = Thread(target=serve, name=f"dbrtoolkit-{cls.__name__}", daemon=True)
+        self._worker = Thread(target=serve, name=f"bondi-{cls.__name__}", daemon=True)
         self._worker.start()
         ready.wait()
 

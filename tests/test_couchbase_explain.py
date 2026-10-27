@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from dbrtoolkit.couchbase import summarize
-from dbrtoolkit.summary import QuerySummary
+from bondi.couchbase import summarize
+from bondi.summary import QuerySummary
 
 FIXTURES = Path(__file__).parent / "fixtures" / "couchbase"
 

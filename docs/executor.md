@@ -10,7 +10,7 @@ Install the optional SDK and initialize the [local database](local-databases.md)
 These credentials are only for the bundled local environment:
 
 ```python
-from dbrtoolkit.couchbase import CouchbaseExecutor, CouchbaseQuery
+from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
 
 query = CouchbaseQuery("SELECT RAW b FROM `demo`.`_default`.`business` b LIMIT 5")
 with CouchbaseExecutor.from_uri(
@@ -28,7 +28,7 @@ with CouchbaseExecutor.from_uri(
 Given a `workload` built with the [workload guide](workloads.md):
 
 ```python
-from dbrtoolkit.mongodb import MongoExecutor
+from bondi.mongodb import MongoExecutor
 
 with MongoExecutor.from_uri(
     "mongodb://127.0.0.1:27017",

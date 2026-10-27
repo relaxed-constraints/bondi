@@ -13,8 +13,8 @@ from decimal import Decimal
 import pytest
 from bson import Int64, ObjectId
 
-from dbrtoolkit.estimation import CardinalityEstimate
-from dbrtoolkit.mongodb import (
+from bondi.estimation import CardinalityEstimate
+from bondi.mongodb import (
     MongoCollectionRef,
     MongoFindQuery,
     MongoGenerationConfig,
@@ -23,8 +23,8 @@ from dbrtoolkit.mongodb import (
     MongoWorkloadGenerator,
     WorkloadGenerationError,
 )
-from dbrtoolkit.schema import Schema
-from dbrtoolkit.workload import Workload
+from bondi.schema import Schema
+from bondi.workload import Workload
 
 TARGET = MongoCollectionRef("test", "items")
 DOCS = [{"x": i, "y": str(i % 10), "flag": bool(i % 2)} for i in range(100)]
@@ -82,8 +82,8 @@ def test_full_distinct_reproducibility_and_no_global_rng():
 
 def test_reproducible_across_hash_seeds():
     script = """
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoWorkloadGenerator
-from dbrtoolkit.schema import Schema
+from bondi.mongodb import MongoCollectionRef, MongoWorkloadGenerator
+from bondi.schema import Schema
 s = Schema.from_documents([{'a':str(i),'b':i} for i in range(20)],values='full')
 g = MongoWorkloadGenerator(target=MongoCollectionRef('d','c'),schema=s)
 print([e.query.to_json() for e in g.generate(num_patterns=8,instances_per_pattern=4,seed=9)])
@@ -219,7 +219,7 @@ def test_external_errors_and_deadline(monkeypatch):
         g.generate(num_patterns=1, validate_pattern=fail)
     assert g.last_stats["candidate_attempts"] == 1
     clock = [0.0]
-    monkeypatch.setattr("dbrtoolkit.mongodb.generation.time.monotonic", lambda: clock[0])
+    monkeypatch.setattr("bondi.mongodb.generation.time.monotonic", lambda: clock[0])
 
     def slow(*args):
         clock[0] = 2

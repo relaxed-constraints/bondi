@@ -1,16 +1,16 @@
 # Schema inspection
 
-::: dbrtoolkit.schema.Schema
+::: bondi.schema.Schema
     options:
       show_root_heading: true
       heading_level: 2
 
-::: dbrtoolkit.schema.FieldSchema
+::: bondi.schema.FieldSchema
     options:
       show_root_heading: true
       heading_level: 2
 
-::: dbrtoolkit.schema.TypeSchema
+::: bondi.schema.TypeSchema
     options:
       show_root_heading: true
       heading_level: 2
@@ -18,14 +18,14 @@
 ## Array paths and value retention
 
 `ARRAY_ELEMENT` identifies an array-element step in tuple paths, for example
-`schema[("tags", ARRAY_ELEMENT)]`. Import it from `dbrtoolkit.schema`.
+`schema[("tags", ARRAY_ELEMENT)]`. Import it from `bondi.schema`.
 `ValueMode` is the literal type `"none" | "distinct" | "full"`.
 
 ## Exact paths
 
 
 ```python
-from dbrtoolkit.schema import ARRAY_ELEMENT
+from bondi.schema import ARRAY_ELEMENT
 
 schema["items.[].price"]
 schema[("items", ARRAY_ELEMENT, "price")]  # Same lookup, without string syntax.
@@ -84,7 +84,7 @@ and a Couchbase executor for the others; see the [MongoDB](../executor.md) and
 ### MongoDB: a bounded preview
 
 ```python
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoFindQuery
+from bondi.mongodb import MongoCollectionRef, MongoFindQuery
 
 sample_query = MongoFindQuery(
     MongoCollectionRef("demo", "business"),
@@ -99,7 +99,7 @@ without an explicit sort, do not assume a stable selection or representative cov
 ### MongoDB: random sampling
 
 ```python
-from dbrtoolkit.mongodb import MongoAggregateQuery, MongoCollectionRef
+from bondi.mongodb import MongoAggregateQuery, MongoCollectionRef
 
 sample_query = MongoAggregateQuery(
     MongoCollectionRef("demo", "business"),
@@ -117,7 +117,7 @@ distinct source documents. Repeated sampling calls need not return the same docu
 ### Couchbase: a bounded preview
 
 ```python
-from dbrtoolkit.couchbase import CouchbaseQuery
+from bondi.couchbase import CouchbaseQuery
 
 sample_query = CouchbaseQuery(
     "SELECT RAW b FROM `demo`.`_default`.`business` AS b LIMIT 100"
@@ -157,7 +157,7 @@ its suitability and statistical properties should be evaluated before adopting i
 Inside the corresponding executor context or notebook:
 
 ```python
-from dbrtoolkit.schema import Schema
+from bondi.schema import Schema
 
 result = executor.run(sample_query, collect_results=True)
 schema = Schema.from_documents(result.documents)

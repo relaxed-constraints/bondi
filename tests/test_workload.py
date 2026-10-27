@@ -6,9 +6,9 @@ from typing import ClassVar
 
 import pytest
 
-from dbrtoolkit.couchbase import CouchbaseQuery
-from dbrtoolkit.mongodb import MongoAggregateQuery, MongoCollectionRef, MongoFindQuery
-from dbrtoolkit.workload import Workload, WorkloadEntry
+from bondi.couchbase import CouchbaseQuery
+from bondi.mongodb import MongoAggregateQuery, MongoCollectionRef, MongoFindQuery
+from bondi.workload import Workload, WorkloadEntry
 
 
 def find():

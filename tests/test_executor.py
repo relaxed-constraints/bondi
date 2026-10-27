@@ -6,16 +6,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pymongo.errors import ExecutionTimeout, OperationFailure
 
-from dbrtoolkit.couchbase import CouchbaseQuery
-from dbrtoolkit.execution import ExecutionResult
-from dbrtoolkit.mongodb import (
+from bondi.couchbase import CouchbaseQuery
+from bondi.execution import ExecutionResult
+from bondi.mongodb import (
     AsyncMongoExecutor,
     MongoAggregateQuery,
     MongoCollectionRef,
     MongoFindQuery,
     summarize,
 )
-from dbrtoolkit.workload import Workload, WorkloadEntry
+from bondi.workload import Workload, WorkloadEntry
 
 TARGET = MongoCollectionRef("research", "businesses")
 
@@ -260,7 +260,7 @@ def test_borrowed_and_owned_client_lifetimes():
         async with AsyncMongoExecutor(client):
             pass
         client.close.assert_not_awaited()
-        with patch("dbrtoolkit.mongodb.executor.AsyncMongoClient", return_value=client) as factory:
+        with patch("bondi.mongodb.executor.AsyncMongoClient", return_value=client) as factory:
             async with AsyncMongoExecutor.from_uri(
                 "mongodb://example", client_kwargs={"retryReads": False}
             ) as executor:
@@ -343,7 +343,7 @@ def test_timeout_scope_covers_all_batches():
         cursor = Checked([{}, {}])
         client, _, _ = driver(cursor)
         with patch(
-            "dbrtoolkit.mongodb.executor.pymongo.timeout", return_value=Deadline()
+            "bondi.mongodb.executor.pymongo.timeout", return_value=Deadline()
         ) as timeout:
             await AsyncMongoExecutor(client, timeout_seconds=5).run(MongoFindQuery(TARGET, {}))
             timeout.assert_called_once_with(5)

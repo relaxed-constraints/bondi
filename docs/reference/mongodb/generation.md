@@ -1,26 +1,26 @@
 # MongoDB workload generation
 
-::: dbrtoolkit.mongodb.MongoGenerationConfig
+::: bondi.mongodb.MongoGenerationConfig
     options:
       show_root_heading: true
       heading_level: 2
 
-::: dbrtoolkit.mongodb.MongoPredicateTemplate
+::: bondi.mongodb.MongoPredicateTemplate
     options:
       show_root_heading: true
       heading_level: 2
 
-::: dbrtoolkit.mongodb.MongoQueryPattern
+::: bondi.mongodb.MongoQueryPattern
     options:
       show_root_heading: true
       heading_level: 2
 
-::: dbrtoolkit.mongodb.MongoWorkloadGenerator
+::: bondi.mongodb.MongoWorkloadGenerator
     options:
       show_root_heading: true
       heading_level: 2
 
-::: dbrtoolkit.mongodb.WorkloadGenerationError
+::: bondi.mongodb.WorkloadGenerationError
     options:
       show_root_heading: true
       heading_level: 2
@@ -89,8 +89,8 @@ ordered, independent of hash seed and value frequencies. Generator seeds do not
 control database sampling or elapsed timings. Do not mutate inputs during a call.
 
 ```python
-from dbrtoolkit.workload import Workload
-from dbrtoolkit.mongodb import MongoQueryPattern
+from bondi.workload import Workload
+from bondi.mongodb import MongoQueryPattern
 
 workload.save("workload.jsonl")
 loaded = Workload.load("workload.jsonl")

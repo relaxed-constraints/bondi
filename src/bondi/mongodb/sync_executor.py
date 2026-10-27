@@ -3,10 +3,10 @@
 from collections.abc import Mapping
 from typing import Any, Self
 
-from dbrtoolkit._sync import _SyncExecutor
-from dbrtoolkit.execution import ExecutionResult
-from dbrtoolkit.mongodb.executor import AsyncMongoExecutor, MongoQuery, ProfileVerbosity
-from dbrtoolkit.workload import Workload
+from bondi._sync import _SyncExecutor
+from bondi.execution import ExecutionResult
+from bondi.mongodb.executor import AsyncMongoExecutor, MongoQuery, ProfileVerbosity
+from bondi.workload import Workload
 
 
 class MongoExecutor(_SyncExecutor):

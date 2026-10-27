@@ -1,7 +1,7 @@
 [project]
-name = "dbrtoolkit"
+name = "bondi"
 version = "0.1.0"
-description = "Python building blocks for reproducible database research"
+description = "A Python toolkit for document database research"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -24,10 +24,10 @@ docs = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/dbrtoolkit"]
+packages = ["src/bondi"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "src/dbrtoolkit"]
+testpaths = ["tests", "src/bondi"]
 addopts = "--import-mode=importlib --doctest-modules"
 
 [tool.ruff]

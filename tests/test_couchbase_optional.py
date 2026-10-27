@@ -13,10 +13,10 @@ def without_sdk(name, *args, **kwargs):
         raise ModuleNotFoundError(name, name=name)
     return original_import(name, *args, **kwargs)
 builtins.__import__ = without_sdk
-from dbrtoolkit.couchbase import (CouchbaseQuery, AsyncCouchbaseExecutor,
+from bondi.couchbase import (CouchbaseQuery, AsyncCouchbaseExecutor,
                                 summarize)
-from dbrtoolkit.workload import Workload, WorkloadEntry
-from dbrtoolkit.execution import ExecutionResult
+from bondi.workload import Workload, WorkloadEntry
+from bondi.execution import ExecutionResult
 assert summarize({'plan': {'#operator': 'DummyScan'}}).index_names == ()
 assert summarize({'metrics': {'result_count': 0}}).rows_returned == 0
 query = CouchbaseQuery('SELECT RAW 1')

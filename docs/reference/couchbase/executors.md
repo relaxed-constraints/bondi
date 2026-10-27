@@ -1,12 +1,12 @@
 # Couchbase executors
 
-::: dbrtoolkit.couchbase.CouchbaseExecutor
+::: bondi.couchbase.CouchbaseExecutor
     options:
       show_root_heading: true
       heading_level: 2
       inherited_members: true
 
-::: dbrtoolkit.couchbase.AsyncCouchbaseExecutor
+::: bondi.couchbase.AsyncCouchbaseExecutor
     options:
       show_root_heading: true
       heading_level: 2
@@ -15,7 +15,7 @@
 
 
 ```python
-from dbrtoolkit.workload import Workload, WorkloadEntry
+from bondi.workload import Workload, WorkloadEntry
 
 workload = Workload([WorkloadEntry(query), WorkloadEntry(query)])
 # Inside the executor context:

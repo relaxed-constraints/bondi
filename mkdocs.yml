@@ -1,5 +1,5 @@
-site_name: Database Research Toolkit
-site_description: Python building blocks for reproducible database research
+site_name: BONDI
+site_description: A Python toolkit for document database research
 theme:
   name: material
   font: false

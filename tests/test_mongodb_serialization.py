@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta, timezone
 import pytest
 from bson import Binary, Decimal128, Int64, ObjectId, Regex, Timestamp, json_util
 
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoFindQuery
+from bondi.mongodb import MongoCollectionRef, MongoFindQuery
 
 TARGET = MongoCollectionRef("research", "businesses")
 
@@ -180,8 +180,8 @@ def test_rejects_unknown_python_values():
 
 
 def test_only_native_payload_uses_extended_json(tmp_path):
-    from dbrtoolkit.mongodb import MongoAggregateQuery
-    from dbrtoolkit.workload import Workload, WorkloadEntry
+    from bondi.mongodb import MongoAggregateQuery
+    from bondi.workload import Workload, WorkloadEntry
 
     query = MongoFindQuery(TARGET, {"x": Int64(1)}, {"x": 1, "_id": 0}, (("x", -1),), 2, 10)
     aggregate = MongoAggregateQuery(TARGET, [{"$match": {"x": Int64(1)}}, {"$limit": 10}])

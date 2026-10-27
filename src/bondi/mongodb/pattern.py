@@ -4,8 +4,8 @@ import math
 from dataclasses import dataclass
 from typing import Self
 
-from dbrtoolkit.mongodb.collection import MongoCollectionRef
-from dbrtoolkit.mongodb.query import MongoFindQuery
+from bondi.mongodb.collection import MongoCollectionRef
+from bondi.mongodb.query import MongoFindQuery
 
 _TYPES = {"str", "int", "Int64", "float", "bool", "datetime", "ObjectId", "null"}
 _BSON_TYPES = {

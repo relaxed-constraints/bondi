@@ -4,7 +4,7 @@ Both backends expose `summarize(raw)`. Import it from the backend that produced 
 response. The parser operates offline and returns the shared `QuerySummary` class.
 
 ```python
-from dbrtoolkit.mongodb import summarize
+from bondi.mongodb import summarize
 
 # profile is an ExecutionResult from executor.profile(query).
 summary = summarize(profile.raw)

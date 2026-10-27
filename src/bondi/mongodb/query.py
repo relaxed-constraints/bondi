@@ -5,12 +5,12 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, ClassVar, Self
 
-from dbrtoolkit.mongodb._serialization import (
+from bondi.mongodb._serialization import (
     _check_canonical_payload,
     _dump_envelope,
     _load_envelope,
 )
-from dbrtoolkit.mongodb.collection import MongoCollectionRef
+from bondi.mongodb.collection import MongoCollectionRef
 
 
 @dataclass

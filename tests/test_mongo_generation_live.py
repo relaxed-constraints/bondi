@@ -6,7 +6,7 @@ import os
 import pytest
 from pymongo import MongoClient
 
-from dbrtoolkit.mongodb import (
+from bondi.mongodb import (
     MongoCollectionRef,
     MongoExecutor,
     MongoFindQuery,
@@ -14,10 +14,10 @@ from dbrtoolkit.mongodb import (
     MongoSampleEstimator,
     MongoWorkloadGenerator,
 )
-from dbrtoolkit.schema import Schema
+from bondi.schema import Schema
 
 
-@pytest.mark.skipif(os.getenv("DBRTOOLKIT_GENERATION_LIVE") != "1", reason="opt-in Docker test")
+@pytest.mark.skipif(os.getenv("BONDI_GENERATION_LIVE") != "1", reason="opt-in Docker test")
 def test_generation_live(tmp_path):
     async def notebook():
         target = MongoCollectionRef("demo", "business")

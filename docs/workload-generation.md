@@ -7,8 +7,8 @@ filter values. The generator is synchronous and can be used directly in notebook
 ## Generate patterns from observed values
 
 ```python
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoGenerationConfig, MongoWorkloadGenerator
-from dbrtoolkit.schema import Schema
+from bondi.mongodb import MongoCollectionRef, MongoGenerationConfig, MongoWorkloadGenerator
+from bondi.schema import Schema
 
 schema = Schema.from_documents(
     [{"city": "Sydney", "stars": 4}, {"city": "Melbourne", "stars": 3}],

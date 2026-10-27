@@ -1,4 +1,4 @@
-"""Opt-in Docker fixture test: DBRTOOLKIT_ESTIMATOR_LIVE=1 uv run pytest -k estimator_live."""
+"""Opt-in Docker fixture test: BONDI_ESTIMATOR_LIVE=1 uv run pytest -k estimator_live."""
 
 import asyncio
 import os
@@ -6,7 +6,7 @@ import os
 import pytest
 from pymongo import MongoClient
 
-from dbrtoolkit.mongodb import (
+from bondi.mongodb import (
     AsyncMongoExecutor,
     AsyncMongoSampleEstimator,
     MongoCollectionRef,
@@ -16,7 +16,7 @@ from dbrtoolkit.mongodb import (
 )
 
 
-@pytest.mark.skipif(os.getenv("DBRTOOLKIT_ESTIMATOR_LIVE") != "1", reason="opt-in Docker test")
+@pytest.mark.skipif(os.getenv("BONDI_ESTIMATOR_LIVE") != "1", reason="opt-in Docker test")
 def test_estimator_live():
     """Read demo data; only estimator-owned sample collections are created/dropped."""
     uri = "mongodb://localhost:27017"

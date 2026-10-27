@@ -5,7 +5,7 @@ This example reads the bundled MongoDB `demo.business` collection. Complete
 Run the code in a script or notebook:
 
 ```python
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
+from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
 
 business = MongoCollectionRef("demo", "business")
 query = MongoFindQuery(business, {"city": "Sydney"}, limit=5)

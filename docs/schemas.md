@@ -5,7 +5,7 @@ not connect to a database: it describes the documents you supply, not validation
 rules or a guarantee about unseen data.
 
 ```python
-from dbrtoolkit.schema import Schema
+from bondi.schema import Schema
 
 schema = Schema.from_documents(
     [{"city": "Sydney", "stars": 4}, {"city": "Sydney", "stars": None}, {"city": "Melbourne"}],

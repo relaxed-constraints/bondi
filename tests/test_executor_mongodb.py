@@ -1,6 +1,6 @@
 """Opt-in real-server checks using only a uniquely named disposable database.
 
-Set DBRTOOLKIT_TEST_MONGODB_URI to run. The caller owns the MongoDB server.
+Set BONDI_TEST_MONGODB_URI to run. The caller owns the MongoDB server.
 """
 
 import asyncio
@@ -10,24 +10,24 @@ from uuid import uuid4
 import pytest
 from pymongo import AsyncMongoClient
 
-from dbrtoolkit.mongodb import (
+from bondi.mongodb import (
     AsyncMongoExecutor,
     MongoAggregateQuery,
     MongoCollectionRef,
     MongoFindQuery,
     summarize,
 )
-from dbrtoolkit.workload import Workload, WorkloadEntry
+from bondi.workload import Workload, WorkloadEntry
 
 
 def test_executor_against_mongodb():
-    uri = os.environ.get("DBRTOOLKIT_TEST_MONGODB_URI")
+    uri = os.environ.get("BONDI_TEST_MONGODB_URI")
     if not uri:
-        pytest.skip("Set DBRTOOLKIT_TEST_MONGODB_URI for live checks")
+        pytest.skip("Set BONDI_TEST_MONGODB_URI for live checks")
 
     async def scenario():
         client = AsyncMongoClient(uri, serverSelectionTimeoutMS=3000)
-        database = f"dbrtoolkit_test_{uuid4().hex}"
+        database = f"bondi_test_{uuid4().hex}"
         try:
             collection = client[database]["items"]
             await collection.insert_many([{"x": i} for i in range(25)])

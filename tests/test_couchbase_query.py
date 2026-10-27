@@ -6,7 +6,7 @@ from datetime import datetime
 import pytest
 from bson import Int64
 
-from dbrtoolkit.couchbase import CouchbaseQuery
+from bondi.couchbase import CouchbaseQuery
 
 
 def test_round_trip_preserves_text_context_and_json_types():

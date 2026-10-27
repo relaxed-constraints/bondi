@@ -18,7 +18,7 @@ cleans up the sample when finished. It does not modify source documents.
 After the notebook has produced the live `workload`, run:
 
 ```python
-from dbrtoolkit.mongodb import MongoExecutor, summarize
+from bondi.mongodb import MongoExecutor, summarize
 
 with MongoExecutor.from_uri("mongodb://127.0.0.1:27017", concurrency=1) as executor:
     results = executor.run_workload(workload)

@@ -2,9 +2,9 @@
 
 import pytest
 
-from dbrtoolkit.couchbase import summarize as couchbase_summary
-from dbrtoolkit.mongodb import summarize as mongodb_summary
-from dbrtoolkit.summary import QuerySummary
+from bondi.couchbase import summarize as couchbase_summary
+from bondi.mongodb import summarize as mongodb_summary
+from bondi.summary import QuerySummary
 
 
 @pytest.mark.parametrize("summarize", [mongodb_summary, couchbase_summary])

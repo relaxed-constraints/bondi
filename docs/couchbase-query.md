@@ -5,7 +5,7 @@ parse SQL++ or translate MongoDB queries. SQL++ can query nested JSON documents
 using SQL-style expressions.
 
 ```python
-from dbrtoolkit.couchbase import CouchbaseQuery
+from bondi.couchbase import CouchbaseQuery
 
 query = CouchbaseQuery(
     "SELECT RAW b FROM business b WHERE b.city = $city LIMIT 5",

@@ -1,16 +1,16 @@
 # Queries and workloads
 
-::: dbrtoolkit.query.Query
+::: bondi.query.Query
     options:
       show_root_heading: true
       heading_level: 2
 
-::: dbrtoolkit.workload.WorkloadEntry
+::: bondi.workload.WorkloadEntry
     options:
       show_root_heading: true
       heading_level: 2
 
-::: dbrtoolkit.workload.Workload
+::: bondi.workload.Workload
     options:
       show_root_heading: true
       heading_level: 2

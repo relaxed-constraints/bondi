@@ -146,7 +146,7 @@ for both downloaded images and growing database volumes.
 To run the existing MongoDB integration test against this disposable setup:
 
 ```sh
-DBRTOOLKIT_TEST_MONGODB_URI=mongodb://127.0.0.1:27017 \
+BONDI_TEST_MONGODB_URI=mongodb://127.0.0.1:27017 \
   uv run pytest tests/test_executor_mongodb.py
 ```
 
@@ -197,3 +197,7 @@ Both environments must be initialized. It checks ordinary execution, EXPLAIN,
 phase profiling, detailed profiling, a covering query and grouping. Saved responses
 and observations are in `dev/probes/`. Enterprise 7.6.2 returned detailed profiles;
 Community 7.6.2 silently omitted them. The toolkit API remains unchanged.
+
+The Compose project and volume identifiers retain their original `dbrtoolkit` names
+so existing local databases continue to work after the BONDI rename. The Python
+package and imports use `bondi`. Local credentials are unchanged.

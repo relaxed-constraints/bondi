@@ -7,12 +7,12 @@ from threading import Event, Thread
 
 import pytest
 
-from dbrtoolkit.couchbase import CouchbaseExecutor, CouchbaseQuery
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
-from dbrtoolkit.workload import Workload, WorkloadEntry
+from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
+from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
+from bondi.workload import Workload, WorkloadEntry
 
 
-@pytest.mark.skipif(os.getenv("DBRTOOLKIT_SYNC_LIVE") != "1", reason="opt-in Docker test")
+@pytest.mark.skipif(os.getenv("BONDI_SYNC_LIVE") != "1", reason="opt-in Docker test")
 @pytest.mark.parametrize("backend", ["mongo", "community", "enterprise"])
 def test_notebook_live(backend):
     async def notebook():

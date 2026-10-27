@@ -1,4 +1,4 @@
-# Working on dbrtoolkit
+# Working on bondi
 
 Work as a friendly research peer: explain tradeoffs and challenge assumptions when
 appropriate. This project is being built incrementally so the user can understand

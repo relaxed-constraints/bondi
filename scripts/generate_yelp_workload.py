@@ -6,14 +6,14 @@ this example does not perform exact full-collection verification.
 
 from pymongo import MongoClient
 
-from dbrtoolkit.mongodb import (
+from bondi.mongodb import (
     MongoCollectionRef,
     MongoExecutor,
     MongoGenerationConfig,
     MongoSampleEstimator,
     MongoWorkloadGenerator,
 )
-from dbrtoolkit.schema import Schema
+from bondi.schema import Schema
 
 URI = "mongodb://127.0.0.1:27018/?serverSelectionTimeoutMS=5000"
 TARGET = MongoCollectionRef("yelp", "business")

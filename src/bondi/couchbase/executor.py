@@ -9,9 +9,9 @@ from datetime import timedelta
 from time import perf_counter
 from typing import TYPE_CHECKING, Any, Literal, Self
 
-from dbrtoolkit.couchbase.query import CouchbaseQuery
-from dbrtoolkit.execution import ExecutionResult
-from dbrtoolkit.workload import Workload
+from bondi.couchbase.query import CouchbaseQuery
+from bondi.execution import ExecutionResult
+from bondi.workload import Workload
 
 if TYPE_CHECKING:
     from acouchbase.cluster import Cluster

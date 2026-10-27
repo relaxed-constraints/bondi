@@ -6,9 +6,9 @@ from unittest.mock import patch
 import pytest
 from bson import Int64, ObjectId
 
-from dbrtoolkit.couchbase import CouchbaseQuery
-from dbrtoolkit.mongodb import MongoAggregateQuery, MongoCollectionRef, MongoFindQuery
-from dbrtoolkit.workload import Workload, WorkloadEntry
+from bondi.couchbase import CouchbaseQuery
+from bondi.mongodb import MongoAggregateQuery, MongoCollectionRef, MongoFindQuery
+from bondi.workload import Workload, WorkloadEntry
 
 TARGET = MongoCollectionRef("yelp", "business")
 
@@ -132,7 +132,7 @@ def test_failed_serialization_preserves_destination_and_cleans_temp(tmp_path):
 def test_failed_replace_preserves_destination_and_cleans_temp(tmp_path):
     path = tmp_path / "queries.jsonl"
     path.write_text("original")
-    with patch("dbrtoolkit.workload.os.replace", side_effect=OSError("failed")):
+    with patch("bondi.workload.os.replace", side_effect=OSError("failed")):
         with pytest.raises(OSError):
             sample().save(path)
     assert path.read_text() == "original"

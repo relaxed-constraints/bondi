@@ -5,12 +5,12 @@ import warnings
 from typing import Self
 from uuid import uuid4
 
-from dbrtoolkit.estimation import CardinalityEstimate
-from dbrtoolkit.mongodb.aggregate import MongoAggregateQuery
-from dbrtoolkit.mongodb.collection import MongoCollectionRef
-from dbrtoolkit.mongodb.executor import AsyncMongoExecutor
-from dbrtoolkit.mongodb.query import MongoFindQuery
-from dbrtoolkit.mongodb.sync_executor import MongoExecutor
+from bondi.estimation import CardinalityEstimate
+from bondi.mongodb.aggregate import MongoAggregateQuery
+from bondi.mongodb.collection import MongoCollectionRef
+from bondi.mongodb.executor import AsyncMongoExecutor
+from bondi.mongodb.query import MongoFindQuery
+from bondi.mongodb.sync_executor import MongoExecutor
 
 
 class AsyncMongoSampleEstimator:
@@ -46,7 +46,7 @@ class AsyncMongoSampleEstimator:
         sample_size: int | None = None,
         sample_ratio: float | None = None,
         persist: bool = False,
-        sample_database: str = "dbrtoolkit_samples",
+        sample_database: str = "bondi_samples",
         population_limit: int | None = None,
         cleanup_on_exit: bool = True,
     ) -> None:
@@ -263,7 +263,7 @@ class MongoSampleEstimator:
         sample_size: int | None = None,
         sample_ratio: float | None = None,
         persist: bool = False,
-        sample_database: str = "dbrtoolkit_samples",
+        sample_database: str = "bondi_samples",
         population_limit: int | None = None,
         cleanup_on_exit: bool = True,
     ) -> None:

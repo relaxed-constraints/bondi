@@ -16,10 +16,10 @@ from couchbase.exceptions import (  # noqa: E402
 )
 from couchbase.n1ql import QueryProfile, QueryScanConsistency  # noqa: E402
 
-from dbrtoolkit.couchbase import AsyncCouchbaseExecutor, CouchbaseQuery  # noqa: E402
-from dbrtoolkit.execution import ExecutionResult  # noqa: E402
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoFindQuery  # noqa: E402
-from dbrtoolkit.workload import Workload, WorkloadEntry  # noqa: E402
+from bondi.couchbase import AsyncCouchbaseExecutor, CouchbaseQuery  # noqa: E402
+from bondi.execution import ExecutionResult  # noqa: E402
+from bondi.mongodb import MongoCollectionRef, MongoFindQuery  # noqa: E402
+from bondi.workload import Workload, WorkloadEntry  # noqa: E402
 
 
 def workload(count):

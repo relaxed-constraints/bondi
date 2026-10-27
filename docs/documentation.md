@@ -9,7 +9,7 @@ There are two complementary sources of documentation:
 
 ## 1. Write the contract beside the code
 
-Open `src/dbrtoolkit/mongodb/collection.py`. The class docstring contains a summary,
+Open `src/bondi/mongodb/collection.py`. The class docstring contains a summary,
 behavioural details, and Google-style `Args`, `Raises`, and `Examples` sections.
 The constructor signature comes from the dataclass fields and their type hints.
 
@@ -21,7 +21,7 @@ second copy of its parameter descriptions in Markdown.
 `docs/reference/mongodb/queries.md` contains this directive:
 
 ```text
-::: dbrtoolkit.mongodb.MongoCollectionRef
+::: bondi.mongodb.MongoCollectionRef
 ```
 
 The mkdocstrings plugin resolves that public Python path and renders the class

@@ -11,10 +11,10 @@ import pymongo
 from pymongo import AsyncMongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
 
-from dbrtoolkit.execution import ExecutionResult
-from dbrtoolkit.mongodb.aggregate import MongoAggregateQuery
-from dbrtoolkit.mongodb.query import MongoFindQuery
-from dbrtoolkit.workload import Workload
+from bondi.execution import ExecutionResult
+from bondi.mongodb.aggregate import MongoAggregateQuery
+from bondi.mongodb.query import MongoFindQuery
+from bondi.workload import Workload
 
 MongoQuery = MongoFindQuery | MongoAggregateQuery
 ProfileVerbosity = Literal["executionStats", "allPlansExecution"]

@@ -6,8 +6,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from dbrtoolkit.couchbase import AsyncCouchbaseExecutor, CouchbaseExecutor
-from dbrtoolkit.mongodb import AsyncMongoExecutor, MongoExecutor
+from bondi.couchbase import AsyncCouchbaseExecutor, CouchbaseExecutor
+from bondi.mongodb import AsyncMongoExecutor, MongoExecutor
 
 PAIRS = [
     (MongoExecutor, AsyncMongoExecutor, {}),

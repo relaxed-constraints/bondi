@@ -10,25 +10,25 @@ pytest.importorskip("couchbase")
 from couchbase.exceptions import ParsingFailedException  # noqa: E402
 from couchbase.n1ql import QueryScanConsistency  # noqa: E402
 
-from dbrtoolkit.couchbase import (  # noqa: E402
+from bondi.couchbase import (  # noqa: E402
     AsyncCouchbaseExecutor,
     CouchbaseQuery,
     summarize,
 )
-from dbrtoolkit.workload import Workload, WorkloadEntry  # noqa: E402
+from bondi.workload import Workload, WorkloadEntry  # noqa: E402
 
 
 @pytest.mark.parametrize("edition", ["COMMUNITY", "ENTERPRISE"])
 def test_live_couchbase(edition):
-    uri = os.environ.get(f"DBRTOOLKIT_TEST_COUCHBASE_{edition}_URI")
+    uri = os.environ.get(f"BONDI_TEST_COUCHBASE_{edition}_URI")
     if not uri:
-        pytest.skip(f"Set DBRTOOLKIT_TEST_COUCHBASE_{edition}_URI to opt in")
+        pytest.skip(f"Set BONDI_TEST_COUCHBASE_{edition}_URI to opt in")
 
     async def scenario():
         async with await AsyncCouchbaseExecutor.from_uri(
             uri,
-            username=os.environ["DBRTOOLKIT_TEST_COUCHBASE_USERNAME"],
-            password=os.environ["DBRTOOLKIT_TEST_COUCHBASE_PASSWORD"],
+            username=os.environ["BONDI_TEST_COUCHBASE_USERNAME"],
+            password=os.environ["BONDI_TEST_COUCHBASE_PASSWORD"],
             concurrency=2,
             continue_on_error=True,
             timeout_seconds=10,

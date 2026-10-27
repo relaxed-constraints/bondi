@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from bson import Int64
 
-from dbrtoolkit.mongodb import summarize
-from dbrtoolkit.summary import QuerySummary
+from bondi.mongodb import summarize
+from bondi.summary import QuerySummary
 
 FIXTURES = Path(__file__).parent / "fixtures" / "explain"
 

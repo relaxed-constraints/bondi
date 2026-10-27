@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoFindQuery
+from bondi.mongodb import MongoCollectionRef, MongoFindQuery
 
 TARGET = MongoCollectionRef("research", "businesses")
 

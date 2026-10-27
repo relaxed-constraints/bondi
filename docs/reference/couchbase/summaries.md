@@ -1,6 +1,6 @@
 # Couchbase summary parsing
 
-::: dbrtoolkit.couchbase.summarize
+::: bondi.couchbase.summarize
     options:
       show_root_heading: true
       heading_level: 2

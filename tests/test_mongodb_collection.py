@@ -4,7 +4,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from dbrtoolkit.mongodb import MongoCollectionRef
+from bondi.mongodb import MongoCollectionRef
 
 
 @pytest.mark.parametrize("field", ["database", "collection"])

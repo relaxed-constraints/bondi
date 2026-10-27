@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from dbrtoolkit.estimation import CardinalityEstimate
-from dbrtoolkit.mongodb import (
+from bondi.estimation import CardinalityEstimate
+from bondi.mongodb import (
     AsyncMongoExecutor,
     AsyncMongoSampleEstimator,
     MongoAggregateQuery,
@@ -71,7 +71,7 @@ def test_persisted_count_and_cleanup():
         ex = FakeExecutor([[{"count": 100}], [], [{"count": 9}], [{"count": 3}]])
         async with AsyncMongoSampleEstimator(ex, TARGET, sample_size=10, persist=True) as est:
             target = est.sample_target
-            assert target.database == "dbrtoolkit_samples"
+            assert target.database == "bondi_samples"
             assert target != TARGET
             assert est.sample_size == 9
             result = await est.estimate(QUERY)

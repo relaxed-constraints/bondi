@@ -1,6 +1,6 @@
-# Database Research Toolkit
+# BONDI — A Python toolkit for document database research
 
-**dbrtoolkit** provides Python building blocks for reproducible database research.
+**bondi** provides A Python toolkit for document database research.
 
 Use native MongoDB and Couchbase queries, execute and profile workloads, inspect
 schemas, estimate MongoDB selectivity, and generate pattern-based workloads.
@@ -16,7 +16,7 @@ Requires [uv](https://docs.astral.sh/uv/) and Python 3.11 or newer. From this di
 
 ```sh
 uv sync --locked
-uv run python -c "import dbrtoolkit; print(dbrtoolkit.__file__)"
+uv run python -c "import bondi; print(bondi.__file__)"
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
@@ -50,7 +50,7 @@ and `notebooks/schema_demo.ipynb`.
 ## Repository layout
 
 ```text
-src/dbrtoolkit/     Installable library
+src/bondi/     Installable library
 tests/            Offline tests
 docs/             Getting started, guides, tutorials, API reference and development
 ```

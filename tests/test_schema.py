@@ -8,7 +8,7 @@ from uuid import UUID
 import pytest
 from bson import Binary, Int64, ObjectId
 
-from dbrtoolkit.schema import ARRAY_ELEMENT, Schema
+from bondi.schema import ARRAY_ELEMENT, Schema
 
 DOCUMENTS = [
     {"city": "Sydney", "rating": 4, "items": [{"price": 10}, {"price": 20}]},

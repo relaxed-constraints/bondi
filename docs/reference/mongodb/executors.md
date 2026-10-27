@@ -1,12 +1,12 @@
 # MongoDB executors
 
-::: dbrtoolkit.mongodb.MongoExecutor
+::: bondi.mongodb.MongoExecutor
     options:
       show_root_heading: true
       heading_level: 2
       inherited_members: true
 
-::: dbrtoolkit.mongodb.AsyncMongoExecutor
+::: bondi.mongodb.AsyncMongoExecutor
     options:
       show_root_heading: true
       heading_level: 2
