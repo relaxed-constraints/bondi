@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 — 2026-10-28
+
+- Add human-readable MongoQueryPattern string representations.
+- Return independent, JSON-serializable dictionaries for generation statistics.
+- Update generation documentation and notebook examples.
+
 ## 0.1.1 — 2026-10-27
 
 - Rewrite the README around implemented features, with synchronous usage examples.

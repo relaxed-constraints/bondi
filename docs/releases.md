@@ -2,8 +2,8 @@
 
 ## Current release
 
-[0.1.1 is published on PyPI](https://pypi.org/project/bondi/0.1.1/) with a matching
-[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.1).
+[0.1.2 is published on PyPI](https://pypi.org/project/bondi/0.1.2/) with a matching
+[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.2).
 The tagged source provides the notebooks and Docker environment. Installation
 instructions on this site include post-release documentation corrections.
 
@@ -12,10 +12,10 @@ instructions on this site include post-release documentation corrections.
 1. Run offline CI and local database integration tests. Review the changelog and version.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.1.1` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.1.2` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.1.1` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.1.2` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.
