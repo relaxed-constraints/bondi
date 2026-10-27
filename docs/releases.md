@@ -1,16 +1,16 @@
 # Releases and publishing
 
-## First release status
+## Current release
 
-Version 0.1.0 is prepared for publication. PyPI publication requires the maintainer
-to configure the pending publisher and then publish the GitHub release. A draft
-GitHub release does not trigger publication. Do not advertise PyPI installation
-as available until the upload has succeeded.
+[0.1.0 is published on PyPI](https://pypi.org/project/bondi/0.1.0/) with a matching
+[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.0).
+The tagged source provides the notebooks and Docker environment. Installation
+instructions on this site include post-release documentation corrections.
 
 ## Maintainer procedure
 
 1. Run offline CI and local database integration tests. Review the changelog and version.
-2. Configure the PyPI trusted publisher for project `bondi`, owner
+2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
 3. Create a `v0.1.0` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the

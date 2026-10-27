@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — initial release (prepared)
+## 0.1.0 — 2026-10-27
 
 - Native MongoDB find/aggregation and Couchbase SQL++ queries with JSONL workloads.
 - Synchronous and asynchronous execution, explain and profile operations.

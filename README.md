@@ -63,8 +63,9 @@ A distribution can be built with `uv build`.
 
 ## Publication
 
-BONDI is MIT licensed, copyright Relaxed Constraints. Version 0.1.0 is being
-prepared for PyPI; use the source installation instructions until it is published.
+BONDI is MIT licensed, copyright Relaxed Constraints. Version [0.1.0](https://pypi.org/project/bondi/0.1.0/) is available on PyPI.
+Install with `uv add bondi` or `pip install bondi`; use `bondi[couchbase]` for the optional SDK.
+Get notebooks and Docker files from the matching GitHub release source.
 See [release preparation](docs/releases.md) for the publishing process.
 
 ## Optional local databases

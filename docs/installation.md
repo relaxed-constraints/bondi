@@ -1,55 +1,79 @@
 # Installation
 
-Use Python **3.11 or newer** and `uv`. Work from a checkout of this repository;
-the instructions below do not assume a published PyPI release.
+BONDI **0.1.0** is available on [PyPI](https://pypi.org/project/bondi/0.1.0/).
+Use Python **3.11 or newer**. Choose a library installation for your own project,
+or a source checkout for notebooks and local demo databases.
+
+## Install the Python library
+
+In an existing uv project:
 
 ```sh
-git clone https://github.com/relaxed-constraints/bondi.git
-cd bondi
-uv sync --locked
+uv add bondi
+# Include the optional Couchbase SDK when needed:
+uv add 'bondi[couchbase]'
 ```
 
-PyMongo is required and installed automatically, including its BSON codecs.
-Install the optional SDK if you want to execute Couchbase queries:
+Or, in an activated Python virtual environment:
 
 ```sh
+python -m pip install bondi
+python -m pip install 'bondi[couchbase]'
+```
+
+PyMongo and its BSON codecs are installed automatically. Couchbase query descriptions
+and offline parsing work without the optional SDK; executing Couchbase queries needs it.
+For reproducible experiments, pin the release (`bondi==0.1.0`) and retain your project's
+lockfile. The API is still evolving.
+
+Verify installation with `uv run python` in a uv project, or `python` in your
+activated environment:
+
+```sh
+python -c "from importlib.metadata import version; import bondi; print(version('bondi'))"
+```
+
+Query construction, schema inspection and saved-response parsing need no database.
+Continue with the [quickstart](quickstart.md) for an offline example and a database query.
+
+## Get notebooks and Docker Compose files
+
+Teaching resources are included in the GitHub source, not in the installed wheel.
+Clone the matching release:
+
+```sh
+git clone --branch v0.1.0 https://github.com/relaxed-constraints/bondi.git
+cd bondi
+uv sync --locked
+# If you want to execute Couchbase queries:
 uv sync --locked --extra couchbase
 ```
 
-Query objects, schemas, workload persistence and offline summary parsing do not
-require a running database. For execution, follow [Local databases](local-databases.md).
+Alternatively, download and extract a source archive from the
+[0.1.0 GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.0),
+then run `uv sync --locked` in the extracted folder. Git is not required for archives.
+Both options provide `notebooks/`, Compose files, initialization scripts and demo data.
+Use [Local databases](local-databases.md) to start and initialize a backend.
 
-## Use the toolkit in another project
+## Open the notebooks
 
-From your research project's directory, add your local checkout as an editable dependency:
-
-```sh
-uv add --editable /path/to/bondi
-# Include the optional backend if needed:
-uv add --editable '/path/to/bondi[couchbase]'
-```
-
-## Notebooks
-
-From the toolkit checkout, launch Jupyter using the same environment as the package:
+From the source checkout or extracted release:
 
 ```sh
 uv run --with jupyterlab --with ipykernel jupyter lab
 ```
 
-Open a notebook under `notebooks/` and choose the Python kernel from this environment.
-The guides use synchronous APIs: no `await` or event-loop setup is needed in notebooks.
+Choose the Python kernel from this environment and open a notebook under `notebooks/`.
+Examples use synchronous APIs: no `await` or event-loop setup is needed.
 
-To preview this documentation, see [Building the documentation](documentation.md).
+## Develop BONDI
 
-## Library versus teaching resources
+To work on current development code, clone the default branch without `--branch`,
+then follow [Contributing](contributing.md). Use an editable checkout dependency
+only when you intentionally want local source changes in another project:
 
-PyPI publication is pending. Once 0.1.0 is published, library-only users will be
-able to use `uv add bondi` or `pip install bondi` (add `[couchbase]` for the SDK).
-Until then, use the checkout instructions above.
+```sh
+uv add --editable /path/to/bondi
+```
 
-Notebooks, Docker Compose files and demo data live in the GitHub repository, not
-inside the installed Python package. Clone the repository to obtain them, or download
-the source archive from a [GitHub release](https://github.com/relaxed-constraints/bondi/releases).
-After a release is published, use its matching tag (for example `git checkout v0.1.0`)
-and run `uv sync --locked` from that checkout. Archives work too and do not require Git.
+See [Building the documentation](documentation.md) to preview the site locally.

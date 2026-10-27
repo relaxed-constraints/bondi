@@ -1,6 +1,24 @@
 # Quickstart
 
-This example reads the bundled MongoDB `demo.business` collection. Complete
+## Start without a database
+
+[Install BONDI](installation.md) from PyPI, then inspect a small dataset:
+
+```python
+from bondi.schema import Schema
+
+schema = Schema.from_documents([{"city": "Sydney", "stars": 4}, {"city": "Melbourne"}])
+print(schema.document_count)  # 2
+print(schema["stars"].missing_count)  # 1
+```
+
+Run this in your project with `uv run python your_script.py`, or use `python` in
+an activated environment.
+
+## Execute a query
+
+Get the [release source and teaching resources](installation.md#get-notebooks-and-docker-compose-files)
+if you want to use the demo data. This example reads the bundled MongoDB `demo.business` collection. Complete
 [installation](installation.md) and [database initialization](local-databases.md) first.
 Run the code in a script or notebook:
 
