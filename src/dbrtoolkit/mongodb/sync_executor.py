@@ -5,11 +5,11 @@ from typing import Any, Self
 
 from dbrtoolkit._sync import _SyncExecutor
 from dbrtoolkit.execution import ExecutionResult
-from dbrtoolkit.mongodb.executor import AsyncMongoDBExecutor, MongoQuery, ProfileVerbosity
+from dbrtoolkit.mongodb.executor import AsyncMongoExecutor, MongoQuery, ProfileVerbosity
 from dbrtoolkit.workload import Workload
 
 
-class MongoDBExecutor(_SyncExecutor):
+class MongoExecutor(_SyncExecutor):
     """Synchronous database executor with an owned connection.
 
     Create with from_uri(). Use with or explicitly call close() when finished.
@@ -35,7 +35,7 @@ class MongoDBExecutor(_SyncExecutor):
         """
 
         async def connect():
-            return AsyncMongoDBExecutor.from_uri(
+            return AsyncMongoExecutor.from_uri(
                 uri,
                 concurrency=concurrency,
                 continue_on_error=continue_on_error,
@@ -52,7 +52,7 @@ class MongoDBExecutor(_SyncExecutor):
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> ExecutionResult:
-        """Synchronously run; options match AsyncMongoDBExecutor.run."""
+        """Synchronously run; options match AsyncMongoExecutor.run."""
         return self._call("run", query, collect_results=collect_results, query_kwargs=query_kwargs)
 
     def explain(
@@ -62,7 +62,7 @@ class MongoDBExecutor(_SyncExecutor):
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> ExecutionResult:
-        """Synchronously explain; options match AsyncMongoDBExecutor.explain."""
+        """Synchronously explain; options match AsyncMongoExecutor.explain."""
         return self._call(
             "explain", query, query_kwargs=query_kwargs, command_kwargs=command_kwargs
         )
@@ -75,7 +75,7 @@ class MongoDBExecutor(_SyncExecutor):
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> ExecutionResult:
-        """Synchronously profile; options match AsyncMongoDBExecutor.profile."""
+        """Synchronously profile; options match AsyncMongoExecutor.profile."""
         return self._call(
             "profile",
             query,
@@ -91,7 +91,7 @@ class MongoDBExecutor(_SyncExecutor):
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Synchronously run workload; options match AsyncMongoDBExecutor.run_workload."""
+        """Synchronously run workload; options match AsyncMongoExecutor.run_workload."""
         return self._call(
             "run_workload", workload, collect_results=collect_results, query_kwargs=query_kwargs
         )
@@ -103,7 +103,7 @@ class MongoDBExecutor(_SyncExecutor):
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Synchronously explain workload; options match AsyncMongoDBExecutor.explain_workload."""
+        """Synchronously explain workload; options match AsyncMongoExecutor.explain_workload."""
         return self._call(
             "explain_workload", workload, query_kwargs=query_kwargs, command_kwargs=command_kwargs
         )
@@ -116,7 +116,7 @@ class MongoDBExecutor(_SyncExecutor):
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Synchronously profile workload; options match AsyncMongoDBExecutor.profile_workload."""
+        """Synchronously profile workload; options match AsyncMongoExecutor.profile_workload."""
         return self._call(
             "profile_workload",
             workload,

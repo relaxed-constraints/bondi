@@ -53,7 +53,7 @@ def _options(value: Mapping[str, Any] | None, forbidden: set[str], name: str) ->
     return dict(value)
 
 
-class AsyncMongoDBExecutor:
+class AsyncMongoExecutor:
     """Run, explain and profile native queries and single-backend workloads using PyMongo async.
 
     Args:

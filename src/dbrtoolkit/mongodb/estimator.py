@@ -8,12 +8,12 @@ from uuid import uuid4
 from dbrtoolkit.estimation import CardinalityEstimate
 from dbrtoolkit.mongodb.aggregate import MongoAggregateQuery
 from dbrtoolkit.mongodb.collection import MongoCollectionRef
-from dbrtoolkit.mongodb.executor import AsyncMongoDBExecutor
+from dbrtoolkit.mongodb.executor import AsyncMongoExecutor
 from dbrtoolkit.mongodb.query import MongoFindQuery
-from dbrtoolkit.mongodb.sync_executor import MongoDBExecutor
+from dbrtoolkit.mongodb.sync_executor import MongoExecutor
 
 
-class AsyncMongoDBSampleEstimator:
+class AsyncMongoSampleEstimator:
     """Estimate filter cardinality using MongoDB matching semantics.
 
     Construction does no I/O. Call prepare() or enter an async context before
@@ -40,7 +40,7 @@ class AsyncMongoDBSampleEstimator:
 
     def __init__(
         self,
-        executor: AsyncMongoDBExecutor,
+        executor: AsyncMongoExecutor,
         target: MongoCollectionRef,
         *,
         sample_size: int | None = None,
@@ -50,8 +50,8 @@ class AsyncMongoDBSampleEstimator:
         population_limit: int | None = None,
         cleanup_on_exit: bool = True,
     ) -> None:
-        if not isinstance(executor, AsyncMongoDBExecutor):
-            raise TypeError("executor must be an AsyncMongoDBExecutor")
+        if not isinstance(executor, AsyncMongoExecutor):
+            raise TypeError("executor must be an AsyncMongoExecutor")
         if not isinstance(target, MongoCollectionRef):
             raise TypeError("target must be a MongoCollectionRef")
         if sample_size is not None and sample_ratio is not None:
@@ -247,17 +247,17 @@ class AsyncMongoDBSampleEstimator:
         await self.close()
 
 
-class MongoDBSampleEstimator:
-    """Synchronous facade using its borrowed MongoDBExecutor's existing event loop.
+class MongoSampleEstimator:
+    """Synchronous facade using its borrowed MongoExecutor's existing event loop.
 
-    Options and results match AsyncMongoDBSampleEstimator. Use prepare()/close()
+    Options and results match AsyncMongoSampleEstimator. Use prepare()/close()
     or a with block. Close the estimator before closing its executor. No second
     connection or event loop is created.
     """
 
     def __init__(
         self,
-        executor: MongoDBExecutor,
+        executor: MongoExecutor,
         target: MongoCollectionRef,
         *,
         sample_size: int | None = None,
@@ -267,11 +267,11 @@ class MongoDBSampleEstimator:
         population_limit: int | None = None,
         cleanup_on_exit: bool = True,
     ) -> None:
-        if not isinstance(executor, MongoDBExecutor):
-            raise TypeError("executor must be a MongoDBExecutor")
+        if not isinstance(executor, MongoExecutor):
+            raise TypeError("executor must be a MongoExecutor")
         executor._check()
         self._executor = executor
-        self._estimator = AsyncMongoDBSampleEstimator(
+        self._estimator = AsyncMongoSampleEstimator(
             executor._executor,
             target,
             sample_size=sample_size,

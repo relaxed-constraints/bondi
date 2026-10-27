@@ -11,7 +11,7 @@ import pytest
 from pymongo import AsyncMongoClient
 
 from dbrtoolkit.mongodb import (
-    AsyncMongoDBExecutor,
+    AsyncMongoExecutor,
     MongoAggregateQuery,
     MongoCollectionRef,
     MongoFindQuery,
@@ -32,7 +32,7 @@ def test_executor_against_mongodb():
             collection = client[database]["items"]
             await collection.insert_many([{"x": i} for i in range(25)])
             target = MongoCollectionRef(database, "items")
-            executor = AsyncMongoDBExecutor(
+            executor = AsyncMongoExecutor(
                 client, concurrency=2, timeout_seconds=10, continue_on_error=True
             )
             find = MongoFindQuery(

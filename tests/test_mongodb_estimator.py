@@ -7,20 +7,20 @@ import pytest
 
 from dbrtoolkit.estimation import CardinalityEstimate
 from dbrtoolkit.mongodb import (
-    AsyncMongoDBExecutor,
-    AsyncMongoDBSampleEstimator,
+    AsyncMongoExecutor,
+    AsyncMongoSampleEstimator,
     MongoAggregateQuery,
     MongoCollectionRef,
-    MongoDBExecutor,
-    MongoDBSampleEstimator,
+    MongoExecutor,
     MongoFindQuery,
+    MongoSampleEstimator,
 )
 
 TARGET = MongoCollectionRef("source", "items")
 QUERY = MongoFindQuery(TARGET, {"x": 1}, skip=2, limit=1)
 
 
-class FakeExecutor(AsyncMongoDBExecutor):
+class FakeExecutor(AsyncMongoExecutor):
     def __init__(self, responses):
         super().__init__(self)
         self.responses = list(responses)
@@ -46,7 +46,7 @@ def test_fresh_sample_actual_denominator_and_query_scope():
         ex = FakeExecutor(
             [[{"count": 100}], [{"sample": [{"count": 8}], "matches": [{"count": 2}]}]]
         )
-        estimator = AsyncMongoDBSampleEstimator(ex, TARGET, sample_size=10)
+        estimator = AsyncMongoSampleEstimator(ex, TARGET, sample_size=10)
         assert estimator.sample_size is None
         with pytest.raises(RuntimeError, match="prepare"):
             await estimator.estimate(QUERY)
@@ -69,7 +69,7 @@ def test_fresh_sample_actual_denominator_and_query_scope():
 def test_persisted_count_and_cleanup():
     async def run():
         ex = FakeExecutor([[{"count": 100}], [], [{"count": 9}], [{"count": 3}]])
-        async with AsyncMongoDBSampleEstimator(ex, TARGET, sample_size=10, persist=True) as est:
+        async with AsyncMongoSampleEstimator(ex, TARGET, sample_size=10, persist=True) as est:
             target = est.sample_target
             assert target.database == "dbrtoolkit_samples"
             assert target != TARGET
@@ -89,7 +89,7 @@ def test_persisted_count_and_cleanup():
 def test_retained_sample_and_reprepare():
     async def run():
         ex = FakeExecutor([[{"count": 100}], [], [{"count": 10}]])
-        est = AsyncMongoDBSampleEstimator(
+        est = AsyncMongoSampleEstimator(
             ex, TARGET, sample_size=10, persist=True, cleanup_on_exit=False
         )
         await est.prepare()
@@ -120,7 +120,7 @@ def test_retained_sample_and_reprepare():
 )
 def test_bad_options(options):
     with pytest.raises((TypeError, ValueError)):
-        AsyncMongoDBSampleEstimator(FakeExecutor([]), TARGET, **options)
+        AsyncMongoSampleEstimator(FakeExecutor([]), TARGET, **options)
 
 
 @pytest.mark.parametrize(
@@ -128,7 +128,7 @@ def test_bad_options(options):
 )
 def test_adjustment_warnings(options, size):
     async def run():
-        est = AsyncMongoDBSampleEstimator(FakeExecutor([[{"count": 100}]]), TARGET, **options)
+        est = AsyncMongoSampleEstimator(FakeExecutor([[{"count": 100}]]), TARGET, **options)
         with pytest.warns(UserWarning):
             await est.prepare()
         assert est.sample_size == size
@@ -144,7 +144,7 @@ def test_empty_population_and_full_mode():
             if count:
                 responses.append([{"sample": [{"count": 10}], "matches": []}])
             ex = FakeExecutor(responses)
-            async with AsyncMongoDBSampleEstimator(ex, TARGET, persist=True) as est:
+            async with AsyncMongoSampleEstimator(ex, TARGET, persist=True) as est:
                 result = await est.estimate(QUERY)
                 assert result.cardinality == result.selectivity == 0
                 assert result.sample_size == count
@@ -157,7 +157,7 @@ def test_empty_population_and_full_mode():
 def test_population_limit_and_query_validation():
     async def run():
         ex = FakeExecutor([[{"count": 20}], [{"sample": [{"count": 5}], "matches": []}]])
-        async with AsyncMongoDBSampleEstimator(
+        async with AsyncMongoSampleEstimator(
             ex, TARGET, population_limit=20, sample_ratio=0.25
         ) as est:
             with pytest.raises(TypeError):
@@ -174,7 +174,7 @@ def test_population_limit_and_query_validation():
 def test_creation_failure_cleanup_and_estimate_failure_context():
     async def run():
         ex = FakeExecutor([[{"count": 100}], ValueError("creation failed")])
-        est = AsyncMongoDBSampleEstimator(
+        est = AsyncMongoSampleEstimator(
             ex, TARGET, sample_size=10, persist=True, cleanup_on_exit=False
         )
         with pytest.raises(ValueError, match="creation failed"):
@@ -183,7 +183,7 @@ def test_creation_failure_cleanup_and_estimate_failure_context():
         assert est.sample_target is None
         ex = FakeExecutor([[{"count": 100}], [], [{"count": 10}], ValueError("estimate failed")])
         with pytest.raises(ValueError, match="estimate failed"):
-            async with AsyncMongoDBSampleEstimator(ex, TARGET, sample_size=10, persist=True) as est:
+            async with AsyncMongoSampleEstimator(ex, TARGET, sample_size=10, persist=True) as est:
                 await est.estimate(QUERY)
         assert len(ex.dropped) == 1
 
@@ -199,14 +199,14 @@ def test_sync_uses_executor_loop_and_keeps_executor_open(monkeypatch):
             return await super().run(*args, **kwargs)
 
     monkeypatch.setattr(
-        AsyncMongoDBExecutor,
+        AsyncMongoExecutor,
         "from_uri",
         lambda *a, **kw: LoopExecutor(
             [[{"count": 10}], [{"sample": [{"count": 5}], "matches": [{"count": 2}]}]]
         ),
     )
-    with MongoDBExecutor.from_uri("unused") as executor:
-        with MongoDBSampleEstimator(executor, TARGET, sample_size=5) as est:
+    with MongoExecutor.from_uri("unused") as executor:
+        with MongoSampleEstimator(executor, TARGET, sample_size=5) as est:
             assert est.estimate(QUERY) == CardinalityEstimate(4.0, 10, 2, 5)
         assert not executor._closed
         assert loops[0] is loops[1] is executor._runner.get_loop()
@@ -226,7 +226,7 @@ def test_drop_invalidates_preparation_and_new_sample_has_unique_name():
                 [],
             ]
         )
-        est = AsyncMongoDBSampleEstimator(ex, TARGET, sample_size=10, persist=True)
+        est = AsyncMongoSampleEstimator(ex, TARGET, sample_size=10, persist=True)
         await est.prepare()
         first = est.sample_target
         await est.drop_sample()
@@ -246,7 +246,7 @@ def test_drop_invalidates_preparation_and_new_sample_has_unique_name():
 def test_cleanup_failure_can_be_retried():
     async def run():
         ex = FakeExecutor([[{"count": 100}], [], [{"count": 10}]])
-        est = AsyncMongoDBSampleEstimator(ex, TARGET, sample_size=10, persist=True)
+        est = AsyncMongoSampleEstimator(ex, TARGET, sample_size=10, persist=True)
         await est.prepare()
         target = est.sample_target
         original = ex.drop_collection

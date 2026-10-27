@@ -78,7 +78,7 @@ Filter and projection are deep-copied at construction; later assignments and edi
 are not intercepted. Queries have value equality but are unhashable. Public to_json(), from_json() and fingerprint() methods own persistence and
 representation identity. PyMongo is a required dependency for bson.json_util.
 Serialization preserves order, rejects ambiguous Extended JSON document wrappers,
-and follows BSON date/binary normalization. Execution is provided by AsyncMongoDBExecutor.
+and follows BSON date/binary normalization. Execution is provided by AsyncMongoExecutor.
 
 ## MongoDB aggregation query
 
@@ -228,7 +228,7 @@ Sampling policies and backend query semantics stay outside the schema module.
 
 ## Synchronous executors
 
-MongoDBExecutor and CouchbaseExecutor delegate to the async implementations using
+MongoExecutor and CouchbaseExecutor delegate to the async implementations using
 a private asyncio.Runner for the entire owned connection lifetime. Explicit
 signatures preserve all six operation contracts. Use from_uri() and either with
 or explicit close(). Calls reject running event loops and other threads.
@@ -241,3 +241,12 @@ find filters through native aggregation. Fresh samples count matches and sample
 size in one facet; materialized samples use unique owned collections with explicit
 cleanup. Preparation records population size. Sync estimation borrows the executor
 loop; no connection or loop is created. Schema inference remains independent.
+
+## Mongo naming convention
+
+MongoDB implementation classes use the `Mongo` prefix, with `Async` before it
+where needed. Executors are `MongoExecutor` and `AsyncMongoExecutor`; sampling
+estimators are `MongoSampleEstimator` and `AsyncMongoSampleEstimator`.
+This matches `MongoCollectionRef`, `MongoFindQuery`, and `MongoAggregateQuery`.
+The package path remains `dbrtoolkit.mongodb`. This is a direct API rename;
+previous longer executor and estimator names have no compatibility aliases.

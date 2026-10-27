@@ -7,10 +7,10 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 
 from dbrtoolkit.couchbase import AsyncCouchbaseExecutor, CouchbaseExecutor
-from dbrtoolkit.mongodb import AsyncMongoDBExecutor, MongoDBExecutor
+from dbrtoolkit.mongodb import AsyncMongoExecutor, MongoExecutor
 
 PAIRS = [
-    (MongoDBExecutor, AsyncMongoDBExecutor, {}),
+    (MongoExecutor, AsyncMongoExecutor, {}),
     (CouchbaseExecutor, AsyncCouchbaseExecutor, {"username": "u", "password": "p"}),
 ]
 METHODS = ("run", "explain", "profile", "run_workload", "explain_workload", "profile_workload")

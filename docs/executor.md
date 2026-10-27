@@ -1,16 +1,16 @@
 # Async MongoDB executor
 
-`AsyncMongoDBExecutor` runs, explains or profiles individual MongoDB queries and complete
+`AsyncMongoExecutor` runs, explains or profiles individual MongoDB queries and complete
 workloads. It uses bounded asyncio workers, not threads. One `ExecutionResult`
 class describes successes and captured workload failures.
 
 ## Own or borrow a client
 
 ```python
-from dbrtoolkit.mongodb import AsyncMongoDBExecutor
+from dbrtoolkit.mongodb import AsyncMongoExecutor
 
 # In a notebook or async function:
-async with AsyncMongoDBExecutor.from_uri(
+async with AsyncMongoExecutor.from_uri(
     uri,
     concurrency=4,
     continue_on_error=True,

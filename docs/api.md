@@ -52,7 +52,7 @@
       heading_level: 2
       members: [status]
 
-::: dbrtoolkit.mongodb.AsyncMongoDBExecutor
+::: dbrtoolkit.mongodb.AsyncMongoExecutor
     options:
       show_root_heading: true
       heading_level: 2
@@ -101,7 +101,7 @@
       heading_level: 2
       members: [fields, values, value_counts]
 
-::: dbrtoolkit.mongodb.MongoDBExecutor
+::: dbrtoolkit.mongodb.MongoExecutor
     options:
       show_root_heading: true
       heading_level: 2
@@ -130,13 +130,13 @@
       show_root_heading: true
       heading_level: 2
 
-::: dbrtoolkit.mongodb.MongoDBSampleEstimator
+::: dbrtoolkit.mongodb.MongoSampleEstimator
     options:
       show_root_heading: true
       heading_level: 2
       members: [prepare, estimate, close, drop_sample, population_size, sample_size, sample_target]
 
-::: dbrtoolkit.mongodb.AsyncMongoDBSampleEstimator
+::: dbrtoolkit.mongodb.AsyncMongoSampleEstimator
     options:
       show_root_heading: true
       heading_level: 2

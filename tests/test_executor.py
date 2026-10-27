@@ -9,7 +9,7 @@ from pymongo.errors import ExecutionTimeout, OperationFailure
 from dbrtoolkit.couchbase import CouchbaseQuery
 from dbrtoolkit.execution import ExecutionResult
 from dbrtoolkit.mongodb import (
-    AsyncMongoDBExecutor,
+    AsyncMongoExecutor,
     MongoAggregateQuery,
     MongoCollectionRef,
     MongoFindQuery,
@@ -68,7 +68,7 @@ def test_consumes_all_results_and_routes_options(collect, aggregate):
             if aggregate
             else MongoFindQuery(TARGET, {"x": 1}, {"x": 1}, (("x", -1),), 1, 2)
         )
-        result = await AsyncMongoDBExecutor(client).run(
+        result = await AsyncMongoExecutor(client).run(
             query, collect_results=collect, query_kwargs={"comment": "test"}
         )
         assert result.row_count == cursor.consumed == 2
@@ -96,7 +96,7 @@ def test_cursor_failure_closes_and_single_run_raises():
         cursor = Cursor([{"x": 1}], error)
         client, _, _ = driver(cursor)
         with pytest.raises(OperationFailure) as caught:
-            await AsyncMongoDBExecutor(client).run(MongoFindQuery(TARGET, {}), collect_results=True)
+            await AsyncMongoExecutor(client).run(MongoFindQuery(TARGET, {}), collect_results=True)
         assert caught.value is error
         cursor.close.assert_awaited_once()
 
@@ -112,7 +112,7 @@ def test_explain_command_routing(aggregate):
             if aggregate
             else MongoFindQuery(TARGET, {}, sort=(("b", -1), ("a", 1)), limit=5)
         )
-        result = await AsyncMongoDBExecutor(client).profile(
+        result = await AsyncMongoExecutor(client).profile(
             query,
             verbosity="executionStats",
             query_kwargs={"hint": "idx"},
@@ -140,7 +140,7 @@ def test_sequential_failure_policies_and_partial_results():
         error = ExecutionTimeout("slow", code=50)
         cursors = [Cursor([{"x": 1}]), Cursor([{"x": 2}], error), Cursor()]
         collection.find.side_effect = cursors
-        results = await AsyncMongoDBExecutor(client, continue_on_error=keep_going).run_workload(
+        results = await AsyncMongoExecutor(client, continue_on_error=keep_going).run_workload(
             workload(3), collect_results=True
         )
         assert results[0].status == "success"
@@ -156,7 +156,7 @@ def test_sequential_failure_policies_and_partial_results():
 def test_parallel_stop_drains_inflight_and_preserves_positions():
     async def scenario():
         client, _, _ = driver()
-        executor = AsyncMongoDBExecutor(client, concurrency=2)
+        executor = AsyncMongoExecutor(client, concurrency=2)
         started = []
         second_started = asyncio.Event()
         first_finished = asyncio.Event()
@@ -186,7 +186,7 @@ def test_parallel_stop_drains_inflight_and_preserves_positions():
 def test_parallel_continue_bounds_active_workers_and_attempts_each_entry():
     async def scenario():
         client, _, _ = driver()
-        executor = AsyncMongoDBExecutor(client, concurrency=3, continue_on_error=True)
+        executor = AsyncMongoExecutor(client, concurrency=3, continue_on_error=True)
         active = peak = 0
 
         async def run(query, **kwargs):
@@ -219,7 +219,7 @@ def test_cancellation_closes_active_cursor():
 
         cursor = Blocking()
         client, _, _ = driver(cursor)
-        task = asyncio.create_task(AsyncMongoDBExecutor(client).run_workload(workload(2)))
+        task = asyncio.create_task(AsyncMongoExecutor(client).run_workload(workload(2)))
         await entered.wait()
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
@@ -232,7 +232,7 @@ def test_cancellation_closes_active_cursor():
 def test_programming_error_propagates_and_cleans_workers():
     async def scenario():
         client, _, _ = driver()
-        executor = AsyncMongoDBExecutor(client, concurrency=2, continue_on_error=True)
+        executor = AsyncMongoExecutor(client, concurrency=2, continue_on_error=True)
         entered = asyncio.Event()
         cleaned = asyncio.Event()
 
@@ -257,11 +257,11 @@ def test_programming_error_propagates_and_cleans_workers():
 def test_borrowed_and_owned_client_lifetimes():
     async def scenario():
         client, _, _ = driver()
-        async with AsyncMongoDBExecutor(client):
+        async with AsyncMongoExecutor(client):
             pass
         client.close.assert_not_awaited()
         with patch("dbrtoolkit.mongodb.executor.AsyncMongoClient", return_value=client) as factory:
-            async with AsyncMongoDBExecutor.from_uri(
+            async with AsyncMongoExecutor.from_uri(
                 "mongodb://example", client_kwargs={"retryReads": False}
             ) as executor:
                 factory.assert_called_once_with("mongodb://example", retryReads=False)
@@ -276,7 +276,7 @@ def test_borrowed_and_owned_client_lifetimes():
 def test_preflight_checks_every_entry_before_io():
     async def scenario():
         client, _, collection = driver()
-        executor = AsyncMongoDBExecutor(client)
+        executor = AsyncMongoExecutor(client)
         work = workload(2)
         work[1].query.limit = -1
         with pytest.raises(ValueError):
@@ -294,7 +294,7 @@ def test_preflight_checks_every_entry_before_io():
 def test_reserved_query_options_rejected(options):
     async def scenario():
         client, db, collection = driver()
-        executor = AsyncMongoDBExecutor(client)
+        executor = AsyncMongoExecutor(client)
         with pytest.raises(ValueError):
             await executor.run_workload(workload(1), query_kwargs=options)
         with pytest.raises(ValueError):
@@ -308,7 +308,7 @@ def test_reserved_query_options_rejected(options):
 def test_explain_workload_and_empty_workload():
     async def scenario():
         client, db, _ = driver()
-        executor = AsyncMongoDBExecutor(client, continue_on_error=True)
+        executor = AsyncMongoExecutor(client, continue_on_error=True)
         db.command.side_effect = [{"ok": 1}, OperationFailure("bad")]
         results = await executor.explain_workload(workload(2))
         assert results[0].raw == {"ok": 1}
@@ -345,7 +345,7 @@ def test_timeout_scope_covers_all_batches():
         with patch(
             "dbrtoolkit.mongodb.executor.pymongo.timeout", return_value=Deadline()
         ) as timeout:
-            await AsyncMongoDBExecutor(client, timeout_seconds=5).run(MongoFindQuery(TARGET, {}))
+            await AsyncMongoExecutor(client, timeout_seconds=5).run(MongoFindQuery(TARGET, {}))
             timeout.assert_called_once_with(5)
         assert not inside
 
@@ -364,7 +364,7 @@ def test_timeout_scope_covers_all_batches():
 )
 def test_invalid_configuration(kwargs):
     with pytest.raises((ValueError, TypeError)):
-        AsyncMongoDBExecutor(MagicMock(), **kwargs)
+        AsyncMongoExecutor(MagicMock(), **kwargs)
 
 
 def test_result_status():
@@ -378,7 +378,7 @@ def test_explain_preserves_raw_without_implicit_parsing():
         client, db, _ = driver()
         raw = {"ok": 1, "queryPlanner": {"winningPlan": {"stage": 42}}}
         db.command.return_value = raw
-        result = await AsyncMongoDBExecutor(client).explain(MongoFindQuery(TARGET, {}))
+        result = await AsyncMongoExecutor(client).explain(MongoFindQuery(TARGET, {}))
         assert result.raw is raw
         assert result.status == "success"
         assert result.warnings == ()
@@ -402,7 +402,7 @@ def test_diagnostic_modes(method, verbosity, aggregate):
     async def scenario():
         client, db, _ = driver()
         query = MongoAggregateQuery(TARGET, []) if aggregate else MongoFindQuery(TARGET, {})
-        result = await getattr(AsyncMongoDBExecutor(client), method)(query)
+        result = await getattr(AsyncMongoExecutor(client), method)(query)
         db.command.assert_awaited_once()
         assert db.command.call_args.args[0]["verbosity"] == verbosity
         assert result.row_count is result.documents is None
@@ -416,7 +416,7 @@ def test_diagnostic_workload_errors(method, keep_going):
     async def scenario():
         client, db, _ = driver()
         db.command.side_effect = [ExecutionTimeout("slow", code=50), {"ok": 1}]
-        results = await getattr(AsyncMongoDBExecutor(client, continue_on_error=keep_going), method)(
+        results = await getattr(AsyncMongoExecutor(client, continue_on_error=keep_going), method)(
             workload(2)
         )
         assert results[0].status == "timeout"
@@ -429,7 +429,7 @@ def test_diagnostic_workload_errors(method, keep_going):
 def test_profile_verbosity_and_reserved_options():
     async def scenario():
         client, db, _ = driver()
-        executor = AsyncMongoDBExecutor(client)
+        executor = AsyncMongoExecutor(client)
         for kwargs in (
             {"verbosity": "queryPlanner"},
             {"query_kwargs": {"verbosity": "queryPlanner"}},

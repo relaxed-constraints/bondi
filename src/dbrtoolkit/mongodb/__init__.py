@@ -2,17 +2,17 @@
 
 from dbrtoolkit.mongodb.aggregate import MongoAggregateQuery
 from dbrtoolkit.mongodb.collection import MongoCollectionRef
-from dbrtoolkit.mongodb.estimator import AsyncMongoDBSampleEstimator, MongoDBSampleEstimator
-from dbrtoolkit.mongodb.executor import AsyncMongoDBExecutor
+from dbrtoolkit.mongodb.estimator import AsyncMongoSampleEstimator, MongoSampleEstimator
+from dbrtoolkit.mongodb.executor import AsyncMongoExecutor
 from dbrtoolkit.mongodb.explain import summarize
 from dbrtoolkit.mongodb.query import MongoFindQuery
-from dbrtoolkit.mongodb.sync_executor import MongoDBExecutor
+from dbrtoolkit.mongodb.sync_executor import MongoExecutor
 
 __all__ = [
-    "AsyncMongoDBSampleEstimator",
-    "MongoDBSampleEstimator",
-    "MongoDBExecutor",
-    "AsyncMongoDBExecutor",
+    "AsyncMongoSampleEstimator",
+    "MongoSampleEstimator",
+    "MongoExecutor",
+    "AsyncMongoExecutor",
     "MongoAggregateQuery",
     "MongoCollectionRef",
     "MongoFindQuery",

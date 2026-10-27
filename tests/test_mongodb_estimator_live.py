@@ -7,12 +7,12 @@ import pytest
 from pymongo import MongoClient
 
 from dbrtoolkit.mongodb import (
-    AsyncMongoDBExecutor,
-    AsyncMongoDBSampleEstimator,
+    AsyncMongoExecutor,
+    AsyncMongoSampleEstimator,
     MongoCollectionRef,
-    MongoDBExecutor,
-    MongoDBSampleEstimator,
+    MongoExecutor,
     MongoFindQuery,
+    MongoSampleEstimator,
 )
 
 
@@ -27,11 +27,11 @@ def test_estimator_live():
         assert count > 4, "Initialize the Docker demo fixture first"
         exact = client.demo.business.count_documents(query.filter)
         owned = []
-        with MongoDBExecutor.from_uri(uri, timeout_seconds=10) as executor:
-            with MongoDBSampleEstimator(executor, target) as est:
+        with MongoExecutor.from_uri(uri, timeout_seconds=10) as executor:
+            with MongoSampleEstimator(executor, target) as est:
                 assert est.estimate(query).cardinality == exact
             for persist in (False, True):
-                with MongoDBSampleEstimator(
+                with MongoSampleEstimator(
                     executor, target, sample_size=4, persist=persist
                 ) as est:
                     result = est.estimate(query)
@@ -47,9 +47,9 @@ def test_estimator_live():
                         assert est.estimate(query) == result
 
         async def run():
-            async with AsyncMongoDBExecutor.from_uri(uri, timeout_seconds=10) as executor:
+            async with AsyncMongoExecutor.from_uri(uri, timeout_seconds=10) as executor:
                 for persist in (False, True):
-                    async with AsyncMongoDBSampleEstimator(
+                    async with AsyncMongoSampleEstimator(
                         executor,
                         target,
                         sample_ratio=0.5,

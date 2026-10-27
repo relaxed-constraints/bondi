@@ -9,13 +9,13 @@ not accepted; filters must be valid in an aggregation `$match` stage.
 
 ```python
 from dbrtoolkit.mongodb import (
-    MongoCollectionRef, MongoDBExecutor, MongoDBSampleEstimator, MongoFindQuery,
+    MongoCollectionRef, MongoExecutor, MongoSampleEstimator, MongoFindQuery,
 )
 
 target = MongoCollectionRef("demo", "business")
 query = MongoFindQuery(target, {"stars": {"$gte": 4}})
-with MongoDBExecutor.from_uri("mongodb://localhost:27017") as executor:
-    with MongoDBSampleEstimator(
+with MongoExecutor.from_uri("mongodb://localhost:27017") as executor:
+    with MongoSampleEstimator(
         executor, target, sample_size=4, persist=True,
     ) as estimator:
         estimate = estimator.estimate(query)
@@ -33,7 +33,7 @@ Source documents are not modified.
 Explicit lifecycle management is also supported:
 
 ```python
-estimator = MongoDBSampleEstimator(executor, target, sample_ratio=0.25, persist=True)
+estimator = MongoSampleEstimator(executor, target, sample_ratio=0.25, persist=True)
 try:
     estimator.prepare()
     estimate = estimator.estimate(query)
@@ -90,10 +90,10 @@ after source changes. MongoDB sampling is not controlled by a Python random seed
 ## Async notebooks
 
 ```python
-from dbrtoolkit.mongodb import AsyncMongoDBExecutor, AsyncMongoDBSampleEstimator
+from dbrtoolkit.mongodb import AsyncMongoExecutor, AsyncMongoSampleEstimator
 
-async with AsyncMongoDBExecutor.from_uri("mongodb://localhost:27017") as executor:
-    async with AsyncMongoDBSampleEstimator(
+async with AsyncMongoExecutor.from_uri("mongodb://localhost:27017") as executor:
+    async with AsyncMongoSampleEstimator(
         executor, target, sample_size=4, persist=True,
     ) as estimator:
         estimate = await estimator.estimate(query)

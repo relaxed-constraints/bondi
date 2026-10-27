@@ -1,16 +1,16 @@
 # Synchronous executors
 
-Use `MongoDBExecutor` or `CouchbaseExecutor` in ordinary Python scripts. They
+Use `MongoExecutor` or `CouchbaseExecutor` in ordinary Python scripts. They
 return the same results as their async counterparts without requiring `await`.
 
 ```python
-from dbrtoolkit.mongodb import MongoCollectionRef, MongoDBExecutor, MongoFindQuery
+from dbrtoolkit.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
 
 query = MongoFindQuery(
     target=MongoCollectionRef("demo", "business"),
     filter={"stars": {"$gte": 4}},
 )
-with MongoDBExecutor.from_uri("mongodb://localhost:27017") as executor:
+with MongoExecutor.from_uri("mongodb://localhost:27017") as executor:
     result = executor.run(query, collect_results=True)
     print(result.documents)
     plan = executor.explain(query)
@@ -22,7 +22,7 @@ raises. Keep it open for all queries in an experiment. Results remain usable aft
 Explicit cleanup is equally supported:
 
 ```python
-executor = MongoDBExecutor.from_uri("mongodb://localhost:27017")
+executor = MongoExecutor.from_uri("mongodb://localhost:27017")
 try:
     result = executor.run(query)
 finally:
@@ -62,9 +62,9 @@ Jupyter normally runs an event loop already. Use the async executors with `await
 there. Sync adapters reject calls inside a running loop with an explanatory error.
 
 ```python
-from dbrtoolkit.mongodb import AsyncMongoDBExecutor
+from dbrtoolkit.mongodb import AsyncMongoExecutor
 
-executor = AsyncMongoDBExecutor.from_uri("mongodb://localhost:27017")
+executor = AsyncMongoExecutor.from_uri("mongodb://localhost:27017")
 result = await executor.run(query)
 # In a later cell, when finished:
 await executor.close()
