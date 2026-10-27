@@ -141,3 +141,33 @@
       show_root_heading: true
       heading_level: 2
       members: [prepare, estimate, close, drop_sample, population_size, sample_size, sample_target]
+
+::: dbrtoolkit.mongodb.MongoGenerationConfig
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [validate]
+
+::: dbrtoolkit.mongodb.MongoPredicateTemplate
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: []
+
+::: dbrtoolkit.mongodb.MongoQueryPattern
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [from_query, matches]
+
+::: dbrtoolkit.mongodb.MongoWorkloadGenerator
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [generate, last_stats]
+
+::: dbrtoolkit.mongodb.WorkloadGenerationError
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: []

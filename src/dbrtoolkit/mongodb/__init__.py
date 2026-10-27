@@ -5,10 +5,18 @@ from dbrtoolkit.mongodb.collection import MongoCollectionRef
 from dbrtoolkit.mongodb.estimator import AsyncMongoSampleEstimator, MongoSampleEstimator
 from dbrtoolkit.mongodb.executor import AsyncMongoExecutor
 from dbrtoolkit.mongodb.explain import summarize
+from dbrtoolkit.mongodb.generation import MongoWorkloadGenerator, WorkloadGenerationError
+from dbrtoolkit.mongodb.generation_config import MongoGenerationConfig
+from dbrtoolkit.mongodb.pattern import MongoPredicateTemplate, MongoQueryPattern
 from dbrtoolkit.mongodb.query import MongoFindQuery
 from dbrtoolkit.mongodb.sync_executor import MongoExecutor
 
 __all__ = [
+    "MongoWorkloadGenerator",
+    "WorkloadGenerationError",
+    "MongoGenerationConfig",
+    "MongoQueryPattern",
+    "MongoPredicateTemplate",
     "AsyncMongoSampleEstimator",
     "MongoSampleEstimator",
     "MongoExecutor",

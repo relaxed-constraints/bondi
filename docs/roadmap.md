@@ -99,11 +99,19 @@ No compatibility aliases are retained.
 
 Synchronous executor adapters are implemented for both backends, with owned
 connections, explicit cleanup and context management. MongoDB sampling estimation is now implemented with fresh/persisted samples,
-optional diagnostics and sync/async interfaces. Workload generation is next. Executor sample() helpers remain deferred.
+optional diagnostics and sync/async interfaces. Flat-find workload generation is now implemented (step 11). Executor sample() helpers remain deferred.
 
-Couchbase sampling estimation is deferred. Next, resume MongoDB workload generation
-using the completed sampling estimator and the saved feature-parity audit.
+Couchbase sampling estimation is deferred. MongoDB workload generation uses the sampling estimator and saved feature-parity audit.
 
 Synchronous executors and sampling estimators now work in notebooks through a
-background event loop, with interruption cleanup. Workload generation remains
-a synchronous-only planned component.
+background event loop, with interruption cleanup. Workload generation uses a synchronous-only interface.
+
+## Workload generation progress
+
+Step 11 implements single-collection flat-find patterns through generate(), with
+one configuration, optional selectivity estimation, exact group sizes, bounded
+rejection, callbacks, diagnostics, and existing Workload JSONL persistence.
+Both distinct and full schema retention use uniform distinct values.
+Logical filters, $elemMatch and $lookup generation remain on the broader
+index-advisor parity checklist; multi-collection generation is intentionally
+excluded from this interface. Matching-example retrieval by estimators remains deferred.

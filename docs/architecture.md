@@ -258,3 +258,15 @@ previous longer executor and estimator names have no compatibility aliases.
 Guides and demo notebooks default to synchronous executors and estimators in both
 scripts and Jupyter. Public async classes remain supported for advanced integration
 and borrowed async connections; no async APIs are deprecated.
+
+## Mongo workload generation
+
+MongoWorkloadGenerator is synchronous and single-collection. It consumes one
+Schema retaining values, one optional prepared CardinalityEstimator and one
+MongoGenerationConfig containing all controls. generate() returns the existing
+Workload, optionally paired with a pattern list indexed by entry.pattern_id.
+MongoQueryPattern and its typed predicate slots are immutable. Only flat find
+patterns are generated initially; logical/array-expression/aggregation families
+remain deferred. Canonical typed pools make full/distinct retention equivalent.
+Generation uses bounded rejection, never an unchecked fallback. No database
+connection, sample acquisition, cleanup or event loop belongs to the generator.
