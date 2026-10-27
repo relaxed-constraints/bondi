@@ -114,3 +114,30 @@
       heading_level: 2
       inherited_members: true
       members: [from_uri, close, run, run_workload, explain, explain_workload, profile, profile_workload]
+
+::: dbrtoolkit.estimation.CardinalityEstimate
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: dbrtoolkit.estimation.CardinalityEstimator
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: dbrtoolkit.estimation.AsyncCardinalityEstimator
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: dbrtoolkit.mongodb.MongoDBSampleEstimator
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [prepare, estimate, close, drop_sample, population_size, sample_size, sample_target]
+
+::: dbrtoolkit.mongodb.AsyncMongoDBSampleEstimator
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: [prepare, estimate, close, drop_sample, population_size, sample_size, sample_target]

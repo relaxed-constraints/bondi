@@ -232,3 +232,12 @@ MongoDBExecutor and CouchbaseExecutor delegate to the async implementations usin
 a private asyncio.Runner for the entire owned connection lifetime. Explicit
 signatures preserve all six operation contracts. Use from_uri() and either with
 or explicit close(). Calls reject running event loops and other threads.
+
+## Cardinality estimation
+
+Shared sync/async protocols require only estimate(query), returning a frozen
+CardinalityEstimate with optional sample diagnostics. MongoDB estimators evaluate
+find filters through native aggregation. Fresh samples count matches and sample
+size in one facet; materialized samples use unique owned collections with explicit
+cleanup. Preparation records population size. Sync estimation borrows the executor
+loop; no connection or loop is created. Schema inference remains independent.

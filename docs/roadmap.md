@@ -98,5 +98,5 @@ No compatibility aliases are retained.
 ## Before workload generation
 
 Synchronous executor adapters are implemented for both backends, with owned
-connections, explicit cleanup and context management. Next: sampling estimation
-for MongoDB before workload generation. Executor sample() helpers remain deferred.
+connections, explicit cleanup and context management. MongoDB sampling estimation is now implemented with fresh/persisted samples,
+optional diagnostics and sync/async interfaces. Workload generation is next. Executor sample() helpers remain deferred.
