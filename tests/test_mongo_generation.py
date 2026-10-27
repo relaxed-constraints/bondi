@@ -58,8 +58,10 @@ def test_exact_counts_patterns_and_fixed_options():
         assert patterns[e.pattern_id].matches(e.query)
         assert e.query.sort and e.query.projection is not None and e.query.limit is not None
     assert g.last_stats["completed_patterns"] == 10
-    with pytest.raises(TypeError):
-        g.last_stats["completed_patterns"] = 9
+    stats = g.last_stats
+    assert json.loads(json.dumps(stats)) == stats
+    stats["completed_patterns"] = 9
+    assert g.last_stats["completed_patterns"] == 10
     with pytest.raises(FrozenInstanceError):
         patterns[0].skip = 4
 
@@ -176,8 +178,10 @@ def test_callback_before_estimator_and_fixed_slot_targets():
         )
     assert len(calls) == 8 and len(set(calls)) == 1
     assert g.last_stats["validation_rejections"] == 8
-    with pytest.raises(TypeError):
-        g.last_stats["pending_pattern_target"]["num_predicates"] = 0
+    stats = g.last_stats
+    assert json.loads(json.dumps(stats)) == stats
+    stats["pending_pattern_target"]["num_predicates"] = 0
+    assert g.last_stats["pending_pattern_target"]["num_predicates"] > 0
 
 
 def test_discarded_group_never_returned_or_exposed_to_callback():
@@ -496,3 +500,11 @@ def test_defaults_are_independent_and_invalid_call_clears_stats():
     with pytest.raises(ValueError):
         g.generate(num_patterns=0)
     assert dict(g.last_stats) == {}
+
+
+def test_error_stats_are_serializable_and_independent():
+    source = {"nested": {"count": 1}}
+    error = WorkloadGenerationError("exhausted", source)
+    assert json.loads(json.dumps(error.stats)) == source
+    error.stats["nested"]["count"] = 2
+    assert source["nested"]["count"] == 1

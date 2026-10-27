@@ -4,11 +4,10 @@ import inspect
 import math
 import random
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
-from types import MappingProxyType
 from typing import Any, Literal, overload
 
 from bson import Int64, json_util
@@ -35,17 +34,14 @@ _BSON_NAMES = {
 }
 
 
-def _snapshot(stats):
-    return MappingProxyType(
-        {k: _snapshot(v) if isinstance(v, dict) else v for k, v in stats.items()}
-    )
-
-
 class WorkloadGenerationError(RuntimeError):
-    """Generation exhausted a budget without a complete workload; stats describe progress."""
+    """Generation exhausted a budget without a complete workload.
+
+    The stats attribute is an independent, JSON-serializable progress dictionary.
+    """
 
     def __init__(self, message: str, stats: dict):
-        self.stats = _snapshot(stats)
+        self.stats = deepcopy(stats)
         super().__init__(message)
 
 
@@ -274,9 +270,13 @@ class MongoWorkloadGenerator:
         self._last_stats = {}
 
     @property
-    def last_stats(self) -> Mapping[str, Any]:
-        """Read-only snapshot of the latest generation call, including interrupted/failed calls."""
-        return _snapshot(self._last_stats)
+    def last_stats(self) -> dict[str, Any]:
+        """Return a JSON-serializable deep copy of the latest call's statistics.
+
+        Includes interrupted/failed calls. Mutating this dictionary or its nested
+        values does not affect the generator or subsequent snapshots.
+        """
+        return deepcopy(self._last_stats)
 
     @overload
     def generate(

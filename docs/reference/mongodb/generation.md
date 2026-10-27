@@ -65,7 +65,7 @@ workload = generator.generate(
     timeout_seconds=60,
     seed=42,
 )
-print(dict(generator.last_stats))
+print(generator.last_stats)
 ```
 
 The callback runs before estimation, receives only fully completed prior patterns
@@ -75,7 +75,7 @@ Deadline checks occur between operations; they cannot interrupt a running estima
 or callback. Configure the estimator's executor timeout separately.
 
 On budget exhaustion, `WorkloadGenerationError.stats` reports progress. There is
-no partial workload result. `generator.last_stats` is a read-only snapshot with
+no partial workload result. `generator.last_stats` is an independent, JSON-serializable dictionary with
 attempts, rejection counts, estimator calls, discarded groups, completed patterns,
 elapsed seconds and, when unfinished, the pending slot targets. Exceptions and
 interruptions also update diagnostics after generation starts. Input-validation
@@ -181,3 +181,7 @@ are enabled with chances 0.3/0.2/0.1: exists requires observed missingness, type
 requires multiple observed types, and size requires an observed array.
 These probabilities are conditional, not independent final proportions.
 
+
+Statistics are deep copies: modifying nested values does not change generator state.
+Both `generator.last_stats` and `WorkloadGenerationError.stats` can be passed directly
+to `json.dumps()` or an experiment tracker.
