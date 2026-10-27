@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-10-27
+
+- Rewrite the README around implemented features, with synchronous usage examples.
+- Clarify installation, notebook setup and published documentation links.
+- No library behavior or public API changes.
+
 ## 0.1.0 — 2026-10-27
 
 - Native MongoDB find/aggregation and Couchbase SQL++ queries with JSONL workloads.
