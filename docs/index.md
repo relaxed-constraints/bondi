@@ -1,37 +1,32 @@
 # Database Research Toolkit
 
-`dbrtoolkit` is a small shared foundation for database research projects.
-It is being developed incrementally, with each class discussed and understood
-before moving on to the next component.
+`dbrtoolkit` provides Python building blocks for students and researchers studying
+database queries, query optimization and index selection. Use it to describe native
+queries, run experiments against databases, inspect data, and generate workloads.
+Research models and experiment tracking belong in your project; the toolkit supplies
+the shared database components.
 
-## Current capabilities
+## Two common workflows
 
-The package provides an immutable `MongoCollectionRef` and mutable `MongoFindQuery` and `MongoAggregateQuery` classes.
-No database connection is needed; PyMongo is installed automatically for BSON support. Start with the
-[collection reference guide](collection-reference.md), then follow the
-[documentation walkthrough](documentation.md) to see how its API docs are built.
+- **Describe queries → execute or profile → summarize results.** Compare query behavior
+  while retaining native diagnostic responses for deeper analysis.
+- **Inspect data → estimate selectivity → generate workloads.** Build groups of queries
+  with fixed patterns and varying values, then save them for repeatable experiments.
 
-See the [find-query guide](find-query.md) for construction and mutation examples.
+| Capability | MongoDB | Couchbase |
+| --- | --- | --- |
+| Native queries and workload persistence | Find and aggregation | SQL++ |
+| Execution, explain and profile | Supported | Detailed profiling depends on server support |
+| Summary parsing | Supported | Supported; unavailable metrics remain `None` |
+| Schema inspection | Python documents from either backend or files | Same parser |
+| Sampling estimation | Supported | Planned/deferred |
+| Pattern-based workload generation | Flat find queries | Not implemented |
 
-The [aggregation guide](aggregate-query.md) introduces ordered pipelines and
-explains how the two native query classes share serialization.
+## Start here
 
-The [Couchbase guide](couchbase-query.md) introduces SQL++ text, parameters and context.
+1. [Install the toolkit](installation.md).
+2. [Start a local database](local-databases.md) with bundled demo data.
+3. [Run your first query](quickstart.md).
 
-The [workload guide](workloads.md) explains the Query protocol, reference ownership
-and single-backend validation.
-
-The [executor guide](executor.md) covers async MongoDB execution, raw explains and
-concurrent workloads. The [Couchbase executor guide](couchbase-executor.md) shows
-the same operations for SQL++, including optional Enterprise profiling. Database
-connections are needed only for execution.
-
-The [schema guide](schemas.md) shows how to inspect nested Python documents, count
-missing fields and optionally retain typed values without a database.
-
-## Where to start
-
-- [Architecture](architecture.md): scope and agreed design boundaries.
-- [Roadmap](roadmap.md): small implementation milestones.
-- [Contributing](contributing.md): setup, checks and the learning workflow.
-- [API reference](api.md): documentation extracted from the package.
+Explore the **User guide** by task, follow a **Tutorial** for a complete workflow,
+or use the [API reference](api.md) to look up a particular class or method.

@@ -1,53 +1,12 @@
-# Couchbase query summaries
+# Couchbase summary parsing
 
-Parsing is an explicit, offline step. `summarize()` detects the response format and returns the shared frozen
-`QuerySummary`, without the SDK, a connection, or source mutation.
-
-```python
-from dbrtoolkit.couchbase import summarize
-
-# Inside an executor context:
-plan = await executor.explain(query)
-measured = await executor.profile(query)
-
-plan_summary = summarize(plan.raw)
-execution_summary = summarize(measured.raw)
-print(plan_summary.index_names)
-print(execution_summary.execution_time_ms, execution_summary.rows_returned)
-```
-
-`summarize()` also accepts `run().raw`. Basic metrics are useful on
-Community; a detailed Enterprise profile adds operator and index information.
-Keep `.raw` for research-specific counters. There is no automatic summary creation,
-second query, or merge of separately collected explain and profile results.
-
-## Field meanings
-
-| Field | EXPLAIN | Run / profile |
-| --- | --- | --- |
-| `execution_time_ms` | `None` | SDK metadata `metrics.execution_ms`, already in milliseconds. |
-| `rows_returned` | `None` | SDK metadata `metrics.result_count`, including scalar or array rows. |
-| `documents_examined` | `None` | `None`: fetch input/output counts do not establish a comparable whole-query total. |
-| `keys_examined` | `None` | `None`: index output items do not establish internal index entries examined. |
-| `plan_stages` | Native `#operator` names under `plan`. | Native names under `profile.executionTimings`, when available and supported. |
-| `index_names` | Native scan `index` names, including `#primary`. | Names from the supported execution tree. |
-
-Missing values remain `None`; reported zero remains zero. EXPLAIN request timing
-and result count describe plan generation, so the explain parser never presents
-them as underlying-query measurements. Server execution time differs from the
-client's `ExecutionResult.elapsed_ms`. Phase and operator times are never added.
-
-Traversal is root-first, follows `~child` and `~children` in list order, and preserves
-repeated operators. Index names are deduplicated in first-encounter order. This is
-a flat description, not execution order or a unique plan fingerprint. Index names
-are unqualified and may coincide across collections. An empty tuple means no named
-index was found in the supported tree; missing scan names produce `None` instead.
-
-EXPLAIN and execution profiles need not have identical trees. For example, a profile
-can add `Authorize` and `Stream` and omit EXPLAIN's `Parallel` wrapper. Preserve these
-native differences when comparing experiments.
+::: dbrtoolkit.couchbase.summarize
+    options:
+      show_root_heading: true
+      heading_level: 2
 
 ## Supported inputs and limits
+
 
 - `summarize()` accepts the single result row returned as `explain().raw`,
   containing a `plan` object. It does not accept a list of rows or an HTTP envelope.

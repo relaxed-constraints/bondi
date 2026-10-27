@@ -1,272 +1,45 @@
-# Architecture decisions
+# Architecture and design
 
-## Purpose and ownership
+## Toolkit boundary
 
-The toolkit owns reusable database interactions and representations. Individual
-research projects consume it from separate repositories. Models, embeddings,
-training strategies, research-specific evaluation and yanex experiment pipelines
-remain in those projects.
+The toolkit supplies database interactions and reusable representations. Models,
+index recommendation algorithms and experiment tracking remain in research projects.
+Promote project code only when its contract is useful across projects and testable
+independently. The toolkit has no dependency on mdbrtools or sibling repositories.
 
-The existing index-advisor repository is a source of useful implementations,
-not a dependency of the new toolkit. Extract code deliberately and verify its
-behaviour against the new contracts. The toolkit should not depend on mdbrtools.
+## Native queries, shared operations
 
-## Native queries first
+MongoDB find/pipeline objects and Couchbase SQL++ objects preserve native query forms.
+There is no intermediate query language or automatic translation. `Query` is a small
+structural protocol for validation, persistence and identity. A `Workload` groups
+entries from one backend, retaining input order and optional integer pattern IDs.
 
-Represent MongoDB find queries, MongoDB aggregation pipelines and Couchbase
-SQL++ queries natively. No database-independent intermediate query representation
-is planned. An LLM translation project can consume and produce native queries;
-prompts, translation attempts and repair strategies belong in that project.
+## Execution and interpretation
 
-Structural validity, database acceptance and semantic equivalence are separate
-outcomes. A query fingerprint identifies a stored representation, not semantic
-equivalence. Version-1 MongoDB find envelopes use Canonical Extended JSON and SHA-256 fingerprints.
+Executors own or borrow backend connections. Async implementations perform I/O;
+synchronous adapters use a dedicated background loop and are the teaching default.
+Workload concurrency stays inside the executor rather than a separate runner class.
+Queries are passed by reference and must not be mutated during operations.
 
-## Data and execution boundaries
+`run`, `explain` and `profile` separate normal execution from diagnostics.
+`ExecutionResult` stores observations and raw data. Offline `summarize` functions
+interpret those data into a conservative `QuerySummary`; missing information remains
+missing. Backend-specific evidence is retained rather than forced into shared totals.
 
-Saved queries should include logical targets and semantics-affecting options.
-Credentials, connections, timeouts, profiling controls and index hints belong in
-execution configuration. The precise option boundaries will be reviewed when
-implementing each backend.
+## Schema, estimation and generation
 
-Workloads preserve order and duplicate entries. A query fingerprint is not a
-workload-entry identifier. Pattern membership is separate from native query syntax. Weights are deferred
-until a concrete consumer requires them.
+`Schema` consumes Python dictionaries incrementally without database access. Retaining
+values is opt-in. Estimators provide a separate cardinality contract; MongoDB sampling
+uses database matching semantics and owns only its temporary sample collection.
+The synchronous generator consumes a schema and optional prepared estimator. It does
+not own connections or sampling lifecycle. Pattern constraints remain native and
+project-specific rules can be supplied through callbacks.
 
-Keep execution, explain collection and repeated measurement separate. Preserve
-raw explain responses alongside parsed information. Do not force backend plans
-into a universal plan tree before a concrete need is established.
+## Persistence and change policy
 
-## Small contracts, introduced gradually
-
-Prefer dataclasses for data, small protocols for shared behaviour, and composition
-for implementation reuse. Implement native query types before finalising their
-shared protocol. Shared interfaces must not assume MongoDB syntax.
-
-Schema inference should be usable on local documents without a database. Inferred
-schemas describe observations, not guarantees about an entire dataset.
-
-## Dependencies and experiments
-
-Keep runtime dependencies minimal. Backend, notebook and research integrations
-will be introduced only as needed. Yanex remains the experiment tracking tool;
-the toolkit owns the correctness of any measurement procedure it implements.
-
-## Promoting project code into the toolkit
-
-A candidate should have a concrete cross-project use case, an interface independent
-of its originating research method, documented semantics and limitations, focused
-tests, a small example, and proportionate dependencies. A second consumer is useful
-evidence, not a mandatory prerequisite for obvious shared infrastructure.
-
-## MongoDB collection reference
-
-`MongoCollectionRef` is an immutable value object containing database and collection
-names. It has no deployment identity or connection. Both names must be nonempty
-strings without null characters; names are preserved exactly. Full server naming
-validation is deferred. Equality and hashing use both names. There is no common
-backend parent class, namespace parsing or serialization API yet.
-
-## MongoDB find query
-
-`MongoFindQuery` is a mutable dataclass with a required target and filter dictionary,
-optional projection, ordered tuple sort, nonnegative skip and optional positive
-limit. None represents no limit; zero is rejected. Only integer 1/-1 sorts are
-supported initially. Validation is structural and runs at construction, explicitly via validate(), and
-before serialization or fingerprinting.
-Filter and projection are deep-copied at construction; later assignments and edits
-are not intercepted. Queries have value equality but are unhashable. Public to_json(), from_json() and fingerprint() methods own persistence and
-representation identity. PyMongo is a required dependency for bson.json_util.
-Serialization preserves order, rejects ambiguous Extended JSON document wrappers,
-and follows BSON date/binary normalization. Execution is provided by AsyncMongoExecutor.
-
-## MongoDB aggregation query
-
-`MongoAggregateQuery` contains a starting collection target and required pipeline
-list. It follows the mutable, deep-copy-at-construction contract of MongoFindQuery.
-Each top-level stage must have exactly one string key starting with $ followed by
-a name. Empty pipelines and write stages are representable. Stage semantics and
-nested pipelines are deferred to MongoDB; execution policy is a separate concern.
-Collectionless and database-level aggregation are not yet represented.
-
-Both query types use private serialization helpers, without inheriting from each
-other. Aggregation uses a version-1 mongodb.aggregate envelope with target and
-pipeline, preserving stage and document order. Existing find JSON and fingerprints
-remain unchanged.
-
-## Couchbase SQL++ query
-
-`CouchbaseQuery` contains exact statement text, named parameters, positional
-parameters and an optional native query-context string. It has no single target
-collection. Only one parameter style may be nonempty. It is mutable and unhashable,
-with deep-copied parameters at construction and explicit validation thereafter.
-Validation accepts plain JSON values and rejects nonfinite floats and cycles;
-it does not parse SQL++, check placeholders or assert read-only execution.
-
-Its version-1 couchbase.sqlpp envelope uses standard JSON. Fingerprints include
-statement/context text and parameter order without semantic normalization. The
-class needs no Couchbase SDK; connections and execution controls remain separate.
-
-## Shared query contract and workloads
-
-The Query protocol declares a class-level backend identifier and instance methods
-validate(), to_json() and fingerprint(). Native classes satisfy it structurally;
-no inheritance or runtime-checkable protocol is required. Runtime entry validation
-checks member availability and delegates to the query, not method signatures.
-
-WorkloadEntry retains a query reference and optional nonnegative integer pattern_id.
-IDs are local identifiers, not list positions. Workload shallow-copies its input
-list but retains entry/query references, preserving order and duplicates. Explicit
-deepcopy is available when isolation is needed. Workload validates a common backend
-at construction and on explicit validate(); different MongoDB named databases and
-collections may coexist. Empty workloads are valid. Later edits are not intercepted.
-Workload.save/load persist one versioned entry per UTF-8 JSONL line. Native query
-objects retain their own envelopes and decoding rules. Loading creates independent
-objects and reports bad entries with line numbers. Saving uses atomic sibling-file
-replacement. Built-in query kinds only are supported; weights and pattern-registry
-management remain deferred.
-
-## Async MongoDB executor
-
-A single public executor owns single-query and workload operations; there is no
-separate runner class. It accepts a borrowed AsyncMongoClient or creates an owned
-one via from_uri, closed through async context management or close(). Inputs are
-used by reference and must not be mutated during execution. Workloads prevalidate
-all query types and use bounded asyncio workers, returning input-aligned lists of
-ExecutionResult or None for unstarted entries. Successful runs consume all cursor
-batches, optionally retaining documents. Explain collects queryPlanner diagnostics; profile collects executionStats (or
-allPlansExecution) diagnostics. Both return raw responses, without query rows or
-automatic parsing, and have corresponding workload methods.
-
-Expected database/timeout failures become workload results; single operations raise.
-Stop-on-error drains in-flight operations but stops scheduling. Caller cancellation
-and programming errors propagate after cleanup. Status derives from the original
-exception. A per-query PyMongo timeout context covers initial execution and cursor
-consumption. Native query_kwargs/command_kwargs are supported with reserved-field
-checks. There is no write guard, input snapshot, executor retry, warmup or repetition
-feature. PyMongo >=4.13 is required for the stable async API.
-
-## Open decisions
-
-- License and release policy.
-- Remaining native query contracts and their serialization formats.
-- Sync versus async execution strategy.
-- Schema types and sampling contracts.
-- Backend support and compatibility policy.
-
-Package/module names beyond the initial root are provisional.
-
-## Shared summaries and explicit parsing
-
-`QuerySummary` lives in `dbrtoolkit.summary` and is a frozen six-field value object
-returned by the pure
-`summarize(raw)` function. The executor continues to return raw documents;
-summary extraction is explicit and offline. None means unavailable, not zero.
-Winning-plan stages exclude pipeline operators and SBE textual/physical stage names.
-Examination counts describe whole-operation work only when scope is understood;
-no recursive summation of counters or time estimates. Split pipelines retain final
-output counts but may lack other metrics. Sharded and nested-read interpretations
-are deferred. Projects keep the raw document for custom fields; no extensibility
-registry or universal cross-backend plan model is introduced.
-
-## Local development databases
-
-Opt-in Compose profiles provide separate MongoDB and Couchbase services with pinned
-images, localhost ports and named volumes. A shared synthetic fixture is loaded
-through native database interfaces. Initialization is repeatable and separate from
-container startup; no database dependencies are added to the library. Development
-credentials and resource limits are intentionally local-only.
-
-Execution results store native diagnostics in `raw`, optional collected output in
-`documents` (including scalar or array rows), and nonfatal operation `warnings`.
-They do not contain a parsed summary. Backend parsers remain independently usable
-on saved responses; unknown or non-comparable measurements remain `None`.
-
-
-## Async Couchbase executor
-
-The optional `couchbase` extra supplies the SDK; importing native queries does not
-require it. `AsyncCouchbaseExecutor` supports borrowed clusters and an awaited
-`from_uri()` factory for owned clusters. All six operations retain the established
-workload ordering, concurrency and error policy. No common public executor base
-class is introduced.
-
-Run requests basic metrics; explain prefixes SQL++ with EXPLAIN and returns the
-native plan; profile requests TIMINGS and returns execution metadata. Run/profile
-fully consume rows and optionally retain them, including scalar and array rows.
-Missing detailed profiling yields a warning and preserves basic metrics. Metadata
-uses public SDK accessors converted to JSON-compatible values; profile trees stay
-native. The explicit `summarize()` function detects plan vs execution metadata and returns
-QuerySummary offline without the SDK. Supported native operator trees supply plan
-fields; SDK execution_ms/result_count supply time and output counts. Document/index
-examination totals stay unavailable. Unknown plan layouts preserve valid basic metrics.
-
-SDK consistency defaults remain in force unless query_kwargs overrides them.
-Per-query deadlines cover consumption and SDK execution. Statement bindings,
-context and operation modes cannot be overridden through the options escape hatch.
-
-Each backend exposes one `summarize(raw)` function. `None` denotes absent diagnostics
-and yields an empty summary; callers check execution status separately. Unknown or
-malformed responses raise, while unsupported plan layouts retain available metrics.
-
-
-## Observed schemas
-
-Schema inference accepts iterable Python dictionaries and has no database interactions
-or mdbrtools dependency. Schema, FieldSchema and TypeSchema use composition. Exact
-structured paths distinguish field names from array traversal, with escaped dotted
-strings for convenience. Counts describe occurrences; missingness is relative to
-immediate parent objects, not root-document coverage. Null and missing are distinct.
-
-Retention is fixed per schema: none by default, distinct scalar values, or full
-value frequencies. Values are separated by type and exposed read-only. Mixed
-primitive/container paths remain in primitive_fields. Updates avoid sorting or
-rebuilding the entire tree; parent-derived missing counts remain live. Per-document
-validation precedes accumulation, so invalid documents cannot partially update
-counts. Memory grows with schema size and, when enabled, distinct retained values.
-Sampling policies and backend query semantics stay outside the schema module.
-
-## Synchronous executors
-
-MongoExecutor and CouchbaseExecutor delegate to the async implementations using
-a private background thread and event loop for the owned connection lifetime. Explicit
-signatures preserve all six operation contracts. Use from_uri() and either with
-or explicit close(). Calls work inside notebook event loops but remain confined to the creating thread.
-Interrupts cancel the submitted operation and wait for coroutine cleanup. Closing
-waits for connection cleanup, shuts down the loop, and joins the background thread.
-
-## Cardinality estimation
-
-Shared sync/async protocols require only estimate(query), returning a frozen
-CardinalityEstimate with optional sample diagnostics. MongoDB estimators evaluate
-find filters through native aggregation. Fresh samples count matches and sample
-size in one facet; materialized samples use unique owned collections with explicit
-cleanup. Preparation records population size. Sync estimation borrows the executor
-loop; no connection or loop is created. Schema inference remains independent.
-
-## Mongo naming convention
-
-MongoDB implementation classes use the `Mongo` prefix, with `Async` before it
-where needed. Executors are `MongoExecutor` and `AsyncMongoExecutor`; sampling
-estimators are `MongoSampleEstimator` and `AsyncMongoSampleEstimator`.
-This matches `MongoCollectionRef`, `MongoFindQuery`, and `MongoAggregateQuery`.
-The package path remains `dbrtoolkit.mongodb`. This is a direct API rename;
-previous longer executor and estimator names have no compatibility aliases.
-
-## Teaching interface
-
-Guides and demo notebooks default to synchronous executors and estimators in both
-scripts and Jupyter. Public async classes remain supported for advanced integration
-and borrowed async connections; no async APIs are deprecated.
-
-## Mongo workload generation
-
-MongoWorkloadGenerator is synchronous and single-collection. It consumes one
-Schema retaining values, one optional prepared CardinalityEstimator and one
-MongoGenerationConfig containing all controls. generate() returns the existing
-Workload, optionally paired with a pattern list indexed by entry.pattern_id.
-MongoQueryPattern and its typed predicate slots are immutable. Only flat find
-patterns are generated initially; logical/array-expression/aggregation families
-remain deferred. Canonical typed pools make full/distinct retention equivalent.
-Generation uses bounded rejection, never an unchecked fallback. No database
-connection, sample acquisition, cleanup or event loop belongs to the generator.
+Queries are mutable and validated at checkpoints. JSONL workloads persist concrete
+native query envelopes and pattern IDs, not connections or execution results.
+MongoDB filter/pipeline payloads preserve BSON types; envelope metadata uses plain
+JSON. Fingerprints describe serialized representations, not semantic equivalence.
+The API is still evolving; changes are explicit and tested rather than hidden behind
+speculative compatibility layers.

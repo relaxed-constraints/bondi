@@ -1,9 +1,9 @@
-# How this documentation works
+# Building the documentation
 
 There are two complementary sources of documentation:
 
 - Hand-written Markdown explains concepts and workflows, such as the
-  [collection-reference guide](collection-reference.md).
+  [MongoDB query guide](find-query.md).
 - Python docstrings describe public API contracts. mkdocstrings extracts these
   into the [API reference](api.md).
 
@@ -18,7 +18,7 @@ second copy of its parameter descriptions in Markdown.
 
 ## 2. Place the API in a Markdown page
 
-`docs/api.md` contains this directive:
+`docs/reference/mongodb/queries.md` contains this directive:
 
 ```text
 ::: dbrtoolkit.mongodb.MongoCollectionRef
@@ -70,8 +70,8 @@ later.
 ## Documentation theme
 
 The site uses Material for MkDocs, installed through the `docs` dependency group.
-Theme settings live in `mkdocs.yml`. We retain the existing navigation and enable
-code-copy buttons. `font: false` uses system fonts without fetching Google Fonts.
+Theme settings live in `mkdocs.yml`. Top-level tabs separate onboarding, guides, tutorials, reference and development.
+Code-copy buttons are enabled. `font: false` uses system fonts without fetching Google Fonts.
 
 After a dependency or theme change, restart the local server:
 

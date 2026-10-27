@@ -2,15 +2,13 @@
 
 **dbrtoolkit** provides Python building blocks for reproducible database research.
 
-The planned scope includes native queries, workloads, schema inference, workload
-generation, database execution, explain parsing and index management. Research
-algorithms and experiment pipelines live in separate repositories that depend on
-this toolkit.
+Use native MongoDB and Couchbase queries, execute and profile workloads, inspect
+schemas, estimate MongoDB selectivity, and generate pattern-based workloads.
+Synchronous APIs work in scripts and notebooks; async APIs remain available.
+Research algorithms and experiment tracking stay in separate projects.
 
-**Status:** foundation, `MongoCollectionRef`, `MongoFindQuery`, `MongoAggregateQuery` and `CouchbaseQuery` implemented. The shared query protocol, in-memory workloads and async MongoDB/Couchbase executors are available.
-Couchbase execution requires `uv sync --extra couchbase`; see the
-[Couchbase executor guide](docs/couchbase-executor.md).
-See the [executor guide](docs/executor.md) for database execution and testing. See the [collection reference guide](docs/collection-reference.md).
+Start with [installation](docs/installation.md) and the [quickstart](docs/quickstart.md),
+or browse the [documentation overview](docs/index.md).
 
 ## Start developing
 
@@ -54,7 +52,7 @@ and `notebooks/schema_demo.ipynb`.
 ```text
 src/dbrtoolkit/     Installable library
 tests/            Offline tests
-docs/             Architecture, roadmap, contributor guide and API reference
+docs/             Getting started, guides, tutorials, API reference and development
 ```
 
 See [the contributor guide](docs/contributing.md) for the development workflow.

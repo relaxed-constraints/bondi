@@ -5,30 +5,53 @@ theme:
   font: false
   features:
     - content.code.copy
+    - navigation.tabs
+    - navigation.top
 watch:
   - src
 nav:
-  - Overview: index.md
-  - Guides:
+  - Home: index.md
+  - Getting started:
+      - Installation: installation.md
       - Local databases: local-databases.md
-      - Collection reference: collection-reference.md
-      - Find query: find-query.md
-      - Aggregation query: aggregate-query.md
-      - Couchbase query: couchbase-query.md
-      - Inspecting schemas: schemas.md
-      - MongoDB workload generation: workload-generation.md
-      - Queries and workloads: workloads.md
-      - MongoDB sampling estimates: mongodb-estimation.md
-      - Synchronous executors: sync-executors.md
-      - MongoDB executor: executor.md
-      - Couchbase executor: couchbase-executor.md
-      - MongoDB explain summaries: explain.md
-      - Couchbase query summaries: couchbase-summaries.md
-  - Documentation walkthrough: documentation.md
-  - Architecture: architecture.md
-  - Roadmap: roadmap.md
-  - Contributing: contributing.md
-  - API reference: api.md
+      - Quickstart: quickstart.md
+  - User guide:
+      - Queries and workloads:
+          - MongoDB queries: find-query.md
+          - Couchbase queries: couchbase-query.md
+          - Building and saving workloads: workloads.md
+      - Query execution:
+          - Running queries and workloads: executor.md
+          - Explain and profile: profiling.md
+          - Query summaries: summaries.md
+      - Schema inspection: schemas.md
+      - Cardinality estimation: mongodb-estimation.md
+      - Workload generation: workload-generation.md
+  - Tutorials:
+      - Inspect a dataset: tutorials/inspect-data.md
+      - Generate and evaluate a workload: tutorials/generate-workload.md
+      - Explore Couchbase: tutorials/couchbase.md
+  - API reference:
+      - Overview: api.md
+      - Queries and workloads: reference/queries.md
+      - Results and summaries: reference/results.md
+      - Schema inspection: reference/schema.md
+      - Estimation interfaces: reference/estimation.md
+      - MongoDB:
+          - Queries: reference/mongodb/queries.md
+          - Executors: reference/mongodb/executors.md
+          - Sampling estimation: reference/mongodb/estimation.md
+          - Workload generation: reference/mongodb/generation.md
+          - Summary parsing: reference/mongodb/summaries.md
+      - Couchbase:
+          - Queries: reference/couchbase/queries.md
+          - Executors: reference/couchbase/executors.md
+          - Summary parsing: reference/couchbase/summaries.md
+  - Development:
+      - Contributing: contributing.md
+      - Architecture and design: architecture.md
+      - Building the documentation: documentation.md
+      - Roadmap: roadmap.md
 plugins:
   - search
   - mkdocstrings:

@@ -45,7 +45,7 @@ complete workflow exists; exploratory notebooks belong in research repositories.
 The offline suite checks query contracts, persistence, parsers and executor behavior
 at SDK boundaries. Run `uv run --extra couchbase pytest` to include Couchbase SDK
 tests; they are skipped without the optional dependency. Live backend tests require
-explicit environment-variable opt-in. See the executor guides for setup; Couchbase
+explicit environment-variable opt-in. See the local database guide for setup; Couchbase
 checks use read-only queries against the initialized Compose demo data.
 
 See the [documentation walkthrough](documentation.md) for a concrete docstring-to-site example.
@@ -54,3 +54,12 @@ See the [documentation walkthrough](documentation.md) for a concrete docstring-t
 
 Implement new features on a `codex/` feature branch. After verification, commit the
 feature and merge it back into `main`, preserving unrelated user changes.
+
+## Documentation organization
+
+Keep onboarding short and executable, guides focused on common tasks, and detailed
+contracts in source docstrings and reference pages. Use synchronous examples by
+default. Tutorials point to the maintained notebooks rather than duplicating their
+contents. Every public API object should have one reference home. Update navigation
+and local links when moving a page; execute changed examples as well as building
+the site.

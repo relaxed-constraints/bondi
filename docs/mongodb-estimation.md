@@ -1,116 +1,49 @@
-# MongoDB sampling estimates
+# Cardinality and selectivity estimation
 
-Estimate the number of documents matching a find filter using MongoDB's own
-matching semantics. Sort, projection, skip and limit do not affect the estimate.
-The query must target the estimator's source collection. Aggregation queries are
-not accepted; filters must be valid in an aggregation `$match` stage.
+Cardinality is the number of documents matching a filter. Selectivity is that
+number divided by the population size, **before sort, projection, skip and limit**.
+`MongoSampleEstimator` evaluates filters using MongoDB's own matching semantics.
+Couchbase estimation is not implemented yet.
 
-## A reusable sample
+## Reuse a sample
 
 ```python
 from dbrtoolkit.mongodb import (
-    MongoCollectionRef, MongoExecutor, MongoSampleEstimator, MongoFindQuery,
+    MongoCollectionRef, MongoExecutor, MongoFindQuery, MongoSampleEstimator,
 )
 
 target = MongoCollectionRef("demo", "business")
-query = MongoFindQuery(target, {"stars": {"$gte": 4}})
-with MongoExecutor.from_uri("mongodb://localhost:27017") as executor:
-    with MongoSampleEstimator(
-        executor, target, sample_size=4, persist=True,
-    ) as estimator:
-        estimate = estimator.estimate(query)
+with MongoExecutor.from_uri("mongodb://127.0.0.1:27017") as executor:
+    with MongoSampleEstimator(executor, target, sample_size=4, persist=True) as estimator:
+        estimate = estimator.estimate(MongoFindQuery(target, {"city": "Sydney"}))
         print(estimate.cardinality, estimate.selectivity)
         print(estimate.sample_matches, estimate.sample_size)
-        print(estimator.sample_target)
 ```
 
-Preparation counts the population once and creates a uniquely named collection
-in `dbrtoolkit_samples`. Estimates run `$match` and `$count` on that collection.
-The estimator drops its own collection on exit and leaves the borrowed executor
-open. The database user needs permission to create, populate and drop samples.
-Source documents are not modified.
+The four-document sample is for the tiny demo dataset, not a research recommendation.
+Choose `sample_size` or `sample_ratio`, never both. Preparation records the population
+size. A persisted sample is stored in an owned collection under `dbrtoolkit_samples`
+and removed on context exit; the source collection is unchanged. The database user
+needs permission to create and drop the sample.
 
-Explicit lifecycle management is also supported:
+## Choose a sampling strategy
 
-```python
-estimator = MongoSampleEstimator(executor, target, sample_ratio=0.25, persist=True)
-try:
-    estimator.prepare()
-    estimate = estimator.estimate(query)
-finally:
-    estimator.close()
-```
+- `persist=True`: reuse one sample for repeated estimates. Useful for workload generation.
+- `persist=False`: draw a fresh sample for every estimate; repeated answers can differ.
+- Neither size nor ratio: evaluate the full population. No sample collection is created.
 
-Keep the executor open until estimator cleanup finishes. `prepare()` is idempotent;
-`close()` is idempotent and ends use of the estimator. Constructor calls do no I/O.
-Use `cleanup_on_exit=False` to retain a sample; call `drop_sample()` explicitly,
-even after estimator close, while the executor is still open. Dropping a sample
-before close invalidates preparation; prepare again to create a new sample.
-Process termination can leave collections behind: `sample_target` identifies the
-collection to remove. These are ordinary collections, not server-expiring objects.
+An oversized size is capped at the population size with a warning. A tiny positive
+ratio rounds to at least one document for a nonempty population, also with a warning
+when adjustment is needed. Samples are not controlled by the generator's Python seed.
 
-## Fresh samples and full-population evaluation
+## Interpret the result
 
-With `persist=False` (default), each estimate draws a fresh `$sample` from the source.
-A `$facet` counts all sampled documents and matching sampled documents from the
-same draw. Only counts are returned to Python; records are not downloaded.
+The estimate scales sample matches to the recorded population. Zero matches in a
+sample do not prove zero matches in the source. Small samples give coarse selectivity
+resolution; no confidence interval is supplied. Keep the source static during an
+experiment and use full-collection verification when you need a guarantee.
 
-Supply either `sample_size` or `sample_ratio`, never both. Ratios must be in (0, 1];
-sizes must be positive integers. Oversized requests are capped at population size
-with a `UserWarning`. Ratios use Python's nearest-integer rounding; a result of zero
-for a nonempty population is raised to one, with a `UserWarning`.
-
-With neither option, or an effective size equal to the population, the estimator
-evaluates the full population without creating a sample collection, even when
-`persist=True`. Empty populations return zero cardinality, zero selectivity and
-zero sample counts.
-
-`population_limit=N` restricts the population to an unsorted prefix before sampling.
-It changes the denominator as well as the sampled population. It is not a random
-subset and should not be used as a substitute for sampling.
-
-## Interpreting results
-
-`CardinalityEstimate` contains estimated `cardinality` (float), recorded
-`population_size`, and optional observed `sample_matches` and `sample_size`.
-`selectivity` is cardinality divided by population size, or zero for an empty population.
-
-For sampling, cardinality is `sample_matches / sample_size * population_size`.
-Persisted samples use their actual count recorded at preparation. Fresh samples
-report their actual count in each result; the estimator's `sample_size` property
-is the effective requested size. Sample diagnostics can be absent for future
-non-sampling implementations.
-
-Zero sample matches do not prove the population has zero matches. Small samples
-have coarse resolution and variable estimates. No confidence interval is provided.
-Assume the source and persisted sample remain unchanged during use; preparation
-and subsequent operations do not share a database snapshot. Recreate the estimator
-after source changes. MongoDB sampling is not controlled by a Python random seed.
-
-## Advanced: async estimation
-
-The synchronous examples above work directly in Jupyter. The estimator shares
-its executor’s background loop. Use the async classes only when you want an
-awaitable interface:
-
-```python
-from dbrtoolkit.mongodb import AsyncMongoExecutor, AsyncMongoSampleEstimator
-
-async with AsyncMongoExecutor.from_uri("mongodb://localhost:27017") as executor:
-    async with AsyncMongoSampleEstimator(
-        executor, target, sample_size=4, persist=True,
-    ) as estimator:
-        estimate = await estimator.estimate(query)
-```
-
-For async callers, use `await estimator.prepare()`, `await estimator.estimate(query)`, and
-`await estimator.close()` across notebook cells. Do not overlap preparation or
-cleanup with estimates. Executor per-operation timeouts apply; single-operation
-failures propagate. A sync estimator reuses its sync executor's loop and thread.
-
-The shared `CardinalityEstimator[QueryT]` and `AsyncCardinalityEstimator[QueryT]`
-protocols live in `dbrtoolkit.estimation`. They require only `estimate(query)`;
-training, preparation and sample management belong to each implementation.
-Couchbase estimators and retrieval of matching examples are deferred.
-
-See `notebooks/mongodb_estimation.ipynb` for a short Docker-backed walkthrough.
+The estimator borrows its executor, so close the estimator before closing the
+executor. Context managers enforce that order and also clean up on exceptions.
+See [sampling APIs](reference/mongodb/estimation.md) for manual lifecycle management
+and [estimation interfaces](reference/estimation.md) for custom research estimators.
