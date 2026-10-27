@@ -75,3 +75,8 @@ with the executor. Constructing or serializing a query has no database effects.
 
 See the [API reference](api.md) for signatures and docstrings. The class's `>>>`
 example is executed by pytest as well as displayed by mkdocstrings.
+
+Envelope metadata uses ordinary JSON. The entire pipeline uses Canonical Extended
+JSON, including numeric stage arguments such as `$limit` and `$sort` directions.
+This preserves BSON literals anywhere in nested expressions. Files from the old
+metadata encoding should be regenerated; serialization-based fingerprints change.

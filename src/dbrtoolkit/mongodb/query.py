@@ -113,9 +113,11 @@ class MongoFindQuery:
                 raise ValueError("sort directions must be 1 or -1")
 
     def to_json(self) -> str:
-        """Serialize a validated query as a version-1 Canonical Extended JSON envelope.
+        """Serialize a version-1 JSON envelope with a Canonical Extended JSON filter.
 
-        Preserves document and sort order. Dates normalize to millisecond precision
+        Metadata, projection, sort, skip and limit use ordinary JSON. Projections
+        must contain JSON-serializable values. Preserves document and sort order.
+        Dates normalize to millisecond precision
         and load as naive UTC datetimes. Binary subtype zero loads as bytes; large
         integers may load as bson.Int64. These preserve the serialized BSON value,
         not necessarily its original Python representation.
@@ -142,7 +144,7 @@ class MongoFindQuery:
             "skip": self.skip,
             "limit": self.limit,
         }
-        return _dump_envelope(envelope)
+        return _dump_envelope(envelope, ("filter",))
 
     @classmethod
     def from_json(cls, text: str) -> Self:
@@ -157,27 +159,22 @@ class MongoFindQuery:
             ValueError: JSON, the envelope, canonical payload or field values are invalid.
         """
         raw, data = _load_envelope(
-            text, "mongodb.find", {"filter", "projection", "sort", "skip", "limit"}
+            text, "mongodb.find", {"filter", "projection", "sort", "skip", "limit"}, ("filter",)
         )
         target = data["target"]
         sort = data["sort"]
         if not isinstance(sort, list) or any(not isinstance(pair, list) for pair in sort):
             raise TypeError("Serialized sort must be an array of arrays")
 
-        # Canonical numberLong decodes as Int64. Envelope integers are ordinary
-        # Python ints; BSON type distinctions inside filter/projection stay intact.
-        def envelope_int(value):
-            return int(value) if isinstance(value, int) and not isinstance(value, bool) else value
-
         query = cls(
             target=MongoCollectionRef(**target),
             filter=data["filter"],
             projection=data["projection"],
-            sort=tuple(tuple(envelope_int(v) for v in pair) for pair in sort),
-            skip=envelope_int(data["skip"]),
-            limit=envelope_int(data["limit"]),
+            sort=tuple(tuple(pair) for pair in sort),
+            skip=data["skip"],
+            limit=data["limit"],
         )
-        _check_canonical_payload(raw, query.to_json(), ("filter", "projection"))
+        _check_canonical_payload(raw, query.to_json(), ("filter",))
         return query
 
     def fingerprint(self) -> str:

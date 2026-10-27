@@ -154,17 +154,16 @@ def test_rejects_ambiguous_bson_wrapper_and_relaxed_payload():
         MongoAggregateQuery.from_json(text.replace('{"$numberInt":"2"}', "2"))
 
 
-def test_find_serialization_is_unchanged_by_helper_extraction():
+def test_find_serialization_uses_plain_options():
     query = MongoFindQuery(TARGET, {"b": 2, "a": 1}, sort=(("b", -1),), limit=10)
     expected = (
-        '{"format_version":{"$numberInt":"1"},"query_kind":"mongodb.find",'
+        '{"format_version":1,"query_kind":"mongodb.find",'
         '"target":{"database":"research","collection":"businesses"},'
         '"filter":{"b":{"$numberInt":"2"},"a":{"$numberInt":"1"}},'
-        '"projection":null,"sort":[["b",{"$numberInt":"-1"}]],'
-        '"skip":{"$numberInt":"0"},"limit":{"$numberInt":"10"}}'
+        '"projection":null,"sort":[["b",-1]],'
+        '"skip":0,"limit":10}'
     )
     assert query.to_json() == expected
-    assert query.fingerprint() == "acdf5f2030daddc455641f3c0aac5c549f5b7e7f9d8eedbbf69328f289970fcd"
     assert MongoFindQuery.from_json(expected) == query
 
 

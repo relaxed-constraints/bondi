@@ -81,8 +81,11 @@ assert restored.fingerprint() == query.fingerprint()
 ```
 
 `to_json()` validates the current query, builds a versioned envelope, and uses
-`bson.json_util.dumps()` with Canonical Extended JSON. `from_json()` uses the
-matching loader, checks the envelope and reconstructs the query. All fields are
+`bson.json_util.dumps()` with Canonical Extended JSON for the **filter only**.
+Metadata, projection, sort, skip and limit use ordinary JSON. Projections must
+contain JSON-serializable values; BSON literals in projection expressions are not
+supported by persistence. `from_json()` decodes BSON only within the filter,
+checks the envelope and reconstructs the query. All fields are
 stored, including defaults. Unknown versions, query kinds, extra/missing fields
 and duplicate JSON keys are rejected. This loader expects our canonical format,
 not arbitrary relaxed JSON exported by another application.
@@ -128,3 +131,7 @@ instead of silently changing those ambiguous documents. Serialization does not
 mutate the original query.
 
 Execution options, hints and database execution remain future steps.
+
+Serialization now uses plain JSON metadata and find options. Regenerate files saved
+with the previous all-Extended-JSON encoding; fingerprints also change with the
+serialized representation. There is no compatibility loader for that encoding.

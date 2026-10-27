@@ -177,3 +177,43 @@ def test_rejects_ambiguous_literal_documents(document):
 def test_rejects_unknown_python_values():
     with pytest.raises(TypeError):
         MongoFindQuery(TARGET, {"value": object()}).to_json()
+
+
+def test_only_native_payload_uses_extended_json(tmp_path):
+    from dbrtoolkit.mongodb import MongoAggregateQuery
+    from dbrtoolkit.workload import Workload, WorkloadEntry
+
+    query = MongoFindQuery(TARGET, {"x": Int64(1)}, {"x": 1, "_id": 0}, (("x", -1),), 2, 10)
+    aggregate = MongoAggregateQuery(TARGET, [{"$match": {"x": Int64(1)}}, {"$limit": 10}])
+    path = tmp_path / "workload.jsonl"
+    Workload([WorkloadEntry(query, 0), WorkloadEntry(aggregate, 1)]).save(path)
+    records = [json.loads(line) for line in path.read_text().splitlines()]
+    for record in records:
+        assert type(record["format_version"]) is int
+        assert type(record["query"]["format_version"]) is int
+    encoded = records[0]["query"]
+    assert encoded["filter"] == {"x": {"$numberLong": "1"}}
+    assert encoded["projection"] == {"x": 1, "_id": 0}
+    assert encoded["sort"] == [["x", -1]]
+    assert encoded["skip"] == 2
+    assert encoded["limit"] == 10
+    assert records[1]["query"]["pipeline"][1] == {"$limit": {"$numberInt": "10"}}
+    restored = Workload.load(path)
+    assert restored[0].query == query
+    assert restored[1].query == aggregate
+    assert restored[0].query.fingerprint() == query.fingerprint()
+
+
+def test_projection_is_plain_json_and_not_bson_decoded():
+    projection = {"literal": {"$literal": {"$numberLong": "1"}}}
+    query = MongoFindQuery(TARGET, {}, projection)
+    assert MongoFindQuery.from_json(query.to_json()).projection == projection
+    with pytest.raises(TypeError):
+        MongoFindQuery(TARGET, {}, {"literal": {"$literal": ObjectId()}}).to_json()
+
+
+def test_extended_json_metadata_is_rejected():
+    data = json.loads(MongoFindQuery(TARGET, {}).to_json())
+    data["format_version"] = {"$numberInt": "1"}
+    with pytest.raises(ValueError, match="format_version"):
+        MongoFindQuery.from_json(json.dumps(data))

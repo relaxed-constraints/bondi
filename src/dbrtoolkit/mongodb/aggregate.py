@@ -85,7 +85,8 @@ class MongoAggregateQuery:
     def to_json(self) -> str:
         """Serialize a validated version-1 mongodb.aggregate envelope.
 
-        Uses Canonical Extended JSON, preserving stage and document order. Shares
+        Uses ordinary JSON metadata and a Canonical Extended JSON pipeline,
+        preserving stage and document order. Shares
         find-query BSON normalization: dates load as naive UTC with millisecond
         precision, binary subtype zero as bytes, and large integers may become
         bson.Int64. Literal documents ambiguous with Extended JSON wrappers are
@@ -104,7 +105,8 @@ class MongoAggregateQuery:
                 "query_kind": "mongodb.aggregate",
                 "target": {"database": self.target.database, "collection": self.target.collection},
                 "pipeline": self.pipeline,
-            }
+            },
+            ("pipeline",),
         )
 
     @classmethod
@@ -118,7 +120,7 @@ class MongoAggregateQuery:
             TypeError: Input or decoded query fields have incorrect types.
             ValueError: Invalid JSON, envelope, pipeline structure or noncanonical payload.
         """
-        raw, data = _load_envelope(text, "mongodb.aggregate", {"pipeline"})
+        raw, data = _load_envelope(text, "mongodb.aggregate", {"pipeline"}, ("pipeline",))
         query = cls(MongoCollectionRef(**data["target"]), data["pipeline"])
         _check_canonical_payload(raw, query.to_json(), ("pipeline",))
         return query
