@@ -303,7 +303,7 @@ class MongoSampleEstimator:
         async def invoke():
             return await getattr(self._estimator, method)(*args)
 
-        return self._executor._runner.run(invoke())
+        return self._executor._submit(invoke, cancel_on_interrupt=method != "close")
 
     def prepare(self) -> Self:
         """Prepare explicitly; entering a with block also prepares."""

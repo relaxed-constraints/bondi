@@ -229,9 +229,11 @@ Sampling policies and backend query semantics stay outside the schema module.
 ## Synchronous executors
 
 MongoExecutor and CouchbaseExecutor delegate to the async implementations using
-a private asyncio.Runner for the entire owned connection lifetime. Explicit
+a private background thread and event loop for the owned connection lifetime. Explicit
 signatures preserve all six operation contracts. Use from_uri() and either with
-or explicit close(). Calls reject running event loops and other threads.
+or explicit close(). Calls work inside notebook event loops but remain confined to the creating thread.
+Interrupts cancel the submitted operation and wait for coroutine cleanup. Closing
+waits for connection cleanup, shuts down the loop, and joins the background thread.
 
 ## Cardinality estimation
 

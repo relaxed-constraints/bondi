@@ -87,7 +87,11 @@ Assume the source and persisted sample remain unchanged during use; preparation
 and subsequent operations do not share a database snapshot. Recreate the estimator
 after source changes. MongoDB sampling is not controlled by a Python random seed.
 
-## Async notebooks
+## Notebooks and async applications
+
+The synchronous examples above work directly in Jupyter. The estimator shares
+its executor’s background loop. Use the async classes only when you want an
+awaitable interface:
 
 ```python
 from dbrtoolkit.mongodb import AsyncMongoExecutor, AsyncMongoSampleEstimator

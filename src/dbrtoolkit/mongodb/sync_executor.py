@@ -14,7 +14,7 @@ class MongoExecutor(_SyncExecutor):
 
     Create with from_uri(). Use with or explicitly call close() when finished.
     Calls retain one private event loop and must stay on the creating thread.
-    Inside notebooks or another running event loop, use the async executor.
+    Works in notebooks: the owned event loop runs on a dedicated background thread.
     Operation options, results, concurrency and errors match the async executor.
     """
 

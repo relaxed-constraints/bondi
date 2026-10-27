@@ -103,3 +103,7 @@ optional diagnostics and sync/async interfaces. Workload generation is next. Exe
 
 Couchbase sampling estimation is deferred. Next, resume MongoDB workload generation
 using the completed sampling estimator and the saved feature-parity audit.
+
+Synchronous executors and sampling estimators now work in notebooks through a
+background event loop, with interruption cleanup. Workload generation remains
+a synchronous-only planned component.

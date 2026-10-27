@@ -209,7 +209,7 @@ def test_sync_uses_executor_loop_and_keeps_executor_open(monkeypatch):
         with MongoSampleEstimator(executor, TARGET, sample_size=5) as est:
             assert est.estimate(QUERY) == CardinalityEstimate(4.0, 10, 2, 5)
         assert not executor._closed
-        assert loops[0] is loops[1] is executor._runner.get_loop()
+        assert loops[0] is loops[1] is executor._loop
     est.close()  # already closed, even after executor shutdown
 
 

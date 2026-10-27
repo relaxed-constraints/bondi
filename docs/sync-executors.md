@@ -56,24 +56,31 @@ as the async executors. Workload concurrency still applies: the caller waits,
 but queries within a workload may execute concurrently. Timeout and error handling
 are unchanged. Parse raw responses explicitly with `summarize(result.raw)`.
 
-## Notebooks and resource ownership
+## Notebooks, interruption and resource ownership
 
-Jupyter normally runs an event loop already. Use the async executors with `await`
-there. Sync adapters reject calls inside a running loop with an explanatory error.
+The synchronous classes work in Jupyter too. Each owns a background thread with
+one event loop; its client is created, used and closed on that loop. Notebook
+calls block until results arrive, while workload queries can still run concurrently.
+No nested event loop or notebook patch is needed.
 
 ```python
-from dbrtoolkit.mongodb import AsyncMongoExecutor
-
-executor = AsyncMongoExecutor.from_uri("mongodb://localhost:27017")
-result = await executor.run(query)
+executor = MongoExecutor.from_uri("mongodb://localhost:27017")
+result = executor.run(query)
 # In a later cell, when finished:
-await executor.close()
+executor.close()
 ```
 
-For Couchbase, the async factory also needs `await`:
-`executor = await AsyncCouchbaseExecutor.from_uri(...)`.
+Use a with block when possible so exceptions and notebook interrupts also close
+the connection. Ctrl+C / notebook interruption cancels the submitted coroutine
+and waits for its cleanup before raising KeyboardInterrupt. An interrupt during
+close lets cleanup finish before propagating. Cleanup may take time if a driver
+is unresponsive; per-operation timeouts remain useful. Client cancellation does
+not guarantee an already-submitted server operation stops immediately.
 
-Sync adapters own their connections and must be created with `from_uri()`.
-They do not accept borrowed clients or existing async executors. Use them only
-from their creating thread. Each keeps one private event loop alive for its full
-lifetime; there is no background thread or nested event loop.
+Synchronous executors own their connections and do not accept borrowed clients.
+Use them only from the thread where they were created. Explicit close joins the
+worker thread and closes its loop; repeated close calls are harmless. Close any
+sampling estimators before their executor.
+
+The async executors remain available when callers want to await operations while
+doing other work. The synchronous interface is the default for scripts and notebooks.
