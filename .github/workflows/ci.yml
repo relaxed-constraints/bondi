@@ -1,0 +1,54 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    name: Python ${{ matrix.python }} offline tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.13.6"
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked --extra couchbase
+      - run: uv run pytest --ignore-glob='tests/*_live.py'
+  quality:
+    name: Lint, docs and distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.13.6"
+          python-version: "3.11"
+      - run: uv sync --locked --group docs
+      - run: uv run ruff check .
+      - run: uv run ruff format --check src tests scripts notebooks
+      - run: uv run mkdocs build --strict
+      - run: uv build --out-dir release-dist
+      - run: uvx --from twine twine check --strict release-dist/*
+      - name: Install the built wheel outside the checkout
+        run: |
+          uv venv /tmp/bondi-wheel
+          uv pip install --python /tmp/bondi-wheel/bin/python release-dist/*.whl
+          cd /tmp
+          /tmp/bondi-wheel/bin/python -c "from bondi.mongodb import MongoCollectionRef, MongoFindQuery; q = MongoFindQuery(MongoCollectionRef('demo', 'business'), {'stars': 4}); assert MongoFindQuery.from_json(q.to_json()) == q"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: distributions
+          path: release-dist/

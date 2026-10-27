@@ -342,9 +342,7 @@ def test_timeout_scope_covers_all_batches():
 
         cursor = Checked([{}, {}])
         client, _, _ = driver(cursor)
-        with patch(
-            "bondi.mongodb.executor.pymongo.timeout", return_value=Deadline()
-        ) as timeout:
+        with patch("bondi.mongodb.executor.pymongo.timeout", return_value=Deadline()) as timeout:
             await AsyncMongoExecutor(client, timeout_seconds=5).run(MongoFindQuery(TARGET, {}))
             timeout.assert_called_once_with(5)
         assert not inside

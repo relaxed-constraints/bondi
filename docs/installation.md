@@ -4,7 +4,8 @@ Use Python **3.11 or newer** and `uv`. Work from a checkout of this repository;
 the instructions below do not assume a published PyPI release.
 
 ```sh
-cd /path/to/bondi
+git clone https://github.com/relaxed-constraints/bondi.git
+cd bondi
 uv sync --locked
 ```
 
@@ -40,3 +41,15 @@ Open a notebook under `notebooks/` and choose the Python kernel from this enviro
 The guides use synchronous APIs: no `await` or event-loop setup is needed in notebooks.
 
 To preview this documentation, see [Building the documentation](documentation.md).
+
+## Library versus teaching resources
+
+PyPI publication is pending. Once 0.1.0 is published, library-only users will be
+able to use `uv add bondi` or `pip install bondi` (add `[couchbase]` for the SDK).
+Until then, use the checkout instructions above.
+
+Notebooks, Docker Compose files and demo data live in the GitHub repository, not
+inside the installed Python package. Clone the repository to obtain them, or download
+the source archive from a [GitHub release](https://github.com/relaxed-constraints/bondi/releases).
+After a release is published, use its matching tag (for example `git checkout v0.1.0`)
+and run `uv sync --locked` from that checkout. Archives work too and do not require Git.

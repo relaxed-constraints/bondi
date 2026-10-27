@@ -31,9 +31,7 @@ def test_estimator_live():
             with MongoSampleEstimator(executor, target) as est:
                 assert est.estimate(query).cardinality == exact
             for persist in (False, True):
-                with MongoSampleEstimator(
-                    executor, target, sample_size=4, persist=persist
-                ) as est:
+                with MongoSampleEstimator(executor, target, sample_size=4, persist=persist) as est:
                     result = est.estimate(query)
                     assert result.sample_size == 4
                     assert 0 <= result.sample_matches <= 4

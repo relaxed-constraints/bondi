@@ -26,6 +26,9 @@ uv run ruff format --check .
 PyMongo is a required dependency for BSON support; no database service is needed.
 The committed `uv.lock` records the development dependency resolution.
 
+[Documentation](https://relaxed-constraints.github.io/bondi/) ·
+[Issues](https://github.com/relaxed-constraints/bondi/issues) · [MIT license](LICENSE)
+
 ## Read the documentation
 
 Start with [the documentation overview](docs/index.md),
@@ -60,8 +63,9 @@ A distribution can be built with `uv build`.
 
 ## Publication
 
-This is a local, unpublished project. A license and release policy must be chosen
-before public distribution; no license is implied by this scaffold.
+BONDI is MIT licensed, copyright Relaxed Constraints. Version 0.1.0 is being
+prepared for PyPI; use the source installation instructions until it is published.
+See [release preparation](docs/releases.md) for the publishing process.
 
 ## Optional local databases
 

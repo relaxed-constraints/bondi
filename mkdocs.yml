@@ -1,4 +1,8 @@
 site_name: BONDI
+site_url: https://relaxed-constraints.github.io/bondi/
+repo_url: https://github.com/relaxed-constraints/bondi
+repo_name: relaxed-constraints/bondi
+copyright: Copyright &copy; 2026 Relaxed Constraints
 site_description: A Python toolkit for document database research
 theme:
   name: material
@@ -52,6 +56,7 @@ nav:
       - Architecture and design: architecture.md
       - Building the documentation: documentation.md
       - Roadmap: roadmap.md
+      - Releases: releases.md
 plugins:
   - search
   - mkdocstrings:

@@ -19,3 +19,6 @@ build/
 !.env.example
 .ipynb_checkpoints/
 .DS_Store
+
+# Locally generated research workloads
+/*workload*.jsonl
