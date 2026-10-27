@@ -104,6 +104,7 @@ class MongoQueryPattern:
 
     Field/operator/type/membership length and all query options identify a pattern.
     Filter and projection order are canonicalized; sort order is significant.
+    Use print(pattern) for a readable target, typed predicates and query options.
     Patterns may be inspected or extracted from saved queries with from_query().
     Logical expressions, object/array equality and multiple operators on one field
     are outside this initial subset. They remain representable as MongoFindQuery.
@@ -152,6 +153,35 @@ class MongoQueryPattern:
             if len(non_id) > 1:
                 raise ValueError("Cannot mix inclusion and exclusion projection")
             object.__setattr__(self, "projection", tuple(sorted(self.projection)))
+
+    def __str__(self) -> str:
+        """Format the target, typed predicates and configured query options for display.
+
+        Sampled operands appear as <type>, or <arity × type> for membership.
+        Fixed exists/type operands retain their Python literal representation.
+        Predicates follow canonical field order; sort precedence is preserved.
+        Unset options and skip=0 are omitted. This is a human-readable summary,
+        not an executable query or persistence format; repr retains the dataclass view.
+        """
+        predicates = []
+        for predicate in self.predicates:
+            if predicate.fixed_value is not None:
+                operand = repr(predicate.fixed_value)
+            elif predicate.operator in {"in", "nin"}:
+                operand = f"<{predicate.arity} × {predicate.value_type}>"
+            else:
+                operand = f"<{predicate.value_type}>"
+            predicates.append(f"{predicate.field} ${predicate.operator} {operand}")
+        parts = [f"{self.target.database}.{self.target.collection}: " + " AND ".join(predicates)]
+        if self.sort:
+            parts.append(f"sort={dict(self.sort)!r}")
+        if self.projection is not None:
+            parts.append(f"projection={dict(self.projection)!r}")
+        if self.skip:
+            parts.append(f"skip={self.skip}")
+        if self.limit is not None:
+            parts.append(f"limit={self.limit}")
+        return " | ".join(parts)
 
     @classmethod
     def from_query(cls, query: MongoFindQuery) -> Self:

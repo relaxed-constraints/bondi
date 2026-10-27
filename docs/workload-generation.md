@@ -32,6 +32,27 @@ Omit `return_patterns=True` to receive only the workload. Set
 can repeat; pattern shapes are distinct. Pattern IDs index the returned pattern list.
 `values="full"` schemas also work: both modes sample uniformly from distinct values.
 
+## Inspect a pattern
+
+`print(pattern)` shows the collection, typed filter slots and any query options:
+
+```python
+from bondi.mongodb import MongoFindQuery, MongoQueryPattern
+
+pattern = MongoQueryPattern.from_query(MongoFindQuery(
+    MongoCollectionRef("demo", "business"),
+    {"city": {"$in": ["Sydney", "Melbourne"]}, "stars": {"$gte": 4}},
+    sort=(("stars", -1),), limit=20,
+))
+print(pattern)
+# demo.business: city $in <2 × str> AND stars $gte <int> | sort={'stars': -1} | limit=20
+```
+
+Placeholders describe sampled value types; `$exists` and `$type` show their fixed
+literals. Sort order is preserved, and unset options are omitted. This display is
+for inspection and logs; use `Workload.save()` for persistence. `repr(pattern)`
+retains the detailed dataclass representation.
+
 ## Add selectivity constraints
 
 Supply a prepared `MongoSampleEstimator` as `estimator=` to the generator, then pass
