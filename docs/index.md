@@ -24,7 +24,7 @@ the shared database components.
 | Sampling estimation | Supported | Planned/deferred |
 | Pattern-based workload generation | Flat find queries | Not implemented |
 
-BONDI [0.1.2](https://pypi.org/project/bondi/0.1.2/) is available under the MIT license.
+BONDI [0.1.3](https://pypi.org/project/bondi/0.1.3/) is available under the MIT license.
 
 ## Start here
 

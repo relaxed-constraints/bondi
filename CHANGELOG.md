@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 — 2026-10-28
+
+- Add versioned MongoQueryPattern serialization with to_dict/from_dict and to_json/from_json.
+- Preserve BSON operands and query options when saving and restoring patterns.
+- Document pattern persistence with examples and round-trip tests.
+
 ## 0.1.2 — 2026-10-28
 
 - Add human-readable MongoQueryPattern string representations.
