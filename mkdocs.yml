@@ -18,6 +18,7 @@ nav:
   - Getting started:
       - Installation: installation.md
       - Local databases: local-databases.md
+      - MongoDB deployment API: deployment.md
       - Quickstart: quickstart.md
   - User guide:
       - Queries and workloads:
@@ -37,6 +38,7 @@ nav:
       - Explore Couchbase: tutorials/couchbase.md
   - API reference:
       - Overview: api.md
+      - Database deployment: reference/deployment.md
       - Queries and workloads: reference/queries.md
       - Results and summaries: reference/results.md
       - Schema inspection: reference/schema.md

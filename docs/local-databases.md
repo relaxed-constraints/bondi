@@ -1,5 +1,9 @@
 # Local databases with Docker
 
+For programmatic MongoDB setup without cloning this repository, see the
+[deployment API](deployment.md).
+
+
 Use either database independently or run both. The toolkit and its offline tests
 still work without Docker. This setup is for local development, not deployment.
 

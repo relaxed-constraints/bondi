@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add named local MongoDB deployments through a Python API with packaged Compose assets.
+- Support readiness checks, lifecycle management, retained volumes, and explicit data removal.
+
 ## 0.1.3 — 2026-10-28
 
 - Add versioned MongoQueryPattern serialization with to_dict/from_dict and to_json/from_json.
