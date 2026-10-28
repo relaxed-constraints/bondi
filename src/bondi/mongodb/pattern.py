@@ -1,7 +1,8 @@
 """Immutable shapes for the flat-find subset produced by workload generation."""
 
+import json
 import math
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Self
 
 from bondi.mongodb.collection import MongoCollectionRef
@@ -153,6 +154,111 @@ class MongoQueryPattern:
             if len(non_id) > 1:
                 raise ValueError("Cannot mix inclusion and exclusion projection")
             object.__setattr__(self, "projection", tuple(sorted(self.projection)))
+
+    def to_dict(self) -> dict:
+        """Return an independent, JSON-compatible version-1 pattern envelope.
+
+        Sort/projection pairs become lists; target and predicate templates become
+        dictionaries. Patterns contain type labels and fixed bool/string operands,
+        not sampled BSON values, so ordinary JSON is sufficient.
+        """
+        return {
+            "format_version": 1,
+            "pattern_kind": "mongodb.find",
+            "target": asdict(self.target),
+            "predicates": [asdict(predicate) for predicate in self.predicates],
+            "sort": [list(pair) for pair in self.sort],
+            "projection": None if self.projection is None else [list(p) for p in self.projection],
+            "skip": self.skip,
+            "limit": self.limit,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict) -> Self:
+        """Restore an envelope produced by to_dict, validating its shape and values.
+
+        All fields are required; unknown fields, kinds and versions are rejected.
+        Raises TypeError for incorrect container types and ValueError for invalid
+        contents. Nested objects and immutable tuples are reconstructed.
+        """
+
+        def fields(obj, expected, name):
+            if not isinstance(obj, dict):
+                raise TypeError(f"{name} must be a dictionary")
+            if set(obj) != set(expected):
+                raise ValueError(f"Unexpected or missing fields in {name}")
+
+        def pairs(items, name):
+            if not isinstance(items, list):
+                raise TypeError(f"{name} must be a list")
+            if any(not isinstance(p, list) or len(p) != 2 for p in items):
+                raise ValueError(f"{name} must contain two-element lists")
+            return tuple(tuple(p) for p in items)
+
+        fields(
+            value,
+            (
+                "format_version",
+                "pattern_kind",
+                "target",
+                "predicates",
+                "sort",
+                "projection",
+                "skip",
+                "limit",
+            ),
+            "pattern",
+        )
+        if type(value["format_version"]) is not int or value["format_version"] != 1:
+            raise ValueError("Unsupported pattern format_version")
+        if value["pattern_kind"] != "mongodb.find":
+            raise ValueError("Unsupported pattern_kind")
+        fields(value["target"], ("database", "collection"), "target")
+        if not isinstance(value["predicates"], list):
+            raise TypeError("predicates must be a list")
+        predicates = []
+        for predicate in value["predicates"]:
+            fields(
+                predicate, ("field", "operator", "value_type", "arity", "fixed_value"), "predicate"
+            )
+            predicates.append(MongoPredicateTemplate(**predicate))
+        return cls(
+            target=MongoCollectionRef(**value["target"]),
+            predicates=tuple(predicates),
+            sort=pairs(value["sort"], "sort"),
+            projection=None
+            if value["projection"] is None
+            else pairs(value["projection"], "projection"),
+            skip=value["skip"],
+            limit=value["limit"],
+        )
+
+    def to_json(self) -> str:
+        """Serialize the versioned envelope as compact JSON."""
+        return json.dumps(
+            self.to_dict(), ensure_ascii=False, allow_nan=False, separators=(",", ":")
+        )
+
+    @classmethod
+    def from_json(cls, text: str) -> Self:
+        """Restore JSON, rejecting duplicate keys, nonfinite numbers and invalid envelopes."""
+        if not isinstance(text, str):
+            raise TypeError("text must be a string")
+
+        def object_pairs(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError(f"Duplicate JSON key: {key}")
+                result[key] = value
+            return result
+
+        def reject_constant(value):
+            raise ValueError(f"Nonfinite JSON constant: {value}")
+
+        return cls.from_dict(
+            json.loads(text, object_pairs_hook=object_pairs, parse_constant=reject_constant)
+        )
 
     def __str__(self) -> str:
         """Format the target, typed predicates and configured query options for display.

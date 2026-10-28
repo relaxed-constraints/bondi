@@ -94,3 +94,29 @@ experiment input. Sample constraints are not full-population guarantees.
 
 See the [generation reference](reference/mongodb/generation.md) for all options,
 pattern fields, supported paths and failure diagnostics.
+
+## Save and restore patterns
+
+Patterns provide `to_dict()` / `from_dict()` for embedding in experiment summaries,
+and `to_json()` / `from_json()` for standalone JSON:
+
+```python
+saved = pattern.to_dict()
+restored = MongoQueryPattern.from_dict(saved)
+assert restored == pattern
+print(restored)
+
+text = pattern.to_json()
+assert MongoQueryPattern.from_json(text) == pattern
+```
+
+BONDI owns the versioned envelope and reconstructs collection references, predicate
+objects and ordered sort tuples. Patterns store operand type labels and fixed
+boolean/string values, so ordinary JSON suffices. Sampled query values remain in
+workload files. Missing/unknown fields, unsupported versions and invalid patterns
+are rejected. Dictionary results are independent of the original pattern.
+
+With Yanex, embed `pattern.to_dict()` in a summary saved via `save_artifact()`.
+After loading the summary, use `MongoQueryPattern.from_dict(summary["pattern"])`
+to recover its readable string and `matches()` behavior. For a standalone artifact,
+use `to_json()` and `from_json()` in Yanex's custom saver/loader hooks.
