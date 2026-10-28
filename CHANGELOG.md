@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add the bondi deployment CLI: deploy, start, stop, status, list, logs, and remove.
+
 - Add named local MongoDB deployments through a Python API with packaged Compose assets.
 - Support readiness checks, lifecycle management, retained volumes, and explicit data removal.
 

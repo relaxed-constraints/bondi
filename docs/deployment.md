@@ -25,6 +25,41 @@ port if an existing MongoDB already uses it. Each named deployment has an isolat
 Compose project and data volume. These deployments do not adopt or modify the
 older repository-level BONDI Compose containers.
 
+## Command line
+
+The `bondi` command calls the same deployment API. In a uv project, use
+`uv run bondi`; in an activated Python environment, use `bondi` directly.
+`python -m bondi` is also supported. These deployment features are unreleased;
+until the next release, use a source checkout with `uv sync`.
+
+```sh
+bondi deploy mongodb --name demo --port 27019
+bondi status demo
+bondi list
+bondi logs demo --tail 20
+bondi stop demo
+bondi start demo
+bondi remove demo                # Retain data and saved configuration.
+bondi start demo                 # Recreate the container using retained data.
+bondi remove demo --delete-data  # Permanently delete data and configuration.
+```
+
+`bondi deploy mongodb` defaults to name `mongodb` and port `27017`. Lifecycle
+commands require the deployment name, avoiding an ambiguous “last used” instance.
+Use `--timeout 300` on deploy/start/stop/remove to increase the operation deadline.
+Use `bondi --help` or `bondi remove --help` to inspect command options.
+
+`--delete-data` is explicit authorization to delete the deployment's data;
+there is no additional interactive prompt, so commands work in automated scripts.
+Listing includes saved configurations whose containers have been removed.
+No command automatically manages another deployment or the older manual Compose setup.
+
+Exit codes are `0` for success, `1` for operational errors (such as unavailable
+Docker or missing deployment files), `2` for invalid command syntax, and `130`
+for interruption. `status` reports a stopped/removed deployment successfully;
+it does not use the exit code as a database health signal. Startup failures retain
+configuration for inspection with `logs` and retries with `start`.
+
 ## Reopen and inspect
 
 ```python
@@ -79,5 +114,5 @@ the same machine; remote Docker contexts are not supported. A script running on
 a remote host can use this API with Docker on that host. Readiness is verified
 inside the container with a MongoDB ping via its health check.
 
-The CLI and Couchbase deployment API are not implemented yet. Existing manual
-Compose instructions remain available in [Local databases](local-databases.md).
+Couchbase deployment support is not implemented yet. Existing manual Compose
+instructions remain available in [Local databases](local-databases.md).

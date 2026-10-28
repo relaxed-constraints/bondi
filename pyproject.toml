@@ -21,6 +21,9 @@ dependencies = [
     "pymongo>=4.13,<5",
 ]
 
+[project.scripts]
+bondi = "bondi._cli:main"
+
 [project.urls]
 Homepage = "https://github.com/relaxed-constraints/bondi"
 Documentation = "https://relaxed-constraints.github.io/bondi/"

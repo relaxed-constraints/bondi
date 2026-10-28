@@ -1,7 +1,7 @@
 # Local databases with Docker
 
-For programmatic MongoDB setup without cloning this repository, see the
-[deployment API](deployment.md).
+For MongoDB setup through Python or the `bondi` CLI without fetching Compose files,
+see [managed deployments](deployment.md) (available in the upcoming release).
 
 
 Use either database independently or run both. The toolkit and its offline tests
