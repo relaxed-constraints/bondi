@@ -57,8 +57,9 @@ No command automatically manages another deployment or the older manual Compose 
 Exit codes are `0` for success, `1` for operational errors (such as unavailable
 Docker or missing deployment files), `2` for invalid command syntax, and `130`
 for interruption. `status` reports a stopped/removed deployment successfully;
-it does not use the exit code as a database health signal. Startup failures retain
-configuration for inspection with `logs` and retries with `start`.
+it does not use the exit code as a database health signal. Failed new deployments
+are cleaned up automatically. Existing deployments retain
+their data and configuration for inspection with `logs` and retries with `start`.
 
 ## Reopen and inspect
 
@@ -104,9 +105,23 @@ same name is not supported.
 ## Startup and troubleshooting
 
 Startup defaults to a 120-second deadline, including an initial Docker image pull.
-Use `deploy_mongodb(..., timeout=300)` on a slower connection. On startup failure,
-configuration and any volume are retained so you can inspect `logs()` and retry
-`start()`. Forced interruption may leave a container running; use status to inspect it.
+Use `deploy_mongodb(..., timeout=300)` on a slower connection. Before creating a deployment, BONDI checks whether it can bind the requested
+localhost port. An occupied port fails without creating metadata or Docker resources.
+This is an advisory check: Docker can still encounter a port race afterwards.
+
+If a **new** deployment fails during startup (including timeout or Ctrl-C), BONDI
+attempts to remove its container, network, volume and metadata. You can then retry
+the same name with another port. The startup error is preserved in the diagnostic.
+If cleanup fails too, metadata is retained and the error gives a cleanup command;
+restore Docker access and run `bondi remove NAME --delete-data`.
+
+Failed starts of **existing** deployments never trigger automatic deletion. Their
+data and configuration are retained. For a mismatched saved port, inspect the
+existing deployment and either use another name or explicitly remove the old one
+with `--delete-data` only when its data is disposable.
+
+A forced process kill or machine crash cannot guarantee cleanup; inspect saved
+deployments with `bondi list` before retrying.
 
 MongoDB uses the pinned `mongo:8.0.16` image and binds only to `127.0.0.1`.
 This is an unauthenticated local research database. Python and Docker must be on

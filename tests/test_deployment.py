@@ -1,6 +1,7 @@
 """Deployment contracts without a Docker daemon."""
 
 import json
+import socket
 import subprocess
 from unittest.mock import patch
 
@@ -12,7 +13,10 @@ from bondi.deployment import deploy_mongodb, get_deployment, list_deployments
 @pytest.fixture
 def compose(tmp_path, monkeypatch):
     monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
-    with patch("bondi.deployment._deployment.subprocess.run") as run:
+    with (
+        patch("bondi.deployment._deployment._check_port"),
+        patch("bondi.deployment._deployment.subprocess.run") as run,
+    ):
         run.return_value.stdout = ""
         yield run
 
@@ -116,3 +120,66 @@ def test_distinct_projects_and_logs(compose):
     compose.return_value.stdout = "ready"
     assert first.logs(tail=10) == "ready"
     assert compose.call_args.args[0][-5:] == ["logs", "--no-color", "--tail", "10", "mongodb"]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        subprocess.CalledProcessError(1, "docker", stderr="port allocated after preflight"),
+        subprocess.TimeoutExpired("docker", 1),
+    ],
+)
+def test_failed_new_start_is_cleaned_and_can_change_port(compose, error):
+    compose.side_effect = [error, subprocess.CompletedProcess([], 0, stdout="")]
+    with pytest.raises(RuntimeError, match="new deployment and its data were removed"):
+        deploy_mongodb("new", port=27019)
+    assert list_deployments() == []
+    assert compose.call_args.args[0][-2:] == ["down", "--volumes"]
+    compose.side_effect = None
+    assert deploy_mongodb("new", port=27020).port == 27020
+
+
+def test_existing_start_failure_never_deletes_data(compose):
+    db = deploy_mongodb()
+    compose.reset_mock()
+    compose.side_effect = subprocess.TimeoutExpired("docker", 1)
+    with pytest.raises(RuntimeError, match="Existing deployment.*retained"):
+        deploy_mongodb()
+    assert compose.call_count == 1
+    assert get_deployment("mongodb") == db
+
+
+def test_failed_cleanup_has_recovery_instructions(compose):
+    compose.side_effect = subprocess.CalledProcessError(1, "docker", stderr="daemon unavailable")
+    with pytest.raises(RuntimeError, match="bondi remove demo --delete-data"):
+        deploy_mongodb("demo")
+    assert get_deployment("demo").port == 27017
+
+
+def test_interrupted_new_start_is_cleaned(compose):
+    compose.side_effect = [KeyboardInterrupt(), subprocess.CompletedProcess([], 0, stdout="")]
+    with pytest.raises(KeyboardInterrupt):
+        deploy_mongodb()
+    assert list_deployments() == []
+
+
+def test_busy_port_leaves_no_metadata(tmp_path, monkeypatch):
+    monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
+    with socket.socket() as occupied:
+        occupied.bind(("127.0.0.1", 0))
+        occupied.listen()
+        with patch("bondi.deployment._deployment.subprocess.run") as run:
+            with pytest.raises(RuntimeError, match="No deployment was created"):
+                deploy_mongodb("busy", port=occupied.getsockname()[1])
+            run.assert_not_called()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_configuration_write_failure_is_cleaned(compose, tmp_path):
+    from pathlib import Path
+
+    with patch.object(Path, "write_text", side_effect=OSError("disk full")):
+        with pytest.raises(OSError, match="disk full"):
+            deploy_mongodb()
+    compose.assert_not_called()
+    assert list(tmp_path.iterdir()) == []

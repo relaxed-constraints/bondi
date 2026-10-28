@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Check new deployment ports before setup and clean up failed new deployments, with recovery guidance.
+
 - Add the bondi deployment CLI: deploy, start, stop, status, list, logs, and remove.
 
 - Add named local MongoDB deployments through a Python API with packaged Compose assets.

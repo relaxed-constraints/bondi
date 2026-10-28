@@ -6,6 +6,7 @@ import math
 import os
 import re
 import shutil
+import socket
 import subprocess
 from dataclasses import dataclass
 from importlib.resources import files
@@ -22,6 +23,18 @@ def _directory(name: str) -> Path:
         )
     root = Path(os.environ.get("BONDI_DEPLOYMENT_DIR", Path.home() / ".bondi" / "deployments"))
     return root.expanduser().resolve() / name
+
+
+def _check_port(port: int) -> None:
+    # Advisory only: another process can acquire the port before Docker binds it.
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(("127.0.0.1", port))
+    except OSError as exc:
+        raise RuntimeError(
+            f"Cannot bind localhost port {port}: {exc.strerror or exc}. "
+            "Choose another --port (or port= in Python). No deployment was created."
+        ) from exc
 
 
 def _timeout(timeout: float) -> None:
@@ -76,10 +89,7 @@ class Deployment:
         except FileNotFoundError as exc:
             raise RuntimeError("Docker was not found. Install Docker with Compose v2.") from exc
         except subprocess.TimeoutExpired as exc:
-            raise RuntimeError(
-                f"Docker operation timed out after {timeout}s. Deployment state is retained; "
-                "inspect status()/logs() and retry start()."
-            ) from exc
+            raise RuntimeError(f"Docker operation timed out after {timeout}s.") from exc
         except subprocess.CalledProcessError as exc:
             detail = (exc.stderr or exc.stdout or "").strip()
             raise RuntimeError(
@@ -194,8 +204,9 @@ def deploy_mongodb(
 
     Raises:
         ValueError: Invalid arguments or a saved port conflicts with this request.
-        RuntimeError: Docker failed or MongoDB did not become ready. Configuration
-            is retained for inspection/retry; failure does not delete data.
+        RuntimeError: Port unavailable or startup failed. New deployments are cleaned
+            up on failure; existing deployments retain their data and configuration.
+            If cleanup fails, metadata is retained with recovery instructions.
 
     Saved deployments retain their original image and assets across BONDI upgrades.
     Calls managing the same deployment must be serialized by the caller.
@@ -207,8 +218,22 @@ def deploy_mongodb(
     if path.exists():
         deployment = get_deployment(name)
         if deployment.port != port:
-            raise ValueError(f"Deployment {name!r} already uses port {deployment.port}")
+            raise ValueError(
+                f"Deployment {name!r} already uses port {deployment.port}. "
+                f"Inspect it with 'bondi status {name}'. Use a different --name to keep it; "
+                f"only if its data is disposable, run 'bondi remove {name} --delete-data' "
+                "before deploying again."
+            )
+        try:
+            deployment.start(timeout=timeout)
+        except (RuntimeError, OSError) as exc:
+            raise RuntimeError(
+                f"{exc}\nExisting deployment {name!r} was retained. "
+                f"Inspect 'bondi logs {name}' and retry 'bondi start {name}'."
+            ) from exc
+        return deployment
     else:
+        _check_port(port)
         template = json.loads(
             files("bondi.deployment").joinpath("mongodb.compose.json").read_text()
         )
@@ -223,8 +248,30 @@ def deploy_mongodb(
             "project": project,
         }
         path.mkdir(parents=True, exist_ok=False)
-        (path / "compose.json").write_text(json.dumps(template, indent=2) + "\n")
-        (path / "deployment.json").write_text(json.dumps(config, indent=2) + "\n")
-        deployment = get_deployment(name)
-    deployment.start(timeout=timeout)
+        try:
+            (path / "compose.json").write_text(json.dumps(template, indent=2) + "\n")
+            (path / "deployment.json").write_text(json.dumps(config, indent=2) + "\n")
+            deployment = get_deployment(name)
+        except BaseException:
+            # Docker has not been called, so only these newly written files exist.
+            shutil.rmtree(path)
+            raise
+    try:
+        deployment.start(timeout=timeout)
+    except BaseException as startup_error:
+        try:
+            deployment.remove(delete_data=True)
+        except BaseException as cleanup_error:
+            raise RuntimeError(
+                f"Startup failed for {name!r}: {startup_error}. "
+                f"Cleanup also failed: {cleanup_error}. Metadata retained at {path}. "
+                f"Restore Docker access and run 'bondi remove {name} --delete-data' "
+                "to finish cleanup."
+            ) from startup_error
+        if isinstance(startup_error, (KeyboardInterrupt, SystemExit)):
+            raise
+        raise RuntimeError(
+            f"Startup failed for {name!r}: {startup_error}\n"
+            "The new deployment and its data were removed. Retry with a free port."
+        ) from startup_error
     return deployment
