@@ -62,9 +62,9 @@ def test_cli_lifecycle(tmp_path, monkeypatch):
         assert cli("stop", "cli-test").returncode == 0
         assert "stopped" in cli("status", "cli-test").stdout
         assert cli("start", "cli-test").returncode == 0
-        assert cli("remove", "cli-test").returncode == 0
+        assert cli("remove", "cli-test", "--keep-data", "-y").returncode == 0
         assert "removed" in cli("status", "cli-test").stdout
-        assert cli("remove", "cli-test", "--delete-data").returncode == 0
+        assert cli("remove", "cli-test", "-y").returncode == 0
         assert cli("status", "cli-test").returncode == 1
         assert "No saved deployments" in cli("list").stdout
     finally:

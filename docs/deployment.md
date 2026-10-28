@@ -39,9 +39,10 @@ bondi list
 bondi logs demo --tail 20
 bondi stop demo
 bondi start demo
-bondi remove demo                # Retain data and saved configuration.
+bondi remove demo --keep-data    # Confirm removal; retain data and configuration.
 bondi start demo                 # Recreate the container using retained data.
-bondi remove demo --delete-data  # Permanently delete data and configuration.
+bondi remove demo                # Confirm permanent deletion of data/configuration.
+bondi remove demo -y             # Skip confirmation (for automation).
 ```
 
 `bondi deploy mongodb` defaults to name `mongodb` and port `27017`. Lifecycle
@@ -49,8 +50,12 @@ commands require the deployment name, avoiding an ambiguous “last used” inst
 Use `--timeout 300` on deploy/start/stop/remove to increase the operation deadline.
 Use `bondi --help` or `bondi remove --help` to inspect command options.
 
-`--delete-data` is explicit authorization to delete the deployment's data;
-there is no additional interactive prompt, so commands work in automated scripts.
+Removal deletes data and saved configuration by default and asks `[y/N]`.
+Only `y` or `yes` proceeds; Enter, other answers, or end-of-input cancel removal.
+Use `--keep-data` to retain the volume and configuration, and `-y` / `--yes` to
+skip confirmation for either mode. Cancellation returns exit code 1.
+The Python API is unchanged: `remove()` retains data and
+`remove(delete_data=True)` deletes it, without a prompt.
 Listing includes saved configurations whose containers have been removed.
 No command automatically manages another deployment or the older manual Compose setup.
 
@@ -113,12 +118,12 @@ If a **new** deployment fails during startup (including timeout or Ctrl-C), BOND
 attempts to remove its container, network, volume and metadata. You can then retry
 the same name with another port. The startup error is preserved in the diagnostic.
 If cleanup fails too, metadata is retained and the error gives a cleanup command;
-restore Docker access and run `bondi remove NAME --delete-data`.
+restore Docker access and run `bondi remove NAME`.
 
 Failed starts of **existing** deployments never trigger automatic deletion. Their
 data and configuration are retained. For a mismatched saved port, inspect the
 existing deployment and either use another name or explicitly remove the old one
-with `--delete-data` only when its data is disposable.
+only when its data is disposable.
 
 A forced process kill or machine crash cannot guarantee cleanup; inspect saved
 deployments with `bondi list` before retrying.

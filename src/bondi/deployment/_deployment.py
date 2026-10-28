@@ -221,7 +221,7 @@ def deploy_mongodb(
             raise ValueError(
                 f"Deployment {name!r} already uses port {deployment.port}. "
                 f"Inspect it with 'bondi status {name}'. Use a different --name to keep it; "
-                f"only if its data is disposable, run 'bondi remove {name} --delete-data' "
+                f"only if its data is disposable, run 'bondi remove {name}' "
                 "before deploying again."
             )
         try:
@@ -265,7 +265,7 @@ def deploy_mongodb(
             raise RuntimeError(
                 f"Startup failed for {name!r}: {startup_error}. "
                 f"Cleanup also failed: {cleanup_error}. Metadata retained at {path}. "
-                f"Restore Docker access and run 'bondi remove {name} --delete-data' "
+                f"Restore Docker access and run 'bondi remove {name}' "
                 "to finish cleanup."
             ) from startup_error
         if isinstance(startup_error, (KeyboardInterrupt, SystemExit)):

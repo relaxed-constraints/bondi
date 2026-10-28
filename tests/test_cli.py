@@ -39,7 +39,7 @@ def test_lifecycle(db, command):
 @pytest.mark.parametrize("delete", [False, True])
 def test_removal_is_explicit(db, delete, capsys):
     with patch("bondi._cli.get_deployment", return_value=db):
-        assert main(["remove", "demo"] + (["--delete-data"] if delete else [])) == 0
+        assert main(["remove", "demo", "-y"] + ([] if delete else ["--keep-data"])) == 0
     db.remove.assert_called_once_with(delete_data=delete, timeout=120)
     assert ("deleted" if delete else "retained") in capsys.readouterr().out
 
@@ -101,3 +101,44 @@ def test_help(capsys):
         main(["--help"])
     assert exc.value.code == 0
     assert "deploy" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("answer", ["y", "yes", " YES "])
+def test_removal_confirmation_accepts(db, answer):
+    with (
+        patch("bondi._cli.get_deployment", return_value=db),
+        patch("builtins.input", return_value=answer) as prompt,
+    ):
+        assert main(["remove", "demo"]) == 0
+    assert "permanently delete" in prompt.call_args.args[0]
+    db.remove.assert_called_once_with(delete_data=True, timeout=120)
+
+
+@pytest.mark.parametrize("answer", ["", "n", "no", "anything"])
+def test_removal_confirmation_declines(db, answer):
+    with (
+        patch("bondi._cli.get_deployment", return_value=db),
+        patch("builtins.input", return_value=answer),
+    ):
+        assert main(["remove", "demo"]) == 1
+    db.remove.assert_not_called()
+
+
+@pytest.mark.parametrize("error,code", [(EOFError(), 1), (KeyboardInterrupt(), 130)])
+def test_removal_confirmation_interrupted(db, error, code):
+    with (
+        patch("bondi._cli.get_deployment", return_value=db),
+        patch("builtins.input", side_effect=error),
+    ):
+        assert main(["remove", "demo"]) == code
+    db.remove.assert_not_called()
+
+
+def test_keep_data_prompt(db):
+    with (
+        patch("bondi._cli.get_deployment", return_value=db),
+        patch("builtins.input", return_value="y") as prompt,
+    ):
+        assert main(["remove", "demo", "--keep-data"]) == 0
+    assert "keeping its data" in prompt.call_args.args[0]
+    db.remove.assert_called_once_with(delete_data=False, timeout=120)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- CLI removal now deletes data by default with confirmation; use --keep-data to retain it or -y to skip confirmation.
+
 - Check new deployment ports before setup and clean up failed new deployments, with recovery guidance.
 
 - Add the bondi deployment CLI: deploy, start, stop, status, list, logs, and remove.

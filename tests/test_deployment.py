@@ -151,7 +151,7 @@ def test_existing_start_failure_never_deletes_data(compose):
 
 def test_failed_cleanup_has_recovery_instructions(compose):
     compose.side_effect = subprocess.CalledProcessError(1, "docker", stderr="daemon unavailable")
-    with pytest.raises(RuntimeError, match="bondi remove demo --delete-data"):
+    with pytest.raises(RuntimeError, match="bondi remove demo"):
         deploy_mongodb("demo")
     assert get_deployment("demo").port == 27017
 

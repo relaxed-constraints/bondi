@@ -19,7 +19,7 @@ def _parser() -> argparse.ArgumentParser:
     for name, help_text in (
         ("start", "Start a saved deployment and wait for readiness"),
         ("stop", "Stop a deployment, retaining data"),
-        ("remove", "Remove a container/network, retaining data by default"),
+        ("remove", "Remove a deployment and its data (asks for confirmation)"),
         ("status", "Show a deployment's current state and URI"),
         ("logs", "Show recent database logs"),
     ):
@@ -34,9 +34,12 @@ def _parser() -> argparse.ArgumentParser:
             )
         if name == "remove":
             command.add_argument(
-                "--delete-data",
+                "--keep-data",
                 action="store_true",
-                help="Permanently delete data volume and saved configuration",
+                help="Retain data volume and configuration for a later start",
+            )
+            command.add_argument(
+                "-y", "--yes", action="store_true", help="Skip the removal confirmation"
             )
         if name == "logs":
             command.add_argument("--tail", type=int, default=50, help="Number of log lines")
@@ -47,8 +50,8 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """Run the CLI, returning 0 on success, 1 on operation failure, or 130 on Ctrl-C.
 
-    Argparse exits with code 2 for invalid command syntax. The explicit
-    --delete-data flag authorizes deletion without an interactive prompt.
+    Argparse exits with code 2 for invalid command syntax. Removal requires
+    confirmation unless -y is supplied; declined/EOF confirmation returns 1.
     """
     args = _parser().parse_args(argv)
     try:
@@ -68,8 +71,25 @@ def main(argv: list[str] | None = None) -> int:
             elif args.command == "logs":
                 print(db.logs(tail=args.tail), end="")
             elif args.command == "remove":
-                db.remove(delete_data=args.delete_data, timeout=args.timeout)
-                detail = "data and configuration deleted" if args.delete_data else "data retained"
+                if not args.yes:
+                    action = (
+                        "remove the container, keeping its data and configuration"
+                        if args.keep_data
+                        else "permanently delete the container, data and saved configuration"
+                    )
+                    try:
+                        answer = input(f"{db.name}: {action}? [y/N] ")
+                    except EOFError:
+                        print(
+                            "bondi: removal cancelled; use -y for unattended removal.",
+                            file=sys.stderr,
+                        )
+                        return 1
+                    if answer.strip().lower() not in {"y", "yes"}:
+                        print("Removal cancelled; nothing was changed.")
+                        return 1
+                db.remove(delete_data=not args.keep_data, timeout=args.timeout)
+                detail = "data retained" if args.keep_data else "data and configuration deleted"
                 print(f"{db.name}: removed ({detail})")
             elif args.command == "start":
                 db.start(timeout=args.timeout)
