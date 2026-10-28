@@ -1,6 +1,6 @@
-# Local MongoDB deployments
+# Local database deployments
 
-BONDI can create and manage named local MongoDB instances using Docker Compose.
+BONDI can create and manage named local MongoDB and Couchbase instances using Docker Compose.
 Install and start Docker with Compose v2 first. The Python package includes its
 Compose asset: no repository clone or GitHub download is needed.
 
@@ -134,5 +134,86 @@ the same machine; remote Docker contexts are not supported. A script running on
 a remote host can use this API with Docker on that host. Readiness is verified
 inside the container with a MongoDB ping via its health check.
 
-Couchbase deployment support is not implemented yet. Existing manual Compose
-instructions remain available in [Local databases](local-databases.md).
+Manual Compose instructions remain available in [Local databases](local-databases.md).
+
+## Couchbase deployments
+
+Community is the default; Enterprise is available explicitly for users entitled
+to use it. This API does not grant an Enterprise license. Both use pinned 7.6.2
+images with Data, Query and Index services and a 4 GiB container memory limit.
+Allow Docker sufficient memory, especially when running several databases.
+
+```python
+from bondi.deployment import deploy_couchbase
+from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
+
+database = deploy_couchbase(name="cb-demo")
+print(database.console_url)  # http://127.0.0.1:8091/
+
+with CouchbaseExecutor.from_uri(
+    database.uri, username=database.username, password=database.password
+) as executor:
+    result = executor.run(CouchbaseQuery("SELECT RAW 1"), collect_results=True)
+    print(result.documents)  # [1]
+```
+
+Deployment needs Docker but no Couchbase SDK. Executing through BONDI requires
+`bondi[couchbase]`. Startup waits for management, cluster initialization, a healthy
+bucket, and a successful SQL++ query. It creates an empty `demo` bucket (256 MiB,
+no replicas), with its default scope and collection. It does **not** insert sample
+data or create indexes. Create appropriate indexes before querying stored data.
+Pass `bucket="research"` to choose another bucket at creation.
+
+The local console credentials default to **Administrator / bondi-local**.
+Use a custom `username`/`password` in Python, or supply a password through an
+existing environment variable in the CLI. The CLI displays the default local password after deployment. Custom passwords
+are identified by their environment variable rather than printed, and passwords
+are excluded from the deployment object's repr. They are stored in plaintext in
+`deployment.json`, created with owner-only permissions on POSIX systems. Keep
+this state directory private. This is local research infrastructure, not a
+production security setup.
+
+```sh
+bondi deploy couchbase
+bondi status couchbase
+bondi logs couchbase
+bondi stop couchbase
+bondi start couchbase
+bondi remove couchbase --keep-data -y
+```
+
+Couchbase needs three **distinct** localhost ports. To coexist with another instance:
+
+```sh
+bondi deploy couchbase --name cb-other \
+  --management-port 9091 --query-port 9093 --kv-port 11211 \
+  --edition enterprise --timeout 300
+
+# If MY_CB_PASSWORD is set in your environment:
+bondi deploy couchbase --name private-demo --password-env MY_CB_PASSWORD
+```
+
+Python equivalents are `management_port`, `query_port`, `kv_port`, and `edition`.
+There is no ambiguous Couchbase `--port` option. The returned `uri` uses the KV
+port and external network mapping; `console_url` uses the management port.
+BONDI configures alternate addresses so SDKs on the host can reach the mapped
+query/KV ports. Python and Docker must run on the same machine.
+
+Names are shared across backends: `demo` cannot refer to both MongoDB and Couchbase.
+Repeating deployment with conflicting ports, edition, bucket or credentials raises
+an error without revealing credential values. Use `get_deployment(name).start()`
+or `bondi start NAME` to reuse saved settings. Retained volumes survive stop/start
+and container removal/recreation; initialization does not reset existing data or
+credentials. New-start failures roll back resources just as for MongoDB.
+
+Implementation references: [cluster initialization](https://docs.couchbase.com/server/7.6/rest-api/rest-cluster-intro.html)
+and [alternate addresses](https://docs.couchbase.com/server/7.6/rest-api/rest-set-up-alternate-address.html).
+
+
+After MongoDB deployment, the CLI prints a `mongosh` connection command and links
+for installing [MongoDB Shell](https://www.mongodb.com/docs/mongodb-shell/install/)
+and [Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
+(`mongoimport`, `mongoexport`, `mongodump`, `mongorestore`). These tools are optional
+on the host; BONDI deploys the database through Docker without installing them.
+After Couchbase deployment, it prints the console URL, username, password source,
+and bucket. The Python API stays quiet and returns these details on the deployment.

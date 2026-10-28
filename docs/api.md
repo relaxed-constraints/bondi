@@ -5,6 +5,7 @@ from source docstrings. Start with the [user guide](workloads.md) for examples.
 
 | Area | Reference |
 | --- | --- |
+| Local databases | [Deployment API](reference/deployment.md) |
 | Shared data | [Queries and workloads](reference/queries.md), [results and summaries](reference/results.md) |
 | Data inspection | [Schemas](reference/schema.md) |
 | Estimation contracts | [Estimator interfaces](reference/estimation.md) |

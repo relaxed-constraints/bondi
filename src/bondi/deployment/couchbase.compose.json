@@ -1,0 +1,19 @@
+{
+  "services": {
+    "couchbase": {
+      "image": "couchbase:community-7.6.2",
+      "ports": [],
+      "volumes": ["couchbase-data:/opt/couchbase/var"],
+      "mem_limit": "4g",
+      "stop_grace_period": "60s",
+      "healthcheck": {
+        "test": ["CMD", "curl", "--silent", "--output", "/dev/null", "http://localhost:8091/pools"],
+        "interval": "2s",
+        "timeout": "5s",
+        "retries": 60,
+        "start_period": "10s"
+      }
+    }
+  },
+  "volumes": {"couchbase-data": {}}
+}

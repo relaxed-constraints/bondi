@@ -1,9 +1,10 @@
 """Command-line adapter for the deployment API (no extra CLI dependencies)."""
 
 import argparse
+import os
 import sys
 
-from bondi.deployment import deploy_mongodb, get_deployment, list_deployments
+from bondi.deployment import deploy_couchbase, deploy_mongodb, get_deployment, list_deployments
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -12,10 +13,21 @@ def _parser() -> argparse.ArgumentParser:
     )
     commands = parser.add_subparsers(dest="command", required=True)
     deploy = commands.add_parser("deploy", help="Create/start a database and wait for readiness")
-    deploy.add_argument("backend", choices=["mongodb"])
-    deploy.add_argument("--name", default="mongodb", help="Deployment name (default: mongodb)")
-    deploy.add_argument("--port", type=int, default=27017, help="Localhost port (default: 27017)")
-    deploy.add_argument("--timeout", type=float, default=120, help="Startup deadline in seconds")
+    backends = deploy.add_subparsers(dest="backend", required=True)
+    mongo = backends.add_parser("mongodb", help="Deploy MongoDB")
+    mongo.add_argument("--name", default="mongodb")
+    mongo.add_argument("--port", type=int, default=27017)
+    mongo.add_argument("--timeout", type=float, default=120)
+    couchbase = backends.add_parser("couchbase", help="Deploy and initialize Couchbase")
+    couchbase.add_argument("--name", default="couchbase")
+    couchbase.add_argument("--management-port", type=int, default=8091)
+    couchbase.add_argument("--query-port", type=int, default=8093)
+    couchbase.add_argument("--kv-port", type=int, default=11210)
+    couchbase.add_argument("--edition", choices=["community", "enterprise"], default="community")
+    couchbase.add_argument("--username", default="Administrator")
+    couchbase.add_argument("--password-env", help="Read password from this environment variable")
+    couchbase.add_argument("--bucket", default="demo")
+    couchbase.add_argument("--timeout", type=float, default=300)
     for name, help_text in (
         ("start", "Start a saved deployment and wait for readiness"),
         ("stop", "Stop a deployment, retaining data"),
@@ -56,8 +68,42 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "deploy":
-            db = deploy_mongodb(args.name, port=args.port, timeout=args.timeout)
+            if args.backend == "mongodb":
+                db = deploy_mongodb(args.name, port=args.port, timeout=args.timeout)
+            else:
+                password = "bondi-local"
+                if args.password_env:
+                    if args.password_env not in os.environ:
+                        raise ValueError(
+                            f"Password environment variable {args.password_env!r} is unset"
+                        )
+                    password = os.environ[args.password_env]
+                db = deploy_couchbase(
+                    args.name,
+                    management_port=args.management_port,
+                    query_port=args.query_port,
+                    kv_port=args.kv_port,
+                    edition=args.edition,
+                    username=args.username,
+                    password=password,
+                    bucket=args.bucket,
+                    timeout=args.timeout,
+                )
+
             print(f"{db.name}: running — {db.uri}")
+            if args.backend == "mongodb":
+                print(f'Connect: mongosh "{db.uri}"')
+                print("Install mongosh: https://www.mongodb.com/docs/mongodb-shell/install/")
+                print("Install mongoimport, mongoexport, mongodump, mongorestore:")
+                print("  https://www.mongodb.com/docs/database-tools/installation/")
+            else:
+                print(f"Console: {db.console_url}")
+                print(f"Username: {db.username}")
+                if args.password_env:
+                    print(f"Password: from {args.password_env} (value not displayed)")
+                else:
+                    print("Password: bondi-local (local demo default)")
+                print(f"Bucket: {db.bucket} (default scope and collection)")
         elif args.command == "list":
             deployments = list_deployments()
             if not deployments:

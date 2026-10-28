@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Community/Enterprise Couchbase deployment, cluster/bucket initialization, custom ports and CLI support.
+
 - CLI removal now deletes data by default with confirmation; use --keep-data to retain it or -y to skip confirmation.
 
 - Check new deployment ports before setup and clean up failed new deployments, with recovery guidance.

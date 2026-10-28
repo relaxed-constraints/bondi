@@ -8,7 +8,8 @@ import re
 import shutil
 import socket
 import subprocess
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
 from typing import Literal
@@ -46,16 +47,23 @@ def _timeout(timeout: float) -> None:
 
 @dataclass(frozen=True)
 class Deployment:
-    """A saved MongoDB deployment; obtaining a handle does not start Docker.
+    """A saved database deployment; obtaining a handle does not start Docker.
 
-    Use deploy_mongodb() or get_deployment() to obtain a handle. Connections use
+    Use deploy_mongodb(), deploy_couchbase() or get_deployment() to obtain a handle. Connections use
     localhost, so Python and Docker must run on the same machine. Lifecycle
     methods never stop or remove unrelated Compose projects.
 
     Attributes:
         name: User-chosen deployment name.
-        port: Localhost port exposed by MongoDB.
-        image: Pinned MongoDB Docker image.
+        port: MongoDB port, or Couchbase management port.
+        backend: mongodb or couchbase.
+        query_port: Couchbase SQL++ port; None for MongoDB.
+        kv_port: Couchbase key/value port; None for MongoDB.
+        username: Couchbase administrator username.
+        password: Couchbase password, excluded from repr.
+        bucket: Default Couchbase bucket.
+        edition: Couchbase community or enterprise.
+        image: Pinned database Docker image.
     """
 
     name: str
@@ -63,16 +71,30 @@ class Deployment:
     image: str
     _path: Path
     _project: str
+    backend: str = "mongodb"
+    query_port: int | None = None
+    kv_port: int | None = None
+    username: str | None = None
+    password: str | None = field(default=None, repr=False)
+    bucket: str | None = None
+    edition: str | None = None
 
     @property
     def uri(self) -> str:
-        """MongoDB connection URI on the local machine."""
+        """Database connection URI on the local machine (without credentials)."""
+        if self.backend == "couchbase":
+            return f"couchbase://127.0.0.1:{self.kv_port}?network=external"
         return f"mongodb://127.0.0.1:{self.port}/"
+
+    @property
+    def console_url(self) -> str | None:
+        """Couchbase browser console URL, or None for MongoDB."""
+        return f"http://127.0.0.1:{self.port}/" if self.backend == "couchbase" else None
 
     def _run(self, *arguments: str, timeout: float = 120) -> str:
         _timeout(timeout)
         if not (self._path / "deployment.json").exists():
-            raise RuntimeError("Deployment was deleted; call deploy_mongodb() again")
+            raise RuntimeError("Deployment was deleted; deploy it again")
         command = [
             "docker",
             "compose",
@@ -99,26 +121,31 @@ class Deployment:
         return result.stdout
 
     def start(self, *, timeout: float = 120) -> None:
-        """Create/start the container and wait for MongoDB health readiness.
+        """Create/start the container, initialize it and wait for database readiness.
 
         Args:
             timeout: Maximum seconds for startup, including image download.
                 Increase this for a first deployment on a slow connection.
         """
         _timeout(timeout)
+        deadline = time.monotonic() + timeout
         self._run(
             "up",
             "-d",
             "--wait",
             "--wait-timeout",
             str(math.ceil(timeout)),
-            "mongodb",
+            self.backend,
             timeout=timeout,
         )
+        if self.backend == "couchbase":
+            from ._couchbase import initialize
+
+            initialize(self, deadline=deadline)
 
     def stop(self, *, timeout: float = 120) -> None:
-        """Stop MongoDB, retaining its container, configuration and data volume."""
-        self._run("stop", "mongodb", timeout=timeout)
+        """Stop the database, retaining its container, configuration and data volume."""
+        self._run("stop", self.backend, timeout=timeout)
 
     def status(self) -> Status:
         """Return observed container state; Docker access errors raise RuntimeError.
@@ -127,7 +154,7 @@ class Deployment:
             running, starting, unhealthy, stopped, or removed. Removed means
             no container exists; a retained data volume may still exist.
         """
-        output = self._run("ps", "--all", "--format", "json", "mongodb")
+        output = self._run("ps", "--all", "--format", "json", self.backend)
         # Compose versions emit either a JSON array or newline-delimited objects.
         if not output.strip():
             return "removed"
@@ -143,13 +170,22 @@ class Deployment:
             return "stopped"
         if row.get("Health") == "unhealthy":
             return "unhealthy"
-        return "running" if row.get("Health") == "healthy" else "starting"
+        if row.get("Health") != "healthy":
+            return "starting"
+        if self.backend == "couchbase":
+            from ._couchbase import ready
+
+            try:
+                ready(self)
+            except (RuntimeError, ValueError):
+                return "starting"
+        return "running"
 
     def logs(self, *, tail: int = 50) -> str:
-        """Return recent MongoDB logs to help diagnose startup failures."""
+        """Return recent database logs to help diagnose startup failures."""
         if type(tail) is not int or tail < 1:
             raise ValueError("tail must be a positive integer")
-        return self._run("logs", "--no-color", "--tail", str(tail), "mongodb")
+        return self._run("logs", "--no-color", "--tail", str(tail), self.backend)
 
     def remove(self, *, delete_data: bool = False, timeout: float = 120) -> None:
         """Remove the container/network, retaining data by default.
@@ -175,9 +211,14 @@ def get_deployment(name: str) -> Deployment:
     """
     path = _directory(name)
     config = json.loads((path / "deployment.json").read_text())
-    if config.get("format_version") != 1 or config.get("backend") != "mongodb":
+    if config.get("format_version") != 1 or config.get("backend") not in {"mongodb", "couchbase"}:
         raise ValueError("Unsupported deployment configuration")
-    return Deployment(name, config["port"], config["image"], path, config["project"])
+    extra = {
+        key: config[key]
+        for key in ("backend", "query_port", "kv_port", "username", "password", "bucket", "edition")
+        if key in config
+    }
+    return Deployment(name, config["port"], config["image"], path, config["project"], **extra)
 
 
 def list_deployments() -> list[Deployment]:
@@ -211,51 +252,113 @@ def deploy_mongodb(
     Saved deployments retain their original image and assets across BONDI upgrades.
     Calls managing the same deployment must be serialized by the caller.
     """
+    return _deploy(name, {"backend": "mongodb", "port": port}, timeout=timeout)
+
+
+def deploy_couchbase(
+    name: str = "couchbase",
+    *,
+    management_port: int = 8091,
+    query_port: int = 8093,
+    kv_port: int = 11210,
+    edition: Literal["community", "enterprise"] = "community",
+    username: str = "Administrator",
+    password: str = "bondi-local",
+    bucket: str = "demo",
+    timeout: float = 300,
+) -> Deployment:
+    """Deploy a local Couchbase node with Data, Query and Index services.
+
+    Creates a 256 MiB bucket with its default scope/collection; no data or indexes
+    are added. Community is the default. All three distinct ports bind localhost.
+    Credentials are saved in owner-only metadata and never printed by the CLI.
+
+    Args:
+        name: Saved deployment identity.
+        management_port: Console/REST port.
+        query_port: SQL++ service port.
+        kv_port: SDK bootstrap/key-value port.
+        edition: community or enterprise (both pinned to 7.6.2).
+        username: Local administrator username.
+        password: Local password, at least six characters.
+        bucket: Bucket name, default demo.
+        timeout: Total startup and initialization deadline in seconds.
+
+    Returns:
+        A ready deployment with uri, console_url and credentials.
+    """
+    if edition not in {"community", "enterprise"}:
+        raise ValueError("edition must be community or enterprise")
+    if not isinstance(username, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", username):
+        raise ValueError("username must use letters, digits, underscores or hyphens")
+    if not isinstance(password, str) or len(password) < 6 or any(ord(c) < 32 for c in password):
+        raise ValueError("password must have at least six characters and no control characters")
+    if not isinstance(bucket, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", bucket):
+        raise ValueError("bucket must use letters, digits, underscores or hyphens")
+    return _deploy(
+        name,
+        {
+            "backend": "couchbase",
+            "port": management_port,
+            "query_port": query_port,
+            "kv_port": kv_port,
+            "edition": edition,
+            "username": username,
+            "password": password,
+            "bucket": bucket,
+        },
+        timeout=timeout,
+    )
+
+
+def _deploy(name: str, settings: dict, *, timeout: float) -> Deployment:
     path = _directory(name)
     _timeout(timeout)
-    if type(port) is not int or not 1 <= port <= 65535:
-        raise ValueError("port must be an integer between 1 and 65535")
+    backend = settings["backend"]
+    ports = [settings[key] for key in ("port", "query_port", "kv_port") if key in settings]
+    if any(type(port) is not int or not 1 <= port <= 65535 for port in ports):
+        raise ValueError("ports must be integers between 1 and 65535")
+    if len(set(ports)) != len(ports):
+        raise ValueError("Couchbase service ports must be distinct")
     if path.exists():
         deployment = get_deployment(name)
-        if deployment.port != port:
+        differences = [key for key, value in settings.items() if getattr(deployment, key) != value]
+        if differences:
             raise ValueError(
-                f"Deployment {name!r} already uses port {deployment.port}. "
-                f"Inspect it with 'bondi status {name}'. Use a different --name to keep it; "
-                f"only if its data is disposable, run 'bondi remove {name}' "
-                "before deploying again."
+                f"Deployment {name!r} already uses saved configuration; conflicting fields: "
+                f"{', '.join(differences)}. Inspect 'bondi status {name}'. "
+                "Use another name to keep it, or remove it only if its data is disposable."
             )
         try:
             deployment.start(timeout=timeout)
-        except (RuntimeError, OSError) as exc:
+        except (RuntimeError, OSError, ValueError) as exc:
             raise RuntimeError(
                 f"{exc}\nExisting deployment {name!r} was retained. "
                 f"Inspect 'bondi logs {name}' and retry 'bondi start {name}'."
             ) from exc
         return deployment
-    else:
+    for port in ports:
         _check_port(port)
-        template = json.loads(
-            files("bondi.deployment").joinpath("mongodb.compose.json").read_text()
-        )
-        project = "bondi-" + name + "-" + hashlib.sha256(str(path).encode()).hexdigest()[:12]
-        service = template["services"]["mongodb"]
-        service["ports"] = [f"127.0.0.1:{port}:27017"]
-        config = {
-            "format_version": 1,
-            "backend": "mongodb",
-            "port": port,
-            "image": service["image"],
-            "project": project,
-        }
-        path.mkdir(parents=True, exist_ok=False)
-        try:
-            (path / "compose.json").write_text(json.dumps(template, indent=2) + "\n")
-            (path / "deployment.json").write_text(json.dumps(config, indent=2) + "\n")
-            deployment = get_deployment(name)
-        except BaseException:
-            # Docker has not been called, so only these newly written files exist.
-            shutil.rmtree(path)
-            raise
+    template = json.loads(files("bondi.deployment").joinpath(f"{backend}.compose.json").read_text())
+    project = "bondi-" + name + "-" + hashlib.sha256(str(path).encode()).hexdigest()[:12]
+    service = template["services"][backend]
+    internal_ports = [27017] if backend == "mongodb" else [8091, 8093, 11210]
+    service["ports"] = [
+        f"127.0.0.1:{host}:{internal}" for host, internal in zip(ports, internal_ports)
+    ]
+    if backend == "couchbase":
+        service["image"] = f"couchbase:{settings['edition']}-7.6.2"
+    config = {"format_version": 1, **settings, "image": service["image"], "project": project}
+    path.mkdir(parents=True, exist_ok=False, mode=0o700)
+    try:
+        (path / "compose.json").write_text(json.dumps(template, indent=2) + "\n")
+        metadata = path / "deployment.json"
+        with open(metadata, "x", opener=lambda file, flags: os.open(file, flags, 0o600)) as stream:
+            stream.write(json.dumps(config, indent=2) + "\n")
+        deployment = get_deployment(name)
+    except BaseException:
+        shutil.rmtree(path)
+        raise
     try:
         deployment.start(timeout=timeout)
     except BaseException as startup_error:
@@ -265,13 +368,12 @@ def deploy_mongodb(
             raise RuntimeError(
                 f"Startup failed for {name!r}: {startup_error}. "
                 f"Cleanup also failed: {cleanup_error}. Metadata retained at {path}. "
-                f"Restore Docker access and run 'bondi remove {name}' "
-                "to finish cleanup."
+                f"Restore Docker access and run 'bondi remove {name}' to finish cleanup."
             ) from startup_error
         if isinstance(startup_error, (KeyboardInterrupt, SystemExit)):
             raise
         raise RuntimeError(
             f"Startup failed for {name!r}: {startup_error}\n"
-            "The new deployment and its data were removed. Retry with a free port."
+            "The new deployment and its data were removed. Check the error and retry."
         ) from startup_error
     return deployment

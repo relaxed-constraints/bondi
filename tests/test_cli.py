@@ -25,7 +25,11 @@ def test_deploy_defaults_and_options(db, capsys):
             == 0
         )
         deploy.assert_called_with("demo", port=27019, timeout=300)
-    assert db.uri in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert db.uri in output
+    assert f'mongosh "{db.uri}"' in output
+    assert "mongoimport" in output and "mongorestore" in output
+    assert "https://www.mongodb.com/docs/database-tools/installation/" in output
 
 
 @pytest.mark.parametrize("command", ["start", "stop"])
@@ -88,7 +92,7 @@ def test_interruption(capsys):
 
 
 @pytest.mark.parametrize(
-    "args", [[], ["stop"], ["deploy", "couchbase"], ["deploy", "mongodb", "--port", "oops"]]
+    "args", [[], ["stop"], ["deploy", "unknown"], ["deploy", "mongodb", "--port", "oops"]]
 )
 def test_invalid_syntax(args):
     with pytest.raises(SystemExit) as exc:
