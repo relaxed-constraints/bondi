@@ -1,7 +1,7 @@
 # Generate and evaluate a MongoDB workload
 
 **Goal:** connect schema inspection, sampling estimates, generation and execution.
-Install the toolkit and initialize [MongoDB demo data](../local-databases.md) first.
+Install the toolkit and initialize [MongoDB demo data](../deployment.md#demo-data) first.
 
 ```sh
 uv run --with jupyterlab --with ipykernel jupyter lab notebooks/workload_generation.ipynb

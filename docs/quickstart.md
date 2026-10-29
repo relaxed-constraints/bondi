@@ -17,9 +17,9 @@ an activated environment.
 
 ## Execute a query
 
-Get the [release source and teaching resources](installation.md#get-notebooks-and-docker-compose-files)
+Get the [release source and teaching resources](installation.md#get-notebooks-and-demo-data)
 if you want to use the demo data. This example reads the bundled MongoDB `demo.business` collection. Complete
-[installation](installation.md) and [database initialization](local-databases.md) first.
+[installation](installation.md) and [database deployment](deployment.md#demo-data) first.
 Run the code in a script or notebook:
 
 ```python

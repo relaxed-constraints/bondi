@@ -134,8 +134,6 @@ the same machine; remote Docker contexts are not supported. A script running on
 a remote host can use this API with Docker on that host. Readiness is verified
 inside the container with a MongoDB ping via its health check.
 
-Manual Compose instructions remain available in [Local databases](local-databases.md).
-
 ## Couchbase deployments
 
 Community is the default; Enterprise is available explicitly for users entitled
@@ -217,3 +215,14 @@ and [Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
 on the host; BONDI deploys the database through Docker without installing them.
 After Couchbase deployment, it prints the console URL, username, password source,
 and bucket. The Python API stays quiet and returns these details on the deployment.
+
+## Demo data
+
+Managed deployments start empty. The source checkout includes eight fictional
+businesses in `dev/business.json` for the guides and notebooks. Load these documents
+into MongoDB's `demo.business` collection or Couchbase's
+`demo._default.business` collection before running examples that use them.
+For Couchbase, create the `business` collection and appropriate indexes first.
+Use the connection details returned by the Python deployment API or printed by
+`bondi deploy`. The older `scripts/init_databases.py` script targets the legacy
+repository Compose services and must not be used to initialize managed deployments.

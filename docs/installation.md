@@ -36,7 +36,7 @@ python -c "from importlib.metadata import version; import bondi; print(version('
 Query construction, schema inspection and saved-response parsing need no database.
 Continue with the [quickstart](quickstart.md) for an offline example and a database query.
 
-## Get notebooks and Docker Compose files
+## Get notebooks and demo data
 
 Teaching resources are included in the GitHub source, not in the installed wheel.
 Clone the matching release:
@@ -52,8 +52,9 @@ uv sync --locked --extra couchbase
 Alternatively, download and extract a source archive from the
 [0.1.3 GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.3),
 then run `uv sync --locked` in the extracted folder. Git is not required for archives.
-Both options provide `notebooks/`, Compose files, initialization scripts and demo data.
-Use [Local databases](local-databases.md) to start and initialize a backend.
+Both options provide `notebooks/` and demo data.
+Use the CLI or Python API in [Database deployment](deployment.md) to start a backend.
+Deployments start empty; load the data needed by your examples separately.
 
 ## Open the notebooks
 

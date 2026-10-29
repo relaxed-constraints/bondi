@@ -77,7 +77,7 @@ class names except `object`, `array`, and `null`. Unsupported BSON types such as
 
 Pass already-decoded documents. JSON text parsing and conversion policies belong
 to the caller. The following queries use the shared `demo` data from our
-[local Docker setup](../local-databases.md). Use a MongoDB executor for the first two
+[managed deployment setup](../deployment.md#demo-data). Use a MongoDB executor for the first two
 and a Couchbase executor for the others; see the [MongoDB](../executor.md) and
 [Couchbase](../executor.md) connection examples.
 

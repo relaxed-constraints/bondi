@@ -6,8 +6,9 @@ Start with the [quickstart](quickstart.md) for a complete MongoDB example.
 
 ## Connect to Couchbase
 
-Install the optional SDK and initialize the [local database](local-databases.md).
-These credentials are only for the bundled local environment:
+Install the optional SDK and create a [Couchbase deployment](deployment.md#couchbase-deployments).
+Load your data into `demo._default.business` before running this query.
+These credentials are the defaults for a managed local deployment:
 
 ```python
 from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
@@ -16,7 +17,7 @@ query = CouchbaseQuery("SELECT RAW b FROM `demo`.`_default`.`business` b LIMIT 5
 with CouchbaseExecutor.from_uri(
     "couchbase://127.0.0.1?network=external",
     username="Administrator",
-    password="dbrtoolkit-local",
+    password="bondi-local",
     timeout_seconds=10,
 ) as executor:
     result = executor.run(query, collect_results=True)

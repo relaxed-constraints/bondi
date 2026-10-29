@@ -35,7 +35,7 @@ profiling requested, and can also collect its rows. Explain itself is a planning
 operation, so its timing is not the underlying query's execution time.
 
 Couchbase Community returns basic execution metrics. Detailed profiling requires
-server support, such as the Enterprise evaluation setup in [Local databases](local-databases.md).
+server support, such as the Enterprise evaluation setup in [Database deployment](deployment.md).
 A successful request without detailed timings carries a warning; inspect
 `result.warnings` rather than assuming every metric will be present.
 

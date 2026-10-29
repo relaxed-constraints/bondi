@@ -29,11 +29,11 @@ uv add bondi
 Or use `pip install bondi`. To execute Couchbase queries, install the optional extra:
 `uv add 'bondi[couchbase]'` or `pip install 'bondi[couchbase]'`.
 
-For notebooks, Docker Compose files and demo data, get the source from a
+For notebooks and demo data, get the source from a
 [GitHub release](https://github.com/relaxed-constraints/bondi/releases).
 The [installation guide](https://relaxed-constraints.github.io/bondi/installation/)
 explains both paths. Database examples below assume the
-[local MongoDB demo](https://relaxed-constraints.github.io/bondi/local-databases/)
+[local MongoDB demo](https://relaxed-constraints.github.io/bondi/deployment/)
 is initialized on port 27017; later snippets reuse earlier variables.
 
 ## Native queries

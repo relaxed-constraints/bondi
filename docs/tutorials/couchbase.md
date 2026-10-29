@@ -1,8 +1,9 @@
 # Explore Couchbase execution and profiling
 
 **Goal:** compare normal execution, query plans and execution diagnostics for SQL++.
-Install the Couchbase extra and initialize the Community database using
-[Local databases](../local-databases.md).
+Install the Couchbase extra and deploy the Community database using
+[Database deployment](../deployment.md#couchbase-deployments), then load the
+[demo data](../deployment.md#demo-data).
 
 ```sh
 uv run --extra couchbase --with jupyterlab --with ipykernel jupyter lab notebooks/couchbase_demo.ipynb

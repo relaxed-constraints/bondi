@@ -29,7 +29,7 @@ BONDI [0.1.3](https://pypi.org/project/bondi/0.1.3/) is available under the MIT 
 ## Start here
 
 1. [Install the toolkit](installation.md).
-2. [Start a local database](local-databases.md) with bundled demo data.
+2. [Deploy a local database](deployment.md) using the CLI or Python API, then load your data.
 3. [Run your first query](quickstart.md).
 
 Explore the **User guide** by task, follow a **Tutorial** for a complete workflow,
