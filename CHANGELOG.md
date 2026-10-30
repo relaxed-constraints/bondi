@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 — 2026-10-31
 
 - Add Community/Enterprise Couchbase deployment, cluster/bucket initialization, custom ports and CLI support.
 
@@ -12,6 +12,11 @@
 
 - Add named local MongoDB deployments through a Python API with packaged Compose assets.
 - Support readiness checks, lifecycle management, retained volumes, and explicit data removal.
+
+- Add packaged demo-data loading through `Deployment.load_demo_data()` and `bondi load-demo-data`.
+- Make database notebooks self-contained with deployment setup and complete data cleanup.
+- Expand Quickstart to six workflows and consolidate tutorials with VS Code instructions.
+- Improve API reference headings, syntax highlighting, navigation and local documentation guidance.
 
 ## 0.1.3 — 2026-10-28
 

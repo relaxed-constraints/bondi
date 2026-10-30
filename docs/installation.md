@@ -1,6 +1,6 @@
 # Installation
 
-BONDI **0.1.3** is available on [PyPI](https://pypi.org/project/bondi/0.1.3/).
+BONDI **0.1.4** is available on [PyPI](https://pypi.org/project/bondi/0.1.4/).
 Use Python **3.11 or newer**. Choose a library installation for your own project,
 or a source checkout for notebooks and local demo databases.
 
@@ -25,7 +25,7 @@ python -m pip install 'bondi[couchbase]'
 
 PyMongo and its BSON codecs are installed automatically. Couchbase query descriptions
 and offline parsing work without the optional SDK; executing Couchbase queries needs it.
-For reproducible experiments, pin the release (`bondi==0.1.3`) and retain your project's
+For reproducible experiments, pin the release (`bondi==0.1.4`) and retain your project's
 lockfile. The API is still evolving.
 
 
@@ -35,7 +35,7 @@ Educational Jupyter notebooks are included in the GitHub source, not in the inst
 Clone the matching release:
 
 ```sh
-git clone --branch v0.1.3 https://github.com/relaxed-constraints/bondi.git
+git clone --branch v0.1.4 https://github.com/relaxed-constraints/bondi.git
 cd bondi
 uv sync --locked
 # If you want to execute Couchbase queries:
@@ -43,7 +43,7 @@ uv sync --locked --extra couchbase
 ```
 
 Alternatively, download and extract a source archive from the
-[0.1.3 GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.3),
+[0.1.4 GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.4),
 then run `uv sync --locked` in the extracted folder. Git is not required for archives.
 Both options provide `notebooks/` and demo data.
 Use the CLI or Python API in [Database deployment](deployment.md) to start a backend.
