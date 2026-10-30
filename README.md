@@ -36,6 +36,18 @@ explains both paths. Database examples below assume the
 [local MongoDB demo](https://relaxed-constraints.github.io/bondi/deployment/)
 is initialized on port 27017; later snippets reuse earlier variables.
 
+## Coding agent skill
+
+Install BONDI guidance for Codex, Claude Code, Gemini CLI or Cursor from your project:
+
+```sh
+npx skills add relaxed-constraints/bondi --skill bondi
+```
+
+The skill explains API and CLI choices and links to documentation and tutorials as
+you work. See [agent skill installation](docs/agent-skill.md) for agent selection,
+local installation and a manual fallback. It does not install the Python library.
+
 ## Native queries
 
 Describe operations without opening a connection. MongoDB filters and pipelines

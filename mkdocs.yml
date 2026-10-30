@@ -20,6 +20,7 @@ nav:
   - Home: index.md
   - Getting started:
       - Installation: installation.md
+      - Coding agent skill: agent-skill.md
       - Database deployment: deployment.md
       - Quickstart: quickstart.md
   - User guide:

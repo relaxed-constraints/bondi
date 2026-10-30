@@ -10,6 +10,8 @@ includes deployment Compose assets and the demo dataset.
 ## Maintainer procedure
 
 1. Run offline CI and local database integration tests. Review the changelog and version.
+   Review the [agent skill](agent-skill.md) against the release API, including examples,
+   documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
 3. Create a `v0.1.4` tag at the reviewed commit and publish its GitHub release.
