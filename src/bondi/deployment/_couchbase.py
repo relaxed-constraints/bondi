@@ -8,6 +8,14 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
+class CouchbaseHTTPError(RuntimeError):
+    """HTTP failure with a status code, without server bodies or credentials."""
+
+    def __init__(self, code, path):
+        self.code = code
+        super().__init__(f"Couchbase HTTP {code} for {path}")
+
+
 def request(db, path, data=None, *, method=None, query=False, auth=True, timeout=10):
     headers = {}
     if auth:
@@ -32,7 +40,7 @@ def request(db, path, data=None, *, method=None, query=False, auth=True, timeout
             raise ValueError(
                 f"Couchbase HTTP {code} for {path}; check configuration/credentials"
             ) from None
-        raise RuntimeError(f"Couchbase HTTP {code} for {path}") from None
+        raise CouchbaseHTTPError(code, path) from None
     except (URLError, TimeoutError, ConnectionError):
         raise RuntimeError(f"Couchbase not reachable at localhost:{port}") from None
 

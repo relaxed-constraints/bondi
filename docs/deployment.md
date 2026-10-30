@@ -218,11 +218,68 @@ and bucket. The Python API stays quiet and returns these details on the deployme
 
 ## Demo data
 
-Managed deployments start empty. The source checkout includes eight fictional
-businesses in `dev/business.json` for the guides and notebooks. Load these documents
-into MongoDB's `demo.business` collection or Couchbase's
-`demo._default.business` collection before running examples that use them.
-For Couchbase, create the `business` collection and appropriate indexes first.
-Use the connection details returned by the Python deployment API or printed by
-`bondi deploy`. The older `scripts/init_databases.py` script targets the legacy
-repository Compose services and must not be used to initialize managed deployments.
+Managed deployments start empty. Load the eight fictional businesses used by the
+guides and notebooks with `load_demo_data()` or `bondi load-demo-data`. The dataset
+from `dev/business.json` is bundled with BONDI, so loading needs no source checkout,
+network download, or particular working directory. Couchbase loading does not
+require the optional Python SDK.
+
+### Python API
+
+```python
+from bondi.deployment import get_deployment
+
+mongo = get_deployment("mongo-demo")  # An existing, running MongoDB deployment.
+result = mongo.load_demo_data()      # demo.business
+print(result.document_count)         # 8
+
+couchbase = get_deployment("cb-demo")  # An existing, running Couchbase deployment.
+result = couchbase.load_demo_data(create_primary_index=True)
+print(result.database, result.scope, result.collection)  # demo _default business
+```
+
+You can also call the method directly on the handle returned by `deploy_mongodb()`
+or `deploy_couchbase()`. Loading does not start a stopped deployment: call `start()`
+or `bondi start NAME` first.
+
+Optional destinations:
+
+```python
+mongo.load_demo_data(database="research", collection="businesses")
+couchbase.load_demo_data(scope="research", collection="businesses")
+```
+
+MongoDB defaults to database `demo` and collection `business`. Couchbase uses the
+bucket saved in the deployment configuration, scope `_default`, and collection
+`business`. Missing collections and Couchbase scopes are created automatically.
+Destination names accept 1–63 letters, digits, underscores or hyphens and must not
+start with a hyphen. The `database` option is MongoDB-only; `scope` and
+`create_primary_index` are Couchbase-only. Inappropriate options raise an error.
+
+### Command line
+
+```sh
+bondi load-demo-data mongo-demo
+bondi load-demo-data cb-demo --create-primary-index
+
+bondi load-demo-data mongo-demo --database research --collection businesses
+bondi load-demo-data cb-demo --scope research --collection businesses
+```
+
+The CLI uses the saved deployment's backend and connection details and reports the
+destination and document count. In a uv project, prefix these commands with `uv run`.
+
+### Repeated loads and indexes
+
+Loading **upserts** the eight documents using `business_id` as MongoDB's `_id` or
+Couchbase's document key. Repeated loads create no duplicates. Documents with the
+same demo IDs are replaced; unrelated documents are preserved. The returned
+`DemoDataResult.document_count` counts documents loaded, including replacements,
+rather than newly inserted documents. A failed load may leave partial writes;
+retrying is safe. Serialize loads and deployment lifecycle operations.
+
+Couchbase does not create a primary index by default. Use
+`create_primary_index=True` or `--create-primary-index` to enable the SQL++ demo
+queries. The option is safe to repeat. Leave it off when managing indexes yourself
+for an experiment. MongoDB loading creates no additional indexes beyond the
+collection's normal `_id` index.

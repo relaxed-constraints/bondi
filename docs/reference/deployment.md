@@ -9,3 +9,5 @@
 ::: bondi.deployment.list_deployments
 
 ::: bondi.deployment.Deployment
+
+::: bondi.deployment.DemoDataResult

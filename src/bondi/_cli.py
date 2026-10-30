@@ -55,6 +55,12 @@ def _parser() -> argparse.ArgumentParser:
             )
         if name == "logs":
             command.add_argument("--tail", type=int, default=50, help="Number of log lines")
+    load = commands.add_parser("load-demo-data", help="Upsert eight packaged demo businesses")
+    load.add_argument("name", help="Running deployment name")
+    load.add_argument("--database", help="MongoDB database (default: demo)")
+    load.add_argument("--scope", help="Couchbase scope (default: _default)")
+    load.add_argument("--collection", default="business")
+    load.add_argument("--create-primary-index", action="store_true", help="Couchbase only")
     commands.add_parser("list", help="List saved deployments with current status")
     return parser
 
@@ -112,7 +118,20 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{db.name}: {db.status()} — {db.uri}")
         else:
             db = get_deployment(args.name)
-            if args.command == "status":
+            if args.command == "load-demo-data":
+                result = db.load_demo_data(
+                    database=args.database,
+                    scope=args.scope,
+                    collection=args.collection,
+                    create_primary_index=args.create_primary_index,
+                )
+                destination = ".".join(
+                    part for part in (result.database, result.scope, result.collection) if part
+                )
+                print(
+                    f"{db.name}: loaded {result.document_count} demo documents into {destination}"
+                )
+            elif args.command == "status":
                 print(f"{db.name}: {db.status()} — {db.uri}")
             elif args.command == "logs":
                 print(db.logs(tail=args.tail), end="")

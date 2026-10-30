@@ -14,6 +14,8 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Literal
 
+from ._demo import DemoDataResult
+
 Status = Literal["running", "starting", "unhealthy", "stopped", "removed"]
 
 
@@ -186,6 +188,44 @@ class Deployment:
         if type(tail) is not int or tail < 1:
             raise ValueError("tail must be a positive integer")
         return self._run("logs", "--no-color", "--tail", str(tail), self.backend)
+
+    def load_demo_data(
+        self,
+        *,
+        database: str | None = None,
+        scope: str | None = None,
+        collection: str = "business",
+        create_primary_index: bool = False,
+    ) -> "DemoDataResult":
+        """Upsert eight packaged fictional businesses into this running deployment.
+
+        Matching demo IDs are replaced; unrelated documents are preserved. Repeating
+        the call creates no duplicates. Failures may leave partial writes; retrying
+        is safe. Lifecycle operations and concurrent loads must be serialized.
+
+        Args:
+            database: MongoDB database (default demo); invalid for Couchbase.
+            scope: Couchbase scope (default _default); invalid for MongoDB.
+            collection: Collection to create if missing (default business).
+            create_primary_index: Explicitly create a Couchbase primary index.
+                Invalid for MongoDB. Defaults to False.
+
+        Returns:
+            Destination and number of documents loaded, including replacements.
+
+        Raises:
+            ValueError: Invalid or backend-inappropriate options.
+            RuntimeError: Deployment is not running or loading failed.
+        """
+        from ._demo import load_demo_data
+
+        return load_demo_data(
+            self,
+            database=database,
+            scope=scope,
+            collection=collection,
+            create_primary_index=create_primary_index,
+        )
 
     def remove(self, *, delete_data: bool = False, timeout: float = 120) -> None:
         """Remove the container/network, retaining data by default.
