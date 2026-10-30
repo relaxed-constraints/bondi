@@ -65,19 +65,20 @@ API reference: [`MongoFindQuery`](reference/mongodb/queries.md#bondi.mongodb.Mon
 
 ## 3. Explain and profile queries
 
-Reuse `deployment` and `workload` from sections 1–2. Explain inspects a plan;
+Reuse `deployment` from section 1. Explain inspects a plan;
 profile executes the query through MongoDB's explain-with-execution-statistics mode.
 Use `summarize()` to extract comparable fields from the raw response:
 
 ```python
-from bondi.mongodb import summarize
+from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery, summarize
+
+query = MongoFindQuery(MongoCollectionRef("demo", "business"), {"city": "Sydney"})
 
 with MongoExecutor.from_uri(deployment.uri) as executor:
-    for entry in workload:
-        plan = summarize(executor.explain(entry.query).raw)
-        profile = summarize(executor.profile(entry.query).raw)
-        print(plan.plan_stages)
-        print(profile.rows_returned, profile.documents_examined, profile.execution_time_ms)
+    plan = summarize(executor.explain(query).raw)
+    profile = summarize(executor.profile(query).raw)
+    print(plan.plan_stages)
+    print(profile.rows_returned, profile.documents_examined, profile.execution_time_ms)
 ```
 
 Planner-only explains have no execution timings. Profiling is diagnostic work;
