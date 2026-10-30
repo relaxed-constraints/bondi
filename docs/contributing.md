@@ -40,6 +40,19 @@ Maintain the architecture and roadmap as decisions are made. API documentation i
 rendered from source docstrings. Add short, executable tutorial notebooks once a
 complete workflow exists; exploratory notebooks belong in research repositories.
 
+### Serve the documentation locally
+
+From the repository root, run:
+
+```sh
+uv run --group docs mkdocs serve
+```
+
+Open <http://127.0.0.1:8000/bondi/>. The preview reloads when you save changes to
+Markdown or Python docstrings. Stop the server with Ctrl+C.
+
+See [Building the documentation](documentation.md#4-preview-locally) for more details.
+
 ## Test boundaries
 
 The offline suite checks query contracts, persistence, parsers and executor behavior

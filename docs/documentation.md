@@ -47,7 +47,7 @@ uv sync --locked --group docs
 uv run --group docs mkdocs serve
 ```
 
-Open <http://127.0.0.1:8000/>. Change a sentence in the class docstring and save it;
+Open <http://127.0.0.1:8000/bondi/>. Change a sentence in the class docstring and save it;
 the preview rebuilds. Stop the server with Ctrl+C.
 
 ## 5. Verify before sharing
