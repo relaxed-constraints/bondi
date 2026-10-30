@@ -17,7 +17,10 @@ nav:
   - Home: index.md
   - Getting started:
       - Installation: installation.md
-      - Database deployment: deployment.md
+      - Database deployment:
+          - Overview: deployment.md
+          - MongoDB Deployments: /bondi/deployment/#mongodb-deployments
+          - Couchbase Deployments: /bondi/deployment/#couchbase-deployments
       - Quickstart: quickstart.md
   - User guide:
       - Queries and workloads:
