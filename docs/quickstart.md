@@ -136,3 +136,40 @@ before any query limit, skip or projection.
 API reference:
 [`MongoSampleEstimator`](reference/mongodb/estimation.md#bondi.mongodb.MongoSampleEstimator)
 and [estimation results](reference/estimation.md).
+
+## 6. Generate a workload
+
+_Assumes `deployment` from section 1._
+
+Read the demo documents and retain their distinct field values, then generate
+three query patterns with two instances each:
+
+```python
+from bondi.mongodb import (
+    MongoCollectionRef, MongoExecutor, MongoFindQuery, MongoWorkloadGenerator,
+)
+from bondi.schema import Schema
+
+business = MongoCollectionRef("demo", "business")
+with MongoExecutor.from_uri(deployment.uri) as executor:
+    result = executor.run(MongoFindQuery(business, {}), collect_results=True)
+
+schema = Schema.from_documents(result.documents, values="distinct")
+generator = MongoWorkloadGenerator(target=business, schema=schema)
+workload = generator.generate(num_patterns=3, instances_per_pattern=2, seed=42)
+
+print(len(workload))  # 6
+for entry in workload:
+    print(entry.pattern_id, entry.query.filter)
+```
+
+Patterns have distinct shapes; instances vary their filter values and may repeat.
+Generation does not execute the generated queries. Pass `workload` to
+`executor.run_workload()` as in section 2 to run them. `values="distinct"` supplies
+the observed values needed by the generator; the default schema mode does not retain them.
+
+API reference:
+[`MongoWorkloadGenerator`](reference/mongodb/generation.md#bondi.mongodb.MongoWorkloadGenerator),
+[`MongoGenerationConfig`](reference/mongodb/generation.md#bondi.mongodb.MongoGenerationConfig),
+[`Schema`](reference/schema.md#bondi.schema.Schema), and
+[`Workload`](reference/queries.md#bondi.workload.Workload).
