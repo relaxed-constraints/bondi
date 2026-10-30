@@ -9,7 +9,9 @@ or a source checkout for notebooks and local demo databases.
 In an existing uv project:
 
 ```sh
+# Install BONDI just with MongoDB support:
 uv add bondi
+
 # Include the optional Couchbase SDK when needed:
 uv add 'bondi[couchbase]'
 ```
@@ -26,19 +28,10 @@ and offline parsing work without the optional SDK; executing Couchbase queries n
 For reproducible experiments, pin the release (`bondi==0.1.3`) and retain your project's
 lockfile. The API is still evolving.
 
-Verify installation with `uv run python` in a uv project, or `python` in your
-activated environment:
-
-```sh
-python -c "from importlib.metadata import version; import bondi; print(version('bondi'))"
-```
-
-Query construction, schema inspection and saved-response parsing need no database.
-Continue with the [quickstart](quickstart.md) for an offline example and a database query.
 
 ## Get notebooks and demo data
 
-Teaching resources are included in the GitHub source, not in the installed wheel.
+Educational Jupyter notebooks are included in the GitHub source, not in the installed wheel.
 Clone the matching release:
 
 ```sh
@@ -65,7 +58,7 @@ uv run --with jupyterlab --with ipykernel jupyter lab
 ```
 
 Choose the Python kernel from this environment and open a notebook under `notebooks/`.
-Examples use synchronous APIs: no `await` or event-loop setup is needed.
+
 
 ## Develop BONDI
 

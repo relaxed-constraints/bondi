@@ -1,8 +1,17 @@
 # Local database deployments
 
 BONDI can create and manage named local MongoDB and Couchbase instances using Docker Compose.
-Install and start Docker with Compose v2 first. The Python package includes its
-Compose asset: no repository clone or GitHub download is needed.
+Install and start Docker with Compose v2 first. 
+
+## MongoDB deployments
+
+MongoDB uses the pinned `mongo:8.0.16` image and binds only to `127.0.0.1`.
+This is an unauthenticated local research database. Python and Docker must be on
+the same machine; remote Docker contexts are not supported. A script running on
+a remote host can use this API with Docker on that host. Readiness is verified
+inside the container with a MongoDB ping via its health check.
+
+### Deploy via Python API
 
 ```python
 from bondi.deployment import deploy_mongodb
@@ -25,48 +34,41 @@ port if an existing MongoDB already uses it. Each named deployment has an isolat
 Compose project and data volume. These deployments do not adopt or modify the
 older repository-level BONDI Compose containers.
 
-## Command line
+### Deploy via command line
 
 The `bondi` command calls the same deployment API. In a uv project, use
 `uv run bondi`; in an activated Python environment, use `bondi` directly.
-`python -m bondi` is also supported. These deployment features are unreleased;
-until the next release, use a source checkout with `uv sync`.
+`python -m bondi` is also supported.
 
 ```sh
-bondi deploy mongodb --name demo --port 27019
-bondi status demo
-bondi list
-bondi logs demo --tail 20
-bondi stop demo
-bondi start demo
-bondi remove demo --keep-data    # Confirm removal; retain data and configuration.
-bondi start demo                 # Recreate the container using retained data.
-bondi remove demo                # Confirm permanent deletion of data/configuration.
-bondi remove demo -y             # Skip confirmation (for automation).
+bondi deploy mongodb --name demo   # deploy database with name `demo` 
+bondi status demo                  # check status
+bondi list                         # show all deployments
+bondi logs demo --tail 20          # show recent logs
+bondi stop demo                    # stop the deployment
+bondi start demo                   # start the deployment
+bondi remove demo --keep-data      # remove deployment but keep data
+bondi remove demo                  # with confirmation for deletion of data/configuration
+bondi remove demo -y               # skip confirmation (for automation)
 ```
 
 `bondi deploy mongodb` defaults to name `mongodb` and port `27017`. Lifecycle
-commands require the deployment name, avoiding an ambiguous “last used” instance.
-Use `--timeout 300` on deploy/start/stop/remove to increase the operation deadline.
-Use `bondi --help` or `bondi remove --help` to inspect command options.
+commands require the deployment name. Use `--timeout 300` on deploy/start/stop/remove
+to increase the operation deadline. Use `bondi --help` or `bondi <command> --help` to
+inspect command options.
 
 Removal deletes data and saved configuration by default and asks `[y/N]`.
-Only `y` or `yes` proceeds; Enter, other answers, or end-of-input cancel removal.
 Use `--keep-data` to retain the volume and configuration, and `-y` / `--yes` to
 skip confirmation for either mode. Cancellation returns exit code 1.
-The Python API is unchanged: `remove()` retains data and
-`remove(delete_data=True)` deletes it, without a prompt.
-Listing includes saved configurations whose containers have been removed.
-No command automatically manages another deployment or the older manual Compose setup.
 
-Exit codes are `0` for success, `1` for operational errors (such as unavailable
-Docker or missing deployment files), `2` for invalid command syntax, and `130`
-for interruption. `status` reports a stopped/removed deployment successfully;
-it does not use the exit code as a database health signal. Failed new deployments
-are cleaned up automatically. Existing deployments retain
-their data and configuration for inspection with `logs` and retries with `start`.
+After MongoDB deployment, the CLI prints a `mongosh` connection command and links
+for installing [MongoDB Shell](https://www.mongodb.com/docs/mongodb-shell/install/)
+and [Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
+(`mongoimport`, `mongoexport`, `mongodump`, `mongorestore`). These tools are optional
+on the host; BONDI deploys the database through Docker without installing them.
 
-## Reopen and inspect
+
+### Reopen and inspect
 
 ```python
 from bondi.deployment import get_deployment, list_deployments
@@ -84,10 +86,9 @@ for item in list_deployments():
 Status is `running`, `starting`, `unhealthy`, `stopped`, or `removed`. Docker
 connection failures raise an error rather than appearing as a stopped database.
 Repeated `deploy_mongodb()` calls reuse matching configuration and wait for
-readiness. A different requested port is rejected. Saved deployments retain their
-original image/configuration when BONDI is upgraded; there is no automatic upgrade.
+readiness. A different requested port is rejected. 
 
-## Data ownership and removal
+### Data ownership and removal
 
 ```python
 database.remove()                   # Remove container/network; retain volume.
@@ -107,10 +108,11 @@ this directory. Do not delete/edit the state directory to manage deployments.
 Serialize lifecycle calls for a given deployment; concurrent management of the
 same name is not supported.
 
-## Startup and troubleshooting
+### Startup and troubleshooting
 
 Startup defaults to a 120-second deadline, including an initial Docker image pull.
-Use `deploy_mongodb(..., timeout=300)` on a slower connection. Before creating a deployment, BONDI checks whether it can bind the requested
+Use `deploy_mongodb(..., timeout=300)` on a slower connection. Before creating a 
+deployment, BONDI checks whether it can bind the requested
 localhost port. An occupied port fails without creating metadata or Docker resources.
 This is an advisory check: Docker can still encounter a port race afterwards.
 
@@ -128,18 +130,16 @@ only when its data is disposable.
 A forced process kill or machine crash cannot guarantee cleanup; inspect saved
 deployments with `bondi list` before retrying.
 
-MongoDB uses the pinned `mongo:8.0.16` image and binds only to `127.0.0.1`.
-This is an unauthenticated local research database. Python and Docker must be on
-the same machine; remote Docker contexts are not supported. A script running on
-a remote host can use this API with Docker on that host. Readiness is verified
-inside the container with a MongoDB ping via its health check.
+## Couchbase Deployments
 
-## Couchbase deployments
+For Couchbase deployments, ensure that the `bondi[couchbase]` variant is installed.
 
 Community is the default; Enterprise is available explicitly for users entitled
 to use it. This API does not grant an Enterprise license. Both use pinned 7.6.2
 images with Data, Query and Index services and a 4 GiB container memory limit.
 Allow Docker sufficient memory, especially when running several databases.
+
+### Deployment via Python API
 
 ```python
 from bondi.deployment import deploy_couchbase
@@ -155,8 +155,7 @@ with CouchbaseExecutor.from_uri(
     print(result.documents)  # [1]
 ```
 
-Deployment needs Docker but no Couchbase SDK. Executing through BONDI requires
-`bondi[couchbase]`. Startup waits for management, cluster initialization, a healthy
+Startup waits for management, cluster initialization, a healthy
 bucket, and a successful SQL++ query. It creates an empty `demo` bucket (256 MiB,
 no replicas), with its default scope and collection. It does **not** insert sample
 data or create indexes. Create appropriate indexes before querying stored data.
@@ -164,9 +163,13 @@ Pass `bucket="research"` to choose another bucket at creation.
 
 The local console credentials default to **Administrator / bondi-local**.
 Use a custom `username`/`password` in Python, or supply a password through an
-existing environment variable in the CLI. The CLI displays the default local password after deployment. Custom passwords
+existing environment variable in the CLI. 
+
+### Deployment via CLI
+
+The CLI displays the default local password after deployment. Custom passwords
 are identified by their environment variable rather than printed, and passwords
-are excluded from the deployment object's repr. They are stored in plaintext in
+are excluded from the deployment object's `repr`. They are stored in plaintext in
 `deployment.json`, created with owner-only permissions on POSIX systems. Keep
 this state directory private. This is local research infrastructure, not a
 production security setup.
@@ -178,7 +181,14 @@ bondi logs couchbase
 bondi stop couchbase
 bondi start couchbase
 bondi remove couchbase --keep-data -y
+bondi remove couchbase -y
 ```
+
+After Couchbase deployment, it prints the console URL, username, password source,
+and bucket. 
+
+
+### Alternate ports and editions
 
 Couchbase needs three **distinct** localhost ports. To coexist with another instance:
 
@@ -207,14 +217,6 @@ credentials. New-start failures roll back resources just as for MongoDB.
 Implementation references: [cluster initialization](https://docs.couchbase.com/server/7.6/rest-api/rest-cluster-intro.html)
 and [alternate addresses](https://docs.couchbase.com/server/7.6/rest-api/rest-set-up-alternate-address.html).
 
-
-After MongoDB deployment, the CLI prints a `mongosh` connection command and links
-for installing [MongoDB Shell](https://www.mongodb.com/docs/mongodb-shell/install/)
-and [Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
-(`mongoimport`, `mongoexport`, `mongodump`, `mongorestore`). These tools are optional
-on the host; BONDI deploys the database through Docker without installing them.
-After Couchbase deployment, it prints the console URL, username, password source,
-and bucket. The Python API stays quiet and returns these details on the deployment.
 
 ## Demo data
 

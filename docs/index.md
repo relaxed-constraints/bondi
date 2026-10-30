@@ -8,21 +8,17 @@ queries, run experiments against databases, inspect data, and generate workloads
 Research models and experiment tracking belong in your project; the toolkit supplies
 the shared database components.
 
-## Two common workflows
-
-- **Describe queries → execute or profile → summarize results.** Compare query behavior
-  while retaining native diagnostic responses for deeper analysis.
-- **Inspect data → estimate selectivity → generate workloads.** Build groups of queries
-  with fixed patterns and varying values, then save them for repeatable experiments.
+## What's currently supported
 
 | Capability | MongoDB | Couchbase |
 | --- | --- | --- |
-| Native queries and workload persistence | Find and aggregation | SQL++ |
-| Execution, explain and profile | Supported | Detailed profiling depends on server support |
-| Summary parsing | Supported | Supported; unavailable metrics remain `None` |
-| Schema inspection | Python documents from either backend or files | Same parser |
-| Sampling estimation | Supported | Planned/deferred |
-| Pattern-based workload generation | Flat find queries | Not implemented |
+| **Local deployments via CLI & API** | ✅ Supported | ✅ Supported |
+| **Native queries and workload persistence** | ✅ Find and aggregation |  ✅ SQL++ |
+| **Query and workload execution, explain and profiling** | ✅ Supported |  ✅ Supported; detailed profiling depends on server support (enterprise edition) |
+| **Summary parsing** | ✅ Supported |  ✅ Supported; some metrics unavailable |
+| **Schema inspection** |  ✅ Python documents from either backend or files |  ✅ Same parser |
+| **Sampling estimation** | ✅ Supported | ❌ Planned/deferred |
+| **Pattern-based workload generation** | 🟡 Flat find queries; no logical expressions or aggregation pipelines | ❌ Not implemented |
 
 BONDI [0.1.3](https://pypi.org/project/bondi/0.1.3/) is available under the MIT license.
 

@@ -11,16 +11,16 @@ theme:
     - content.code.copy
     - navigation.tabs
     - navigation.top
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
 watch:
   - src
 nav:
   - Home: index.md
   - Getting started:
       - Installation: installation.md
-      - Database deployment:
-          - Overview: deployment.md
-          - MongoDB Deployments: /bondi/deployment/#mongodb-deployments
-          - Couchbase Deployments: /bondi/deployment/#couchbase-deployments
+      - Database deployment: deployment.md
       - Quickstart: quickstart.md
   - User guide:
       - Queries and workloads:
