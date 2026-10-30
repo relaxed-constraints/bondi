@@ -1,50 +1,137 @@
 # Quickstart
 
-## Start without a database
+Five common workflows, using minimal Python examples. Follow the
+[installation guide](installation.md) first. Deployment and demo-data loading are
+currently unreleased; use a current source checkout with `uv sync` for these examples.
+Run the snippets in order in a notebook or Python script. Schema analysis is
+independent and needs no database.
 
-[Install BONDI](installation.md) from PyPI, then inspect a small dataset:
+## 1. Deploy MongoDB
+
+Start Docker, then create a local MongoDB deployment and load eight fictional
+businesses into `demo.business`:
+
+```python
+from bondi.deployment import deploy_mongodb
+
+deployment = deploy_mongodb()
+deployment.load_demo_data()
+```
+
+The defaults use deployment name `mongodb` and port `27017`; pass `port=27019`
+if that port is occupied. The deployment keeps running after Python exits.
+Loading again replaces the eight demo documents without duplicating them or
+removing unrelated data.
+
+API reference: [`deploy_mongodb`](reference/deployment.md#bondi.deployment.deploy_mongodb)
+and [`Deployment`](reference/deployment.md#bondi.deployment.Deployment), including
+`load_demo_data()`, `stop()` and `remove()`.
+
+## 2. Run a workload
+
+Reuse `deployment` from section 1. Build three queries and collect their results:
+
+```python
+from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
+from bondi.workload import Workload, WorkloadEntry
+
+business = MongoCollectionRef("demo", "business")
+workload = Workload([
+    WorkloadEntry(MongoFindQuery(business, {"city": "Sydney"})),
+    WorkloadEntry(MongoFindQuery(business, {"stars": {"$gte": 4.5}})),
+    WorkloadEntry(MongoFindQuery(business, {"categories": "Restaurant"})),
+])
+
+with MongoExecutor.from_uri(deployment.uri) as executor:
+    results = executor.run_workload(workload, collect_results=True)
+
+for result in results:
+    if result is None:
+        print("Not started")
+    elif result.error is not None:
+        print(result.error)
+    else:
+        print(result.row_count, result.documents)
+```
+
+Results follow workload order. On the demo dataset, the queries return 3, 3 and 2
+rows. `collect_results=True` retains documents; omit it when only counts and timing
+are needed. The context manager closes the executor's connections.
+
+API reference: [`MongoFindQuery`](reference/mongodb/queries.md#bondi.mongodb.MongoFindQuery),
+[`Workload` and `WorkloadEntry`](reference/queries.md),
+[`MongoExecutor`](reference/mongodb/executors.md#bondi.mongodb.MongoExecutor), and
+[`ExecutionResult`](reference/results.md#bondi.execution.ExecutionResult).
+
+## 3. Explain and profile queries
+
+Reuse `deployment` and `workload` from sections 1–2. Explain inspects a plan;
+profile executes the query through MongoDB's explain-with-execution-statistics mode.
+Use `summarize()` to extract comparable fields from the raw response:
+
+```python
+from bondi.mongodb import summarize
+
+with MongoExecutor.from_uri(deployment.uri) as executor:
+    for entry in workload:
+        plan = summarize(executor.explain(entry.query).raw)
+        profile = summarize(executor.profile(entry.query).raw)
+        print(plan.plan_stages)
+        print(profile.rows_returned, profile.documents_examined, profile.execution_time_ms)
+```
+
+Planner-only explains have no execution timings. Profiling is diagnostic work;
+its server execution time differs from the client's `ExecutionResult.elapsed_ms`.
+
+API reference: [`MongoExecutor`](reference/mongodb/executors.md#bondi.mongodb.MongoExecutor),
+[`summarize`](reference/mongodb/summaries.md#bondi.mongodb.summarize), and
+[`QuerySummary`](reference/results.md#bondi.summary.QuerySummary).
+
+## 4. Analyse a schema without a database
+
+Pass ordinary Python dictionaries to inspect field types and missing values:
 
 ```python
 from bondi.schema import Schema
 
-schema = Schema.from_documents([{"city": "Sydney", "stars": 4}, {"city": "Melbourne"}])
-print(schema.document_count)  # 2
+schema = Schema.from_documents([
+    {"city": "Sydney", "stars": 4.5},
+    {"city": "Melbourne", "stars": None},
+    {"city": "Brisbane"},
+])
+
+print(schema.document_count)          # 3
+print(schema["stars"].count)          # 2
 print(schema["stars"].missing_count)  # 1
+print(list(schema["stars"].types))    # ['float', 'null']
 ```
 
-Run this in your project with `uv run python your_script.py`, or use `python` in
-an activated environment.
+Null is a present value, distinct from a missing field. The schema describes only
+the documents supplied; it does not impose validation rules.
 
-## Execute a query
+API reference: [`Schema`](reference/schema.md#bondi.schema.Schema) and its field/type
+statistics on the same page.
 
-Get the [release source and teaching resources](installation.md#get-notebooks-and-demo-data)
-if you want to use the demo data. This example reads the bundled MongoDB `demo.business` collection. Complete
-[installation](installation.md) and [database deployment](deployment.md#demo-data) first.
-Run the code in a script or notebook:
+## 5. Estimate cardinality
+
+Reuse `deployment` and `business` from sections 1–2. Estimate how many documents
+match a filter using a small sample:
 
 ```python
-from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
+from bondi.mongodb import MongoSampleEstimator
 
-business = MongoCollectionRef("demo", "business")
-query = MongoFindQuery(business, {"city": "Sydney"}, limit=5)
-
-with MongoExecutor.from_uri("mongodb://127.0.0.1:27017") as executor:
-    result = executor.run(query, collect_results=True)
-    print(result.documents)
-    print(result.row_count, result.elapsed_ms)
+with MongoExecutor.from_uri(deployment.uri) as executor:
+    with MongoSampleEstimator(executor, business, sample_size=4) as estimator:
+        estimate = estimator.estimate(MongoFindQuery(business, {"city": "Sydney"}))
+        print(estimate.cardinality, estimate.selectivity)
+        print(estimate.sample_matches, estimate.sample_size)
 ```
 
-A query describes an operation without opening a connection. The executor performs
-it and consumes the complete cursor. `collect_results=True` retains the returned
-rows; omit it when you only need counts and timing. `elapsed_ms` measures time
-observed by the client, not server execution time.
+The four-document sample is for this tiny demo; estimates vary between runs.
+Omit `sample_size` to evaluate the full population, which gives cardinality 3
+and selectivity 0.375 on the unchanged demo data. Cardinality counts matches
+before any query limit, skip or projection.
 
-The `with` block closes the executor even when an exception occurs. Alternatively,
-create it directly and call `executor.close()` in a `finally` block.
-
-Next: [run a workload](executor.md), [inspect a schema](schemas.md), or
-[describe a Couchbase query](couchbase-query.md).
-
-For a longer runnable example using the same demo data, open
-`notebooks/workload_demo.ipynb` in Jupyter. It covers single queries, workloads,
-profiling, persistence and a deliberate database error.
+API reference:
+[`MongoSampleEstimator`](reference/mongodb/estimation.md#bondi.mongodb.MongoSampleEstimator)
+and [estimation results](reference/estimation.md).
