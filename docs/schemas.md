@@ -69,4 +69,4 @@ with MongoClient("mongodb://127.0.0.1:27017") as client:
 ```
 
 The parser consumes iterables incrementally. Follow the
-[dataset inspection tutorial](tutorials/inspect-data.md) for an executable notebook.
+[dataset inspection tutorial](tutorials.md#inspect-a-dataset) for an executable notebook.

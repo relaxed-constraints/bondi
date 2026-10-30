@@ -58,7 +58,7 @@ retains the detailed dataclass representation.
 Supply a prepared `MongoSampleEstimator` as `estimator=` to the generator, then pass
 `min_selectivity` and `max_selectivity` to `generate()`. Every accepted instance must
 meet those bounds on the estimator's sample. The generator does not prepare or close
-the estimator. See the [end-to-end tutorial](tutorials/generate-workload.md).
+the estimator. See the [end-to-end tutorial](tutorials.md#generate-and-evaluate-a-workload).
 
 ## Configure the experiment
 

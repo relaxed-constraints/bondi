@@ -34,10 +34,7 @@ nav:
       - Schema inspection: schemas.md
       - Cardinality estimation: mongodb-estimation.md
       - Workload generation: workload-generation.md
-  - Tutorials:
-      - Inspect a dataset: tutorials/inspect-data.md
-      - Generate and evaluate a workload: tutorials/generate-workload.md
-      - Explore Couchbase: tutorials/couchbase.md
+  - Tutorials: tutorials.md
   - API reference:
       - Overview: api.md
       - Database deployment: reference/deployment.md

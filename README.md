@@ -159,7 +159,7 @@ print(len(workload))  # 500
 ```
 
 [Generation guide](https://relaxed-constraints.github.io/bondi/workload-generation/) ·
-[End-to-end tutorial](https://relaxed-constraints.github.io/bondi/tutorials/generate-workload/)
+[End-to-end tutorial](https://relaxed-constraints.github.io/bondi/tutorials/#generate-and-evaluate-a-workload)
 
 ---
 

@@ -25,6 +25,6 @@ Use parameters for values rather than formatting values into SQL text. Query
 objects use JSON-compatible parameter values and remain mutable. The Couchbase SDK
 is needed for execution, but not for creating or saving these objects.
 
-Continue with [execution](executor.md) or the [Couchbase tutorial](tutorials/couchbase.md).
+Continue with [execution](executor.md) or the [Couchbase tutorial](tutorials.md#explore-couchbase-execution-and-profiling).
 See the [query reference](reference/couchbase/queries.md) for positional parameters
 and the complete contract.
