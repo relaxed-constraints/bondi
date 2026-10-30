@@ -2,7 +2,7 @@
 
 **Goal:** connect schema inspection, sampling estimates, generation and execution.
 Install the toolkit and start Docker. The first code cell deploys MongoDB and loads
-the demo data; the final cell stops the deployment while retaining its data.
+the demo data; the final cell removes the deployment, its data volume and saved configuration.
 
 ```sh
 uv run --with jupyterlab --with ipykernel jupyter lab notebooks/workload_generation.ipynb

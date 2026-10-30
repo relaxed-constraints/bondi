@@ -2,8 +2,8 @@
 
 **Goal:** compare normal execution, query plans and execution diagnostics for SQL++.
 Install the Couchbase extra and start Docker. The first code cell deploys Community,
-loads the demo data, and creates its primary index. The final cell stops the deployment
-while retaining its data.
+loads the demo data, and creates its primary index. The final cell removes the deployment,
+including its data volume and saved configuration.
 
 ```sh
 uv run --extra couchbase --with jupyterlab --with ipykernel jupyter lab notebooks/couchbase_demo.ipynb
