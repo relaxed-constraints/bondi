@@ -1,7 +1,8 @@
 # Generate and evaluate a MongoDB workload
 
 **Goal:** connect schema inspection, sampling estimates, generation and execution.
-Install the toolkit and initialize [MongoDB demo data](../deployment.md#demo-data) first.
+Install the toolkit and start Docker. The first code cell deploys MongoDB and loads
+the demo data; the final cell stops the deployment while retaining its data.
 
 ```sh
 uv run --with jupyterlab --with ipykernel jupyter lab notebooks/workload_generation.ipynb
@@ -9,7 +10,7 @@ uv run --with jupyterlab --with ipykernel jupyter lab notebooks/workload_generat
 
 Run the notebook's offline examples first. They generate 10 patterns with 50 instances,
 inspect pattern membership, save/load JSONL and demonstrate seeded generation.
-Enable its `RUN_LIVE` cell to use `demo.business` on port 27017. That example builds
+Continue through the database examples using the notebook's deployment. That example builds
 a schema, prepares a temporary sample, constrains every query's selectivity and
 cleans up the sample when finished. It does not modify source documents.
 

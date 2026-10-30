@@ -1,17 +1,16 @@
 # Explore Couchbase execution and profiling
 
 **Goal:** compare normal execution, query plans and execution diagnostics for SQL++.
-Install the Couchbase extra and deploy the Community database using
-[Database deployment](../deployment.md#couchbase-deployments), then load the
-[demo data](../deployment.md#demo-data).
+Install the Couchbase extra and start Docker. The first code cell deploys Community,
+loads the demo data, and creates its primary index. The final cell stops the deployment
+while retaining its data.
 
 ```sh
 uv run --extra couchbase --with jupyterlab --with ipykernel jupyter lab notebooks/couchbase_demo.ipynb
 ```
 
-The notebook uses the bundled local connection and credentials by default. Override
-its environment settings when connecting elsewhere; do not store private credentials
-in notebooks you share.
+The notebook obtains connection details and credentials from its deployment handle.
+Run all cells in order; no environment variables or manual database setup are needed.
 
 Work through the single-query and workload examples:
 
