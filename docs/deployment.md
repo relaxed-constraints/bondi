@@ -25,8 +25,8 @@ with MongoExecutor.from_uri(database.uri) as executor:
     pass
 
 print(database.status())  # "running"
-database.stop()           # Retain data and container.
-database.start()          # Wait for readiness again.
+database.stop()  # Retain data and container.
+database.start()  # Wait for readiness again.
 ```
 
 The default name is `mongodb` and the default port is `27017`. Choose another
@@ -91,9 +91,9 @@ readiness. A different requested port is rejected.
 ### Data ownership and removal
 
 ```python
-database.remove()                   # Remove container/network; retain volume.
-database.start()                    # Recreate using the retained data.
-database.remove(delete_data=True)   # Permanently delete volume and configuration.
+database.remove()  # Remove container/network; retain volume.
+database.start()  # Recreate using the retained data.
+database.remove(delete_data=True)  # Permanently delete volume and configuration.
 ```
 
 After deleting data, discard the handle; a new `deploy_mongodb()` creates a fresh
@@ -232,8 +232,8 @@ require the optional Python SDK.
 from bondi.deployment import get_deployment
 
 mongo = get_deployment("mongo-demo")  # An existing, running MongoDB deployment.
-result = mongo.load_demo_data()      # demo.business
-print(result.document_count)         # 8
+result = mongo.load_demo_data()  # demo.business
+print(result.document_count)  # 8
 
 couchbase = get_deployment("cb-demo")  # An existing, running Couchbase deployment.
 result = couchbase.load_demo_data(create_primary_index=True)

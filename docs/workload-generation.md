@@ -20,7 +20,10 @@ generator = MongoWorkloadGenerator(
     config=MongoGenerationConfig(min_predicates=1, max_predicates=2),
 )
 workload, patterns = generator.generate(
-    num_patterns=10, instances_per_pattern=50, seed=42, return_patterns=True,
+    num_patterns=10,
+    instances_per_pattern=50,
+    seed=42,
+    return_patterns=True,
 )
 workload.save("workload.jsonl")
 assert len(workload) == 500
@@ -39,11 +42,14 @@ can repeat; pattern shapes are distinct. Pattern IDs index the returned pattern 
 ```python
 from bondi.mongodb import MongoFindQuery, MongoQueryPattern
 
-pattern = MongoQueryPattern.from_query(MongoFindQuery(
-    MongoCollectionRef("demo", "business"),
-    {"city": {"$in": ["Sydney", "Melbourne"]}, "stars": {"$gte": 4}},
-    sort=(("stars", -1),), limit=20,
-))
+pattern = MongoQueryPattern.from_query(
+    MongoFindQuery(
+        MongoCollectionRef("demo", "business"),
+        {"city": {"$in": ["Sydney", "Melbourne"]}, "stars": {"$gte": 4}},
+        sort=(("stars", -1),),
+        limit=20,
+    )
+)
 print(pattern)
 # demo.business: city $in <2 × str> AND stars $gte <int> | sort={'stars': -1} | limit=20
 ```

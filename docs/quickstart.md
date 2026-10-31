@@ -36,11 +36,13 @@ from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
 from bondi.workload import Workload, WorkloadEntry
 
 business = MongoCollectionRef("demo", "business")
-workload = Workload([
-    WorkloadEntry(MongoFindQuery(business, {"city": "Sydney"}, limit=1)),
-    WorkloadEntry(MongoFindQuery(business, {"stars": {"$gte": 4.5}})),
-    WorkloadEntry(MongoFindQuery(business, {"categories": "Restaurant"})),
-])
+workload = Workload(
+    [
+        WorkloadEntry(MongoFindQuery(business, {"city": "Sydney"}, limit=1)),
+        WorkloadEntry(MongoFindQuery(business, {"stars": {"$gte": 4.5}})),
+        WorkloadEntry(MongoFindQuery(business, {"categories": "Restaurant"})),
+    ]
+)
 
 with MongoExecutor.from_uri(deployment.uri, continue_on_error=True) as executor:
     results = executor.run_workload(workload, collect_results=True)
@@ -112,11 +114,13 @@ Pass ordinary Python dictionaries to inspect field types and missing values. The
 ```python
 from bondi.schema import Schema
 
-schema = Schema.from_documents([
-    {"city": "Sydney", "stars": 4.5},
-    {"city": "Melbourne", "stars": None},
-    {"city": "Brisbane"},
-])
+schema = Schema.from_documents(
+    [
+        {"city": "Sydney", "stars": 4.5},
+        {"city": "Melbourne", "stars": None},
+        {"city": "Brisbane"},
+    ]
+)
 
 print(f"Total count: {schema.document_count}")
 print(f"Docs with `stars` field: {schema['stars'].count}")
@@ -145,18 +149,15 @@ Cardinality estimation determines _approximately_ how many documents
 match a filter using a small sample of the data:
 
 ```python
-from bondi.mongodb import (
-    MongoSampleEstimator, MongoCollectionRef, MongoExecutor, MongoFindQuery
-)
+from bondi.mongodb import MongoSampleEstimator, MongoCollectionRef, MongoExecutor, MongoFindQuery
 
 business = MongoCollectionRef("demo", "business")
 
 with MongoExecutor.from_uri(deployment.uri) as executor:
     with MongoSampleEstimator(executor, business, sample_size=4) as estimator:
-        
         # how many documents have city "Sydney", based on a 4-doc sample
         estimate = estimator.estimate(MongoFindQuery(business, {"city": "Sydney"}))
-        
+
         # cardinality represents an absolute number
         print(f"Cardinality: {estimate.cardinality}")
 

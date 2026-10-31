@@ -9,7 +9,10 @@ Couchbase estimation is not implemented yet.
 
 ```python
 from bondi.mongodb import (
-    MongoCollectionRef, MongoExecutor, MongoFindQuery, MongoSampleEstimator,
+    MongoCollectionRef,
+    MongoExecutor,
+    MongoFindQuery,
+    MongoSampleEstimator,
 )
 
 target = MongoCollectionRef("demo", "business")

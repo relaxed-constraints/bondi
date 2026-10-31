@@ -8,10 +8,12 @@ from bondi.mongodb import MongoCollectionRef, MongoFindQuery
 from bondi.workload import Workload, WorkloadEntry
 
 business = MongoCollectionRef("demo", "business")
-workload = Workload([
-    WorkloadEntry(MongoFindQuery(business, {"city": "Sydney"}), pattern_id=0),
-    WorkloadEntry(MongoFindQuery(business, {"city": "Melbourne"}), pattern_id=0),
-])
+workload = Workload(
+    [
+        WorkloadEntry(MongoFindQuery(business, {"city": "Sydney"}), pattern_id=0),
+        WorkloadEntry(MongoFindQuery(business, {"city": "Melbourne"}), pattern_id=0),
+    ]
+)
 print(len(workload))
 print(workload[0].query.filter)
 ```

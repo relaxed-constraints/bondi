@@ -119,9 +119,7 @@ distinct source documents. Repeated sampling calls need not return the same docu
 ```python
 from bondi.couchbase import CouchbaseQuery
 
-sample_query = CouchbaseQuery(
-    "SELECT RAW b FROM `demo`.`_default`.`business` AS b LIMIT 100"
-)
+sample_query = CouchbaseQuery("SELECT RAW b FROM `demo`.`_default`.`business` AS b LIMIT 100")
 ```
 
 `SELECT RAW b` returns whole document bodies rather than `{ "b": ... }` alias wrappers.
@@ -134,8 +132,7 @@ For the current SQL++ executor, random ordering followed by a limit is an option
 
 ```python
 sample_query = CouchbaseQuery(
-    "SELECT RAW b FROM `demo`.`_default`.`business` AS b "
-    "ORDER BY RANDOM() LIMIT 100"
+    "SELECT RAW b FROM `demo`.`_default`.`business` AS b ORDER BY RANDOM() LIMIT 100"
 )
 ```
 
