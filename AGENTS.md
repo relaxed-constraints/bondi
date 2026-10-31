@@ -9,7 +9,10 @@ each class.
 - Discuss new public contracts before implementing them.
 - Keep runtime dependencies minimal and avoid dependencies on sibling checkouts.
 - Keep research algorithms and experiment pipelines in consumer repositories.
-- Use uv, pytest and Ruff. Update documentation with public behaviour changes.
+- Use uv, pytest and Ruff.
+- For every public-facing change, add or update tests, documentation and the API
+  reference. Record the change under `## Unreleased` in `CHANGELOG.md`; keep it
+  there until the next release, then move it into that release's versioned section.
 - Run relevant tests, Ruff checks and a strict documentation build for changes.
 
 - Implement new features on a `codex/` feature branch. After checks pass, commit

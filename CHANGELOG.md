@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add `MongoCollectionRef.from_namespace(namespace)` to create a collection reference
+  by splitting at the first dot, preserving additional dots in the collection name.
+  Validate input types, the separator, empty names and null characters.
+
 ## 0.1.4 — 2026-10-31
 
 - Add Community/Enterprise Couchbase deployment, cluster/bucket initialization, custom ports and CLI support.
