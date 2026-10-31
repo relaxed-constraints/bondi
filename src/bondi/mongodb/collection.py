@@ -1,6 +1,7 @@
 """Logical MongoDB collection identifiers."""
 
 from dataclasses import dataclass
+from typing import Self
 
 
 @dataclass(frozen=True)
@@ -45,3 +46,32 @@ class MongoCollectionRef:
                 raise ValueError(f"{field_name} must not be empty")
             if "\0" in value:
                 raise ValueError(f"{field_name} must not contain null characters")
+
+    @classmethod
+    def from_namespace(cls, namespace: str) -> Self:
+        """Create a reference from a ``database.collection`` namespace.
+
+        Split at the first dot, preserving any remaining dots in the collection
+        name. Case and whitespace are preserved, as with direct construction.
+
+        Args:
+            namespace: Database and collection names separated by a dot.
+
+        Returns:
+            A collection reference with the parsed names.
+
+        Raises:
+            TypeError: The namespace is not a string.
+            ValueError: There is no dot, either name is empty, or either name
+                contains a null character.
+
+        Examples:
+            >>> MongoCollectionRef.from_namespace("research.businesses.archive")
+            MongoCollectionRef(database='research', collection='businesses.archive')
+        """
+        if not isinstance(namespace, str):
+            raise TypeError("namespace must be a string")
+        database, separator, collection = namespace.partition(".")
+        if not separator:
+            raise ValueError("namespace must contain a dot separating database and collection")
+        return cls(database, collection)

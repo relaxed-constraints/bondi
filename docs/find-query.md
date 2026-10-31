@@ -20,6 +20,21 @@ query = MongoFindQuery(
 Use native MongoDB filter syntax. `sort` is an ordered tuple of pairs; order matters
 for compound sorts. Omit `limit` for unlimited results, rather than using zero.
 
+## Collection references from namespaces
+
+When you already have a namespace string, use the alternate constructor:
+
+```python
+business = MongoCollectionRef.from_namespace("demo.business")
+archive = MongoCollectionRef.from_namespace("demo.business.archive")
+assert archive == MongoCollectionRef("demo", "business.archive")
+```
+
+Only the first dot separates the database from the collection. Names retain their
+case and whitespace. Non-string inputs raise `TypeError`; missing separators,
+empty names, and null characters raise `ValueError`. Like direct construction,
+this creates no connection and does not check whether the collection exists.
+
 ## Aggregation pipelines
 
 ```python

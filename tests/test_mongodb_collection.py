@@ -44,3 +44,43 @@ def test_names_cannot_be_reassigned(field):
     target = MongoCollectionRef("research", "businesses")
     with pytest.raises(FrozenInstanceError):
         setattr(target, field, "other")
+
+
+@pytest.mark.parametrize(
+    ("namespace", "database", "collection"),
+    [
+        ("research.businesses", "research", "businesses"),
+        ("research.businesses.archive", "research", "businesses.archive"),
+        (" Research .Business.Archive ", " Research ", "Business.Archive "),
+        (" . ", " ", " "),
+    ],
+)
+def test_from_namespace_preserves_names(namespace, database, collection):
+    assert MongoCollectionRef.from_namespace(namespace) == MongoCollectionRef(database, collection)
+
+
+@pytest.mark.parametrize("namespace", [None, 42, b"research.businesses"])
+def test_from_namespace_rejects_non_strings(namespace):
+    with pytest.raises(TypeError, match="namespace must be a string"):
+        MongoCollectionRef.from_namespace(namespace)
+
+
+@pytest.mark.parametrize("namespace", ["", "research"])
+def test_from_namespace_requires_separator(namespace):
+    with pytest.raises(ValueError, match="namespace must contain a dot"):
+        MongoCollectionRef.from_namespace(namespace)
+
+
+@pytest.mark.parametrize(
+    ("namespace", "field"),
+    [
+        (".businesses", "database"),
+        ("research.", "collection"),
+        (".", "database"),
+        ("bad\0name.businesses", "database"),
+        ("research.bad\0name", "collection"),
+    ],
+)
+def test_from_namespace_validates_parsed_names(namespace, field):
+    with pytest.raises(ValueError, match=field):
+        MongoCollectionRef.from_namespace(namespace)

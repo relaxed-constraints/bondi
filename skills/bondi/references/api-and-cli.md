@@ -53,6 +53,13 @@ workload.save("workload.jsonl")
 restored = Workload.load("workload.jsonl")
 ```
 
+In checkouts supporting `MongoCollectionRef.from_namespace(namespace)`, use it
+when you already have a string such as `"demo.business"`. It splits at the first
+dot, preserving additional dots in the collection name and all case/whitespace.
+Non-string inputs raise `TypeError`; missing dots, empty names, and null characters
+raise `ValueError`. This constructor was added after the 0.1.4 release; check the
+installed API before using it in a pinned consumer project.
+
 `MongoAggregateQuery` describes pipelines. `CouchbaseQuery` preserves SQL++
 text and named/positional parameters. Workloads preserve order and optional integer
 pattern IDs and contain one backend. MongoDB payload persistence preserves BSON
