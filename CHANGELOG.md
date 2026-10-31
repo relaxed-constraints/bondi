@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a portable BONDI agent skill with API/CLI guidance, development conventions,
+  a documentation and tutorial map, and an installation guide.
 - Add `MongoCollectionRef.from_namespace(namespace)` to create a collection reference
   by splitting at the first dot, preserving additional dots in the collection name.
   Validate input types, the separator, empty names and null characters.

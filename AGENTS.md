@@ -16,7 +16,9 @@ each class.
 - Run relevant tests, Ruff checks and a strict documentation build for changes.
 
 - Implement new features on a `codex/` feature branch. After checks pass, commit
-  the feature and merge it back into `main`. Preserve unrelated user changes.
+  the feature and leave it on the branch for the user to review. Do not merge into
+  `main` until the user has had a chance to review the changes and explicitly
+  approves the merge. Preserve unrelated user changes.
 
 - Use `Mongo` as the class-name prefix for MongoDB implementations (for example,
   `MongoExecutor`, `AsyncMongoExecutor`, and `MongoSampleEstimator`). Keep the
