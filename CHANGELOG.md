@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a Projects documentation page linking to the demo and minimal starter projects.
+
 - Add a portable BONDI agent skill with API/CLI guidance, development conventions,
   a documentation and tutorial map, and an installation guide.
 - Add `MongoCollectionRef.from_namespace(namespace)` to create a collection reference

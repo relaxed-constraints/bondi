@@ -53,6 +53,7 @@ nav:
           - Queries: reference/couchbase/queries.md
           - Executors: reference/couchbase/executors.md
           - Summary parsing: reference/couchbase/summaries.md
+  - Projects: projects.md
   - Development:
       - Contributing: contributing.md
       - Architecture and design: architecture.md
