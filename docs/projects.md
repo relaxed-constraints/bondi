@@ -13,9 +13,9 @@ step-by-step tutorials and a Markdown slide deck for progress updates.
 
 ## bondi-empty-project
 
-A minimal starter for students who want to build their own project from scratch.
+A minimal starter for those who want to build their own project from scratch.
 It uses the same dependencies and directory structure as the demo project, with
-a small greeting function, CLI, Yanex experiment, notebook and test to show how the
+a small hello world function, CLI, Yanex experiment, notebook and test to show how the
 pieces fit together. A Markdown slide deck is included for progress updates.
 
 [View bondi-empty-project on GitHub](https://github.com/relaxed-constraints/bondi-empty-project)
