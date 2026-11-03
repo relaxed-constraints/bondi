@@ -2,8 +2,8 @@
 
 ## Current release
 
-[0.1.4 is published on PyPI](https://pypi.org/project/bondi/0.1.4/) with a matching
-[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.4).
+[0.1.5 is published on PyPI](https://pypi.org/project/bondi/0.1.5/) with a matching
+[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.5).
 The tagged source provides the self-contained notebooks. The installed package
 includes deployment Compose assets and the demo dataset.
 
@@ -14,10 +14,10 @@ includes deployment Compose assets and the demo dataset.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.1.4` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.1.5` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.1.4` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.1.5` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.

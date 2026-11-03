@@ -120,3 +120,12 @@ full-population guarantees.
 Current generation is synchronous, single-collection MongoDB flat-find generation.
 Do not assume aggregation generation or Couchbase generation/estimation exists.
 Use the documentation map for detailed contracts and runnable notebooks.
+
+## External MongoDB JSON (0.1.5+)
+
+Use `from bondi.mongodb import loads_query_json` to decode external query JSON
+with BSON dates/ObjectIds while preserving `$regex` operator documents. Explicit
+`$regularExpression` wrappers decode to native Regex. Invalid input raises
+ValueError; non-string input raises TypeError. This is data decoding, not query
+validation. Find persistence writes version 2 with BSON-aware projections, reads
+legacy version 1, and changes find fingerprints. Use the installed version's API.
