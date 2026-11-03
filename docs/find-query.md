@@ -88,3 +88,36 @@ Aggregation and outer workload envelope versions remain 1.
 
 See [workload persistence](workloads.md) to save many queries, or the
 [MongoDB query reference](reference/mongodb/queries.md) for validation and codec details.
+
+## Decode external query JSON
+
+Use `loads_query_json` for JSON received from a file, user or model when BSON
+values and MongoDB operators must coexist:
+
+```python
+from bondi.mongodb import MongoCollectionRef, MongoFindQuery, loads_query_json
+
+predicate = loads_query_json("""{
+  "tags": {"$elemMatch": {"$regex": "^python$", "$options": "i"}},
+  "created": {"$gte": {"$date": "2026-01-01T00:00:00Z"}}
+}""")
+query = MongoFindQuery(MongoCollectionRef("research", "posts"), predicate)
+```
+
+The function returns ordinary Python data with decoded BSON types, not a query
+object. Objects, arrays and scalars are supported. It shares the query persistence
+codec, preserving `$regex`/`$options` dictionaries while decoding explicit
+`$regularExpression`, `$date`, `$oid` and other PyMongo-supported type wrappers.
+Both canonical and relaxed Extended JSON are accepted; persistence loaders still
+require their versioned envelopes and canonical payloads.
+
+Duplicate keys at any depth, malformed JSON/BSON wrappers, bare NaN/Infinity,
+floating-point overflow and excessive nesting raise `ValueError`. Non-string
+input raises `TypeError`. Explicit Extended JSON `$numberDouble` wrappers can
+represent BSON nonfinite values; this is distinct from illegal bare JSON tokens.
+
+There is no MongoDB operator validation, schema validation, output repair or I/O.
+Unknown operators remain dictionaries for MongoDB to validate later. Object order
+is retained. `$literal` is not an escape from Extended JSON: wrapper-shaped objects
+are still decoded as types. Callers needing the original JSON representation for
+audit records should retain the text or decode it separately with standard JSON.

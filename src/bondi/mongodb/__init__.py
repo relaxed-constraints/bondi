@@ -7,11 +7,13 @@ from bondi.mongodb.executor import AsyncMongoExecutor
 from bondi.mongodb.explain import summarize
 from bondi.mongodb.generation import MongoWorkloadGenerator, WorkloadGenerationError
 from bondi.mongodb.generation_config import MongoGenerationConfig
+from bondi.mongodb.json import loads_query_json
 from bondi.mongodb.pattern import MongoPredicateTemplate, MongoQueryPattern
 from bondi.mongodb.query import MongoFindQuery
 from bondi.mongodb.sync_executor import MongoExecutor
 
 __all__ = [
+    "loads_query_json",
     "MongoWorkloadGenerator",
     "WorkloadGenerationError",
     "MongoGenerationConfig",

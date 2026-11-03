@@ -23,3 +23,9 @@ fingerprint behavior.
       show_root_heading: true
       heading_level: 2
       show_signature_annotations: true
+
+::: bondi.mongodb.loads_query_json
+    options:
+      show_root_heading: true
+      heading_level: 2
+      show_signature_annotations: true

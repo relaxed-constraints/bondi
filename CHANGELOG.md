@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Expose `bondi.mongodb.loads_query_json` for strict external JSON input with
+  query-aware BSON decoding, preserved regex operators and normalized decode errors.
+
 - Preserve MongoDB `$regex`/`$options` operator documents during query and workload
   round trips, including `$elemMatch`; native BSON regex values use `$regularExpression`.
 - Add BSON-aware find projections in version-2 query envelopes. Version-1 reads retain
