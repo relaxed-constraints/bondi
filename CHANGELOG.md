@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Preserve MongoDB `$regex`/`$options` operator documents during query and workload
+  round trips, including `$elemMatch`; native BSON regex values use `$regularExpression`.
+- Add BSON-aware find projections in version-2 query envelopes. Version-1 reads retain
+  plain-JSON projection semantics; new find fingerprints change with the new format.
+  Ambiguous literal BSON-wrapper documents remain rejected on save.
+
 - Add a Projects documentation page linking to the demo and minimal starter projects.
 
 - Add a portable BONDI agent skill with API/CLI guidance, development conventions,

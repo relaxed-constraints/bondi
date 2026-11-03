@@ -113,10 +113,11 @@ class MongoFindQuery:
                 raise ValueError("sort directions must be 1 or -1")
 
     def to_json(self) -> str:
-        """Serialize a version-1 JSON envelope with a Canonical Extended JSON filter.
+        """Serialize a version-2 envelope with BSON-aware filter and projection.
 
-        Metadata, projection, sort, skip and limit use ordinary JSON. Projections
-        must contain JSON-serializable values. Preserves document and sort order.
+        Metadata, sort, skip and limit use ordinary JSON. Filter and projection
+        use Canonical Extended JSON, preserving $regex operator documents.
+        Native BSON Regex values use $regularExpression. Preserves document order.
         Dates normalize to millisecond precision
         and load as naive UTC datetimes. Binary subtype zero loads as bytes; large
         integers may load as bson.Int64. These preserve the serialized BSON value,
@@ -125,8 +126,8 @@ class MongoFindQuery:
         Raises:
             TypeError: Structural validation or BSON-aware JSON encoding fails.
             ValueError: Validation fails or a document is ambiguous with an Extended
-                JSON type wrapper. Use bson.Regex instead of a $regex/$options
-                document. Unsupported Python values may raise codec exceptions.
+                JSON type wrapper. $regex/$options documents are preserved as operators.
+                Unsupported Python values may raise codec exceptions.
 
         Examples:
             >>> query = MongoFindQuery(MongoCollectionRef("research", "businesses"), {})
@@ -135,7 +136,7 @@ class MongoFindQuery:
         """
         self.validate()
         envelope = {
-            "format_version": 1,
+            "format_version": 2,
             "query_kind": "mongodb.find",
             "target": {"database": self.target.database, "collection": self.target.collection},
             "filter": self.filter,
@@ -144,12 +145,14 @@ class MongoFindQuery:
             "skip": self.skip,
             "limit": self.limit,
         }
-        return _dump_envelope(envelope, ("filter",))
+        return _dump_envelope(envelope, ("filter", "projection"))
 
     @classmethod
     def from_json(cls, text: str) -> Self:
-        """Load a version-1 envelope produced by to_json.
+        """Load version-1 or version-2 find envelopes.
 
+        Version-1 projections retain ordinary JSON semantics. New writes use v2,
+        changing fingerprints; ambiguous legacy projections cannot be re-saved.
         Whitespace and envelope field order may differ. BSON payloads must use
         Canonical Extended JSON. Unknown, missing and duplicate envelope fields
         are rejected; duplicate document keys are also rejected at any depth.
@@ -159,7 +162,11 @@ class MongoFindQuery:
             ValueError: JSON, the envelope, canonical payload or field values are invalid.
         """
         raw, data = _load_envelope(
-            text, "mongodb.find", {"filter", "projection", "sort", "skip", "limit"}, ("filter",)
+            text,
+            "mongodb.find",
+            {"filter", "projection", "sort", "skip", "limit"},
+            ("filter", "projection"),
+            versions=(1, 2),
         )
         target = data["target"]
         sort = data["sort"]
@@ -174,7 +181,13 @@ class MongoFindQuery:
             skip=data["skip"],
             limit=data["limit"],
         )
-        _check_canonical_payload(raw, query.to_json(), ("filter",))
+        # Validate the old filter independently: a legacy literal projection may
+        # intentionally contain wrapper-shaped dictionaries that v2 rejects.
+        if raw["format_version"] == 1:
+            encoded = _dump_envelope(dict(raw, filter=query.filter), ("filter",))
+            _check_canonical_payload(raw, encoded, ("filter",))
+        else:
+            _check_canonical_payload(raw, query.to_json(), ("filter", "projection"))
         return query
 
     def fingerprint(self) -> str:

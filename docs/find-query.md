@@ -66,9 +66,25 @@ Queries are mutable. Construction copies filters, projections and pipelines, but
 later edits are ordinary mutations. Do not change them during execution.
 Fingerprints identify serialized representations, not semantic equivalence.
 
-Metadata and find options use ordinary JSON. Filters and entire aggregation
-pipelines use Canonical Extended JSON to preserve BSON values. Find projections
-must be JSON-serializable. Dates normalize to BSON millisecond precision.
+Metadata, sort, skip and limit use ordinary JSON. Filters, projections and entire
+aggregation pipelines use Canonical Extended JSON to preserve BSON values. Dates
+normalize to BSON millisecond precision.
+
+`$regex` / `$options` documents remain query operator dictionaries, including under
+`$elemMatch`. They are never decoded as legacy Extended JSON regex values. Native
+`bson.Regex` values are encoded with the explicit `$regularExpression` wrapper.
+Dates, ObjectIds and other BSON types retain their usual canonical wrappers.
+Literal dictionaries indistinguishable from BSON wrappers (for example a literal
+`{"$oid": "0123456789abcdef01234567"}`) are rejected on save rather than silently
+converted. This also applies inside `$literal` expressions.
+
+New find envelopes use `format_version: 2` for BSON-aware projections. Version-1
+find envelopes still load with their original plain-JSON projection semantics.
+Ordinary old queries can be saved again as version 2; their fingerprints change
+because fingerprints include the serialized version. A legacy projection containing
+a literal wrapper-shaped dictionary still loads unchanged, but cannot be saved as
+version 2 without resolving that ambiguity. Old readers cannot load version 2.
+Aggregation and outer workload envelope versions remain 1.
 
 See [workload persistence](workloads.md) to save many queries, or the
 [MongoDB query reference](reference/mongodb/queries.md) for validation and codec details.

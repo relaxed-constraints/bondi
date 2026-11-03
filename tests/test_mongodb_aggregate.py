@@ -157,7 +157,7 @@ def test_rejects_ambiguous_bson_wrapper_and_relaxed_payload():
 def test_find_serialization_uses_plain_options():
     query = MongoFindQuery(TARGET, {"b": 2, "a": 1}, sort=(("b", -1),), limit=10)
     expected = (
-        '{"format_version":1,"query_kind":"mongodb.find",'
+        '{"format_version":2,"query_kind":"mongodb.find",'
         '"target":{"database":"research","collection":"businesses"},'
         '"filter":{"b":{"$numberInt":"2"},"a":{"$numberInt":"1"}},'
         '"projection":null,"sort":[["b",-1]],'

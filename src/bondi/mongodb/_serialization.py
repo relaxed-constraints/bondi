@@ -6,6 +6,23 @@ from typing import Any
 from bson import json_util
 
 
+def _decode_bson(value: Any) -> Any:
+    """Decode BSON wrappers while preserving MongoDB regex operator documents.
+
+    PyMongo's object hook also recognizes legacy $regex wrappers. Query documents
+    reserve that spelling for the operator; native Regex uses $regularExpression.
+    Process children first, matching json_util's normal object-hook behavior.
+    """
+    if isinstance(value, list):
+        return [_decode_bson(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    decoded = {key: _decode_bson(item) for key, item in value.items()}
+    if "$regex" in decoded:
+        return decoded
+    return json_util.object_hook(decoded, json_options=json_util.CANONICAL_JSON_OPTIONS)
+
+
 def _same_document_structure(original: Any, decoded: Any) -> bool:
     """Detect literal documents consumed as Extended JSON scalar wrappers."""
     if isinstance(original, dict):
@@ -33,7 +50,7 @@ def _dump_bson(value: Any) -> str:
     )
     # Extended JSON reserves document shapes for type wrappers. Never silently
     # turn a native predicate/literal document into a different representation.
-    decoded = json_util.loads(text, json_options=json_util.CANONICAL_JSON_OPTIONS)
+    decoded = _decode_bson(json.loads(text))
     reencoded = json_util.dumps(
         decoded,
         json_options=json_util.CANONICAL_JSON_OPTIONS,
@@ -54,7 +71,12 @@ def _dump_envelope(envelope: dict[str, Any], bson_fields: tuple[str, ...]) -> st
 
 
 def _load_envelope(
-    text: str, kind: str, payload_fields: set[str], bson_fields: tuple[str, ...]
+    text: str,
+    kind: str,
+    payload_fields: set[str],
+    bson_fields: tuple[str, ...],
+    *,
+    versions: tuple[int, ...] = (1,),
 ) -> tuple[dict, dict]:
     """Decode and check envelope metadata; query classes validate their payloads."""
     fields = {"format_version", "query_kind", "target"} | payload_fields
@@ -71,15 +93,15 @@ def _load_envelope(
 
     raw = json.loads(text, object_pairs_hook=unique_object)
     if not isinstance(raw, dict) or set(raw) != fields:
-        raise ValueError("Query envelope must contain exactly the version-1 fields")
+        raise ValueError("Query envelope must contain exactly the expected fields")
+    version = raw["format_version"]
+    if isinstance(version, bool) or not isinstance(version, int) or version not in versions:
+        raise ValueError("Unsupported format_version")
     data = dict(raw)
     for field in bson_fields:
-        data[field] = json_util.loads(
-            json.dumps(raw[field]), json_options=json_util.CANONICAL_JSON_OPTIONS
-        )
-    version = data["format_version"]
-    if isinstance(version, bool) or not isinstance(version, int) or version != 1:
-        raise ValueError("Unsupported format_version")
+        if field == "projection" and version == 1:
+            continue  # Version 1 explicitly stored projection as ordinary JSON.
+        data[field] = _decode_bson(raw[field])
     if data["query_kind"] != kind:
         raise ValueError("Unsupported query_kind")
     target = data["target"]

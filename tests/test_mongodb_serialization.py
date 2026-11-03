@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from bson import Binary, Decimal128, Int64, ObjectId, Regex, Timestamp, json_util
+from bson.errors import BSONError
 
 from bondi.mongodb import MongoCollectionRef, MongoFindQuery
 
@@ -132,7 +133,7 @@ def test_fingerprint_includes_options(field, value):
     [
         lambda d: d.update(extra=True),
         lambda d: d.pop("limit"),
-        lambda d: d.update(format_version=2),
+        lambda d: d.update(format_version=99),
         lambda d: d.update(format_version=True),
         lambda d: d.update(query_kind="mongodb.aggregate"),
         lambda d: d["target"].update(host="localhost"),
@@ -162,7 +163,6 @@ def test_rejects_malformed_or_duplicate_json(text):
 @pytest.mark.parametrize(
     "document",
     [
-        {"x": {"$regex": "a", "$options": "i"}},
         {"x": {"$date": "2026-01-01T00:00:00Z"}},
         {"x": {"$numberLong": "1"}},
     ],
@@ -193,7 +193,7 @@ def test_only_native_payload_uses_extended_json(tmp_path):
         assert type(record["query"]["format_version"]) is int
     encoded = records[0]["query"]
     assert encoded["filter"] == {"x": {"$numberLong": "1"}}
-    assert encoded["projection"] == {"x": 1, "_id": 0}
+    assert encoded["projection"] == {"x": {"$numberInt": "1"}, "_id": {"$numberInt": "0"}}
     assert encoded["sort"] == [["x", -1]]
     assert encoded["skip"] == 2
     assert encoded["limit"] == 10
@@ -204,12 +204,14 @@ def test_only_native_payload_uses_extended_json(tmp_path):
     assert restored[0].query.fingerprint() == query.fingerprint()
 
 
-def test_projection_is_plain_json_and_not_bson_decoded():
+def test_legacy_projection_remains_plain_json():
     projection = {"literal": {"$literal": {"$numberLong": "1"}}}
-    query = MongoFindQuery(TARGET, {}, projection)
-    assert MongoFindQuery.from_json(query.to_json()).projection == projection
-    with pytest.raises(TypeError):
-        MongoFindQuery(TARGET, {}, {"literal": {"$literal": ObjectId()}}).to_json()
+    envelope = json.loads(MongoFindQuery(TARGET, {}).to_json())
+    envelope.update(format_version=1, projection=projection)
+    restored = MongoFindQuery.from_json(json.dumps(envelope))
+    assert restored.projection == projection
+    with pytest.raises(ValueError, match="ambiguous"):
+        restored.to_json()
 
 
 def test_extended_json_metadata_is_rejected():
@@ -217,3 +219,99 @@ def test_extended_json_metadata_is_rejected():
     data["format_version"] = {"$numberInt": "1"}
     with pytest.raises(ValueError, match="format_version"):
         MongoFindQuery.from_json(json.dumps(data))
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        ObjectId("0123456789abcdef01234567"),
+        datetime(2026, 1, 1),
+        Regex("a", "i"),
+        Int64(3),
+        Binary(b"x", 128),
+        Decimal128("1.25"),
+    ],
+)
+def test_projection_bson_roundtrip(value):
+    query = MongoFindQuery(TARGET, {}, {"x": {"$literal": value}})
+    restored = MongoFindQuery.from_json(query.to_json())
+    assert restored.projection == query.projection
+    assert restored.fingerprint() == query.fingerprint()
+
+
+@pytest.mark.parametrize(
+    "operator",
+    [
+        {"$regex": "^python$", "$options": "i"},
+        {"$options": "i", "$regex": "^python$"},
+        {"$regex": Regex("^python$", "i")},
+    ],
+)
+def test_regex_operators_across_query_payloads(operator, tmp_path):
+    from bondi.mongodb import MongoAggregateQuery
+    from bondi.workload import Workload, WorkloadEntry
+
+    predicate = {"tags": {"$elemMatch": operator}}
+    find = MongoFindQuery(TARGET, predicate, {"tags": {"$elemMatch": operator}})
+    aggregate = MongoAggregateQuery(TARGET, [{"$match": predicate}])
+    path = tmp_path / "queries.jsonl"
+    Workload([WorkloadEntry(find), WorkloadEntry(aggregate)]).save(path)
+    restored = Workload.load(path)
+    assert restored[0].query == find
+    assert restored[1].query == aggregate
+    assert isinstance(restored[0].query.filter["tags"]["$elemMatch"], dict)
+    assert list(restored[0].query.filter["tags"]["$elemMatch"]) == list(operator)
+    assert restored[0].query.fingerprint() == find.fingerprint()
+
+
+def test_regex_operator_and_native_value_are_distinct():
+    operator = MongoFindQuery(TARGET, {"x": {"$regex": "a", "$options": "i"}})
+    native = MongoFindQuery(TARGET, {"x": Regex("a", "i")})
+    assert operator.fingerprint() != native.fingerprint()
+    assert "$regularExpression" in native.to_json()
+    assert isinstance(MongoFindQuery.from_json(native.to_json()).filter["x"], Regex)
+
+
+def test_ordinary_version1_find_loads_and_migrates():
+    envelope = json.loads(MongoFindQuery(TARGET, {"x": 1}).to_json())
+    envelope.update(format_version=1, projection={"x": 1})
+    restored = MongoFindQuery.from_json(json.dumps(envelope))
+    assert restored.projection == {"x": 1}
+    assert json.loads(restored.to_json())["format_version"] == 2
+
+
+@pytest.mark.parametrize(
+    "wrapper",
+    [
+        {"$regularExpression": {"pattern": "a", "options": "i"}},
+        {"$oid": "0123456789abcdef01234567"},
+    ],
+)
+def test_literal_wrappers_in_projection_remain_rejected(wrapper):
+    with pytest.raises(ValueError, match="ambiguous"):
+        MongoFindQuery(TARGET, {}, {"x": {"$literal": wrapper}}).to_json()
+
+
+def test_duplicate_projection_keys_rejected():
+    text = (
+        MongoFindQuery(TARGET, {})
+        .to_json()
+        .replace('"projection":null', '"projection":{"x":1,"x":0}')
+    )
+    with pytest.raises(ValueError, match="Duplicate"):
+        MongoFindQuery.from_json(text)
+
+
+@pytest.mark.parametrize(
+    "wrapper",
+    [
+        {"$oid": "invalid"},
+        {"$regularExpression": {"pattern": "a"}},
+        {"$date": "invalid"},
+    ],
+)
+def test_malformed_projection_wrappers_rejected(wrapper):
+    envelope = json.loads(MongoFindQuery(TARGET, {}).to_json())
+    envelope["projection"] = {"x": {"$literal": wrapper}}
+    with pytest.raises((ValueError, TypeError, KeyError, BSONError)):
+        MongoFindQuery.from_json(json.dumps(envelope))

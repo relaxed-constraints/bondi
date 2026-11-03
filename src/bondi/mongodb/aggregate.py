@@ -90,7 +90,8 @@ class MongoAggregateQuery:
         find-query BSON normalization: dates load as naive UTC with millisecond
         precision, binary subtype zero as bytes, and large integers may become
         bson.Int64. Literal documents ambiguous with Extended JSON wrappers are
-        rejected. Serialization does not modify the query.
+        rejected. $regex operator documents stay dictionaries; native Regex values
+        use $regularExpression. Serialization does not modify the query.
 
         Raises:
             TypeError: Structural validation or BSON-aware encoding fails.
