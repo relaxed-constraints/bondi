@@ -27,6 +27,12 @@ def _parser() -> argparse.ArgumentParser:
     couchbase.add_argument("--username", default="Administrator")
     couchbase.add_argument("--password-env", help="Read password from this environment variable")
     couchbase.add_argument("--bucket", default="demo")
+    couchbase.add_argument(
+        "--memory-limit-mb",
+        type=int,
+        default=4096,
+        help="Container memory limit in MiB, separate from Couchbase quotas (default: 4096)",
+    )
     couchbase.add_argument("--timeout", type=float, default=300)
     for name, help_text in (
         ("start", "Start a saved deployment and wait for readiness"),
@@ -93,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
                     username=args.username,
                     password=password,
                     bucket=args.bucket,
+                    memory_limit_mb=args.memory_limit_mb,
                     timeout=args.timeout,
                 )
 

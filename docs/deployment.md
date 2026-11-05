@@ -104,7 +104,8 @@ Python block or script ends. Closing an executor closes its connections, not Doc
 Configuration lives in `~/.bondi/deployments`. Set `BONDI_DEPLOYMENT_DIR` before
 calling these functions to choose another directory. Keep it stable: the state
 path contributes to project identity. Data lives in Docker named volumes, not in
-this directory. Do not delete/edit the state directory to manage deployments.
+this directory. Do not delete the state directory to manage deployments; only edit saved files
+for the explicit memory-resizing procedure below.
 Serialize lifecycle calls for a given deployment; concurrent management of the
 same name is not supported.
 
@@ -136,8 +137,52 @@ For Couchbase deployments, ensure that the `bondi[couchbase]` variant is install
 
 Community is the default; Enterprise is available explicitly for users entitled
 to use it. This API does not grant an Enterprise license. Both use pinned 7.6.2
-images with Data, Query and Index services and a 4 GiB container memory limit.
+images with Data, Query and Index services and a default 4 GiB container memory limit.
 Allow Docker sufficient memory, especially when running several databases.
+
+### Container memory
+
+Set `memory_limit_mb` in Python or `--memory-limit-mb` in the CLI to a positive
+integer number of MiB. For example, a new 16 GiB deployment:
+
+```python
+database = deploy_couchbase(name="cb-large", memory_limit_mb=16384)
+print(database.memory_limit_mb)  # 16384
+```
+
+```sh
+bondi deploy couchbase --name cb-large --memory-limit-mb 16384
+```
+
+These are alternative ways to create the same deployment. This limit controls the
+container, not Couchbase's Data/Index Service or bucket quotas. Initialization still
+uses its small demo allocations. Configure experiment-specific quotas separately,
+and leave room within the container for Query and other service overhead. An
+8192 MiB Data quota plus a 1024 MiB Index quota cannot fit in the default 4096 MiB
+container. Increasing Docker Desktop's VM allocation alone does not raise the
+container limit; Docker also needs enough memory for other running databases.
+
+The limit is saved and conflicting deploy requests fail before contacting Docker.
+Repeat the same limit when calling `deploy_couchbase`, or use `bondi start NAME` /
+`get_deployment(NAME).start()` to reuse saved settings. Metadata created before
+this option is interpreted as 4096 MiB; existing Compose files, including manual
+overrides, are preserved. The handle reports the saved setting, not live Docker usage.
+
+To raise an **existing** deployment's limit while retaining data:
+
+1. Stop it with `bondi stop NAME` and serialize all management operations.
+2. Back up `deployment.json` and `compose.json` in
+   `~/.bondi/deployments/NAME` (or your `BONDI_DEPLOYMENT_DIR`). Keep the backup
+   private because metadata contains credentials.
+3. Set the top-level `"memory_limit_mb": 16384` in `deployment.json` and
+   `"mem_limit": "16384m"` under `services.couchbase` in `compose.json`.
+   Preserve the project identity, volume configuration and all other fields.
+4. Run `bondi start NAME --timeout 300`. Compose recreates the container with
+   the same named data volume; BONDI waits for readiness. Reload any Python handle.
+
+This is an explicit configuration migration, not a deployment reset. Do not use
+`bondi remove NAME` to resize: its default deletes data. If startup fails, the
+existing deployment's configuration and data remain available for recovery.
 
 ### Deployment via Python API
 

@@ -196,3 +196,60 @@ def test_missing_password_env_does_not_deploy(monkeypatch, capsys):
         assert main(["deploy", "couchbase", "--password-env", "MISSING_CB_PASSWORD"]) == 1
         deploy.assert_not_called()
     assert "unset" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("limit", [4096, 16384])
+def test_memory_limit_persisted_and_reused(setup, limit):
+    db = deploy_couchbase(memory_limit_mb=limit)
+    compose_path = db._path / "compose.json"
+    compose = json.loads(compose_path.read_text())
+    assert compose["services"]["couchbase"]["mem_limit"] == f"{limit}m"
+    assert get_deployment(db.name).memory_limit_mb == limit
+    assert deploy_couchbase(memory_limit_mb=limit) == db
+    get_deployment(db.name).start()
+    assert json.loads(compose_path.read_text()) == compose
+
+
+def test_memory_conflict_preserves_existing_deployment(setup):
+    _, run, _ = setup
+    db = deploy_couchbase()
+    before = {p.name: p.read_bytes() for p in db._path.iterdir()}
+    run.reset_mock()
+    with pytest.raises(ValueError, match="memory_limit_mb"):
+        deploy_couchbase(memory_limit_mb=16384)
+    run.assert_not_called()
+    assert {p.name: p.read_bytes() for p in db._path.iterdir()} == before
+
+
+def test_legacy_memory_metadata_preserves_compose(setup):
+    db = deploy_couchbase()
+    metadata = db._path / "deployment.json"
+    config = json.loads(metadata.read_text())
+    del config["memory_limit_mb"]
+    metadata.write_text(json.dumps(config))
+    compose_path = db._path / "compose.json"
+    compose = json.loads(compose_path.read_text())
+    # Existing manually customized assets must not be regenerated on reuse.
+    compose["services"]["couchbase"]["mem_limit"] = "16g"
+    compose_path.write_text(json.dumps(compose))
+    assert get_deployment(db.name).memory_limit_mb == 4096
+    deploy_couchbase()
+    assert json.loads(compose_path.read_text()) == compose
+    assert "memory_limit_mb" not in json.loads(metadata.read_text())
+
+
+@pytest.mark.parametrize("limit", [0, -1, True, False, 4.5, "16g", None])
+def test_invalid_memory_limit_has_no_side_effects(setup, tmp_path, limit):
+    port, run, _ = setup
+    with pytest.raises(ValueError, match="memory_limit_mb"):
+        deploy_couchbase(memory_limit_mb=limit)
+    port.assert_not_called()
+    run.assert_not_called()
+    assert not list(tmp_path.iterdir())
+
+
+def test_cli_memory_limit(setup, capsys):
+    assert main(["deploy", "couchbase", "--memory-limit-mb", "16384"]) == 0
+    assert get_deployment("couchbase").memory_limit_mb == 16384
+    assert main(["deploy", "couchbase", "--memory-limit-mb", "0"]) == 1
+    assert "memory_limit_mb" in capsys.readouterr().err

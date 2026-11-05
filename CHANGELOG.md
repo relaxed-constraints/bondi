@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add Couchbase `memory_limit_mb` / `--memory-limit-mb` for configurable container
+  limits, retaining the 4096 MiB default, persisted settings and conflict checks.
+  Document data-preserving resizing for existing deployments.
+
 ## 0.1.5 — 2026-11-03
 
 - Expose `bondi.mongodb.loads_query_json` for strict external JSON input with

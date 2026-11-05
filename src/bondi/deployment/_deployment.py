@@ -66,6 +66,7 @@ class Deployment:
         bucket: Default Couchbase bucket.
         edition: Couchbase community or enterprise.
         image: Pinned database Docker image.
+        memory_limit_mb: Saved Couchbase container limit in MiB; None for MongoDB.
     """
 
     name: str
@@ -80,6 +81,7 @@ class Deployment:
     password: str | None = field(default=None, repr=False)
     bucket: str | None = None
     edition: str | None = None
+    memory_limit_mb: int | None = None
 
     @property
     def uri(self) -> str:
@@ -258,6 +260,9 @@ def get_deployment(name: str) -> Deployment:
         for key in ("backend", "query_port", "kv_port", "username", "password", "bucket", "edition")
         if key in config
     }
+    if config["backend"] == "couchbase":
+        # Version-1 deployments predating this option used a 4 GiB template.
+        extra["memory_limit_mb"] = config.get("memory_limit_mb", 4096)
     return Deployment(name, config["port"], config["image"], path, config["project"], **extra)
 
 
@@ -305,6 +310,7 @@ def deploy_couchbase(
     username: str = "Administrator",
     password: str = "bondi-local",
     bucket: str = "demo",
+    memory_limit_mb: int = 4096,
     timeout: float = 300,
 ) -> Deployment:
     """Deploy a local Couchbase node with Data, Query and Index services.
@@ -322,11 +328,24 @@ def deploy_couchbase(
         username: Local administrator username.
         password: Local password, at least six characters.
         bucket: Bucket name, default demo.
+        memory_limit_mb: Positive integer container memory limit in MiB (default 4096).
+            Separate from Data/Index Service and bucket quotas, which are unchanged.
+            Docker must have enough memory for this limit and other containers.
         timeout: Total startup and initialization deadline in seconds.
 
     Returns:
         A ready deployment with uri, console_url and credentials.
+
+    Raises:
+        ValueError: Invalid arguments or requested settings conflict with a saved
+            deployment, including its memory limit. Older metadata defaults to 4096 MiB.
+        RuntimeError: Startup failed. Existing deployments retain data and configuration.
+
+    Use get_deployment(name).start() to reuse saved settings without specifying them.
+    Calls managing the same deployment must be serialized by the caller.
     """
+    if type(memory_limit_mb) is not int or memory_limit_mb <= 0:
+        raise ValueError("memory_limit_mb must be a positive integer in MiB")
     if edition not in {"community", "enterprise"}:
         raise ValueError("edition must be community or enterprise")
     if not isinstance(username, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", username):
@@ -346,6 +365,7 @@ def deploy_couchbase(
             "username": username,
             "password": password,
             "bucket": bucket,
+            "memory_limit_mb": memory_limit_mb,
         },
         timeout=timeout,
     )
@@ -387,6 +407,7 @@ def _deploy(name: str, settings: dict, *, timeout: float) -> Deployment:
         f"127.0.0.1:{host}:{internal}" for host, internal in zip(ports, internal_ports)
     ]
     if backend == "couchbase":
+        service["mem_limit"] = f"{settings['memory_limit_mb']}m"
         service["image"] = f"couchbase:{settings['edition']}-7.6.2"
     config = {"format_version": 1, **settings, "image": service["image"], "project": project}
     path.mkdir(parents=True, exist_ok=False, mode=0o700)

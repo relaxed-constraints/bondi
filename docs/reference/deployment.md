@@ -1,5 +1,11 @@
 # Database deployment
 
+`deploy_couchbase(memory_limit_mb=4096)` accepts a positive integer container
+limit in MiB and exposes it as `Deployment.memory_limit_mb` (None for MongoDB).
+It does not change Couchbase service or bucket quotas. See the
+[container memory guide](../deployment.md#container-memory) for saved-setting
+conflicts, legacy metadata and resizing existing deployments.
+
 ::: bondi.deployment.deploy_mongodb
     options:
       show_root_heading: true
