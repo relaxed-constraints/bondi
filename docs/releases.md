@@ -7,6 +7,13 @@
 The tagged source provides the self-contained notebooks. The installed package
 includes deployment Compose assets and the demo dataset.
 
+## Preparing 0.1.6
+
+Version 0.1.6 adds configurable Couchbase container memory limits through the
+Python API and CLI. See the [changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md) for release notes.
+It is prepared locally; publication and fresh PyPI installation verification
+remain pending.
+
 ## Maintainer procedure
 
 1. Run offline CI and local database integration tests. Review the changelog and version.
@@ -14,10 +21,10 @@ includes deployment Compose assets and the demo dataset.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.1.5` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.1.6` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.1.5` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.1.6` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.

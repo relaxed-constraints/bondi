@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.6 — 2026-11-05
+
 - Add Couchbase `memory_limit_mb` / `--memory-limit-mb` for configurable container
   limits, retaining the 4096 MiB default, persisted settings and conflict checks.
   Document data-preserving resizing for existing deployments.
