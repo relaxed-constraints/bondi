@@ -2,17 +2,18 @@
 
 ## Current release
 
-[0.1.5 is published on PyPI](https://pypi.org/project/bondi/0.1.5/) with a matching
-[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.5).
+[0.1.6 is published on PyPI](https://pypi.org/project/bondi/0.1.6/) with a matching
+[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.6).
 The tagged source provides the self-contained notebooks. The installed package
 includes deployment Compose assets and the demo dataset.
 
-## Preparing 0.1.6
+## 0.1.6 verification
 
 Version 0.1.6 adds configurable Couchbase container memory limits through the
 Python API and CLI. See the [changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md) for release notes.
-It is prepared locally; publication and fresh PyPI installation verification
-remain pending.
+Published on 2026-11-05. Release CI and documentation deployment passed.
+A fresh installation from PyPI with the Couchbase extra verified version 0.1.6
+and the configurable memory-limit API.
 
 ## Maintainer procedure
 
