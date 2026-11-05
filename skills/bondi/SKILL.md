@@ -20,7 +20,8 @@ it is not a query translator or an experiment-tracking framework.
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
 and dependency constraints before using an API. This skill describes the 0.1.4
-API baseline. Online documentation follows published releases; it may be newer
+API baseline, with explicitly marked newer deployment options in the API/CLI
+reference. Online documentation follows published releases; it may be newer
 than the user's installation. For discrepancies, inspect installed signatures or
 matching tagged source instead of inventing compatibility or upgrading silently.
 An installed skill contains these references, not the BONDI checkout or notebooks.

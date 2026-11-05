@@ -38,6 +38,33 @@ Use the managed API/CLI rather than legacy repository Compose scripts.
 
 [Deployment guide](https://relaxed-constraints.github.io/bondi/deployment/)
 
+### Couchbase container memory
+
+The unreleased API after 0.1.5 adds
+`deploy_couchbase(..., memory_limit_mb=16384)` and
+`bondi deploy couchbase --memory-limit-mb 16384` for a 16 GiB container.
+Check the installed signature or CLI help before using this option; 0.1.5 does
+not support it. Values are positive integer MiB; the default remains 4096.
+
+Distinguish three limits when diagnosing quota failures: Docker VM memory,
+the container limit, and Couchbase Data/Index Service and bucket quotas.
+Increasing VM memory alone does not raise the container limit. This option does
+not change service or bucket quotas; leave room for other services and overhead.
+Experiment-specific quotas belong in the consumer project.
+
+The limit is persisted as `Deployment.memory_limit_mb`. Conflicting deploy
+requests fail before Docker access; use `get_deployment(name).start()` or
+`bondi start NAME` to reuse saved settings. Older metadata is interpreted as
+4096 MiB, while existing Compose overrides remain untouched. The attribute
+reports saved configuration, not observed Docker memory.
+
+For existing deployments, follow the matching checkout's `docs/deployment.md`
+container-memory migration: stop, privately back up saved files, update both
+metadata `memory_limit_mb` and Compose `services.couchbase.mem_limit`, then start
+with the same project and volume. Reload Python handles afterward. Do not delete
+or redeploy user data to resize a container. The online guide may lag unreleased
+changes.
+
 ## Queries, workloads and execution
 
 Offline construction and persistence:
