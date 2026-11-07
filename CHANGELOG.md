@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add `MongoFindQuery.to_aggregate()` for independent, ordered conversion of supported
+  find queries, with explicit errors for unsupported constructs.
+
 ## 0.1.6 — 2026-11-05
 
 - Add Couchbase `memory_limit_mb` / `--memory-limit-mb` for configurable container

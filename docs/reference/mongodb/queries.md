@@ -6,6 +6,9 @@ operator documents; native regex values use `$regularExpression`. See the
 [codec and compatibility guide](../../find-query.md) for legacy projection and
 fingerprint behavior.
 
+`MongoFindQuery.to_aggregate()` converts supported find queries without database
+access; see [conversion behavior and restrictions](../../find-query.md#convert-a-find-query-to-aggregation).
+
 ::: bondi.mongodb.MongoCollectionRef
     options:
       show_root_heading: true

@@ -5,11 +5,13 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, ClassVar, Self
 
+from bondi.mongodb._conversion import check_filter, projection_stages
 from bondi.mongodb._serialization import (
     _check_canonical_payload,
     _dump_envelope,
     _load_envelope,
 )
+from bondi.mongodb.aggregate import MongoAggregateQuery
 from bondi.mongodb.collection import MongoCollectionRef
 
 
@@ -111,6 +113,48 @@ class MongoFindQuery:
                 raise TypeError("sort directions must be integers, not booleans")
             if direction not in (1, -1):
                 raise ValueError("sort directions must be 1 or -1")
+
+    def to_aggregate(self) -> MongoAggregateQuery:
+        """Convert supported find syntax to an independent aggregation query.
+
+        Stages follow filter, sort, skip, limit, projection order. Empty filters,
+        sorts and projections, zero skip and absent limits produce no stage.
+        The target is preserved and all mutable pipeline contents are deep-copied.
+        No database connection is needed. As with the query constructors, this
+        does not validate every MongoDB operator or guarantee server acceptance.
+
+        Returns:
+            A new MongoAggregateQuery, leaving this query unchanged.
+
+        Raises:
+            TypeError: Current query structure is invalid.
+            ValueError: Current values are invalid or conversion is unsupported:
+                $where/$near/$nearSphere filters, $natural or duplicate sort keys,
+                or projections other than ordinary inclusion/exclusion fields.
+
+        Examples:
+            >>> query = MongoFindQuery(MongoCollectionRef("demo", "items"), {"foo": "bar"},
+            ...                        sort=(("baz", 1),), limit=5)
+            >>> query.to_aggregate().pipeline
+            [{'$match': {'foo': 'bar'}}, {'$sort': {'baz': 1}}, {'$limit': 5}]
+        """
+        self.validate()
+        check_filter(self.filter)
+        names = [field for field, _ in self.sort]
+        if "$natural" in names or len(set(names)) != len(names):
+            raise ValueError("to_aggregate() does not support $natural or duplicate sort keys")
+
+        pipeline: list[dict[str, Any]] = []
+        if self.filter:
+            pipeline.append({"$match": self.filter})
+        if self.sort:
+            pipeline.append({"$sort": dict(self.sort)})
+        if self.skip:
+            pipeline.append({"$skip": self.skip})
+        if self.limit is not None:
+            pipeline.append({"$limit": self.limit})
+        pipeline.extend(projection_stages(self.projection))
+        return MongoAggregateQuery(self.target, pipeline)
 
     def to_json(self) -> str:
         """Serialize a version-2 envelope with BSON-aware filter and projection.

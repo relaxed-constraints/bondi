@@ -10,7 +10,9 @@ independently. The toolkit has no dependency on mdbrtools or sibling repositorie
 ## Native queries, shared operations
 
 MongoDB find/pipeline objects and Couchbase SQL++ objects preserve native query forms.
-There is no intermediate query language or automatic translation. `Query` is a small
+There is no intermediate query language or cross-backend translation.
+MongoDB find queries can be explicitly converted to aggregation through
+`MongoFindQuery.to_aggregate()` for supported syntax. `Query` is a small
 structural protocol for validation, persistence and identity. A `Workload` groups
 entries from one backend, retaining input order and optional integer pattern IDs.
 

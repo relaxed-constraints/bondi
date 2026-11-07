@@ -121,3 +121,34 @@ Unknown operators remain dictionaries for MongoDB to validate later. Object orde
 is retained. `$literal` is not an escape from Extended JSON: wrapper-shaped objects
 are still decoded as types. Callers needing the original JSON representation for
 audit records should retain the text or decode it separately with standard JSON.
+
+## Convert a find query to aggregation
+
+`MongoFindQuery.to_aggregate()` returns an independent `MongoAggregateQuery`
+with the same target. It emits `$match`, `$sort`, `$skip`, `$limit`, then `$project`,
+omitting empty/default components. For example:
+
+```python
+from bondi.mongodb import MongoCollectionRef, MongoFindQuery
+
+query = MongoFindQuery(
+    MongoCollectionRef("demo", "items"),
+    {"foo": "bar"},
+    sort=(("baz", 1),),
+    limit=5,
+)
+aggregate = query.to_aggregate()
+assert aggregate.pipeline == [
+    {"$match": {"foo": "bar"}},
+    {"$sort": {"baz": 1}},
+    {"$limit": 5},
+]
+```
+
+Conversion validates the current query and deep-copies its payload. It does not
+connect to MongoDB. Ordinary inclusion/exclusion projections are supported;
+other projection forms raise `ValueError`. `$where`, `$near`, `$nearSphere`,
+`$natural` sorting, duplicate sort keys and numeric projection path components
+also raise clear errors. This is a conservative conversion, not a complete MongoDB
+syntax validator. Result ordering among tied sort keys remains unspecified; use a
+unique tie-breaker such as `_id` when comparing results.
