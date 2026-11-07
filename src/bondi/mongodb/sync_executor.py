@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, Self
 
+from bondi._callbacks import _SyncResultCallback
 from bondi._sync import _SyncExecutor
 from bondi.execution import ExecutionResult
 from bondi.mongodb.executor import AsyncMongoExecutor, MongoQuery, ProfileVerbosity
@@ -16,6 +17,10 @@ class MongoExecutor(_SyncExecutor):
     Calls retain one private event loop and must stay on the creating thread.
     Works in notebooks: the owned event loop runs on a dedicated background thread.
     Operation options, results, concurrency and errors match the async executor.
+    Workload on_result callbacks run serially on the calling thread. Only regular
+    callbacks are accepted; returning an awaitable raises TypeError. Do not call
+    this same executor from a callback (RuntimeError). Callbacks share the async
+    API's ordering, backpressure, result identity and failure/cleanup policy.
     """
 
     @classmethod
@@ -88,39 +93,66 @@ class MongoExecutor(_SyncExecutor):
         self,
         workload: Workload,
         *,
+        on_result: _SyncResultCallback | None = None,
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Synchronously run workload; options match AsyncMongoExecutor.run_workload."""
-        return self._call(
-            "run_workload", workload, collect_results=collect_results, query_kwargs=query_kwargs
+        """Synchronously run workload with serialized caller-thread callbacks.
+
+        on_result(position, entry, result) must be a regular callable returning None.
+        Other options and failure behavior match AsyncMongoExecutor.run_workload.
+        Do not reenter this executor from a callback.
+        """
+        return self._call_workload(
+            "run_workload",
+            workload,
+            collect_results=collect_results,
+            query_kwargs=query_kwargs,
+            on_result=on_result,
         )
 
     def explain_workload(
         self,
         workload: Workload,
         *,
+        on_result: _SyncResultCallback | None = None,
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Synchronously explain workload; options match AsyncMongoExecutor.explain_workload."""
-        return self._call(
-            "explain_workload", workload, query_kwargs=query_kwargs, command_kwargs=command_kwargs
+        """Synchronously explain workload with serialized caller-thread callbacks.
+
+        on_result(position, entry, result) must be a regular callable returning None.
+        Other options and failure behavior match AsyncMongoExecutor.explain_workload.
+        Do not reenter this executor from a callback.
+        """
+        return self._call_workload(
+            "explain_workload",
+            workload,
+            query_kwargs=query_kwargs,
+            command_kwargs=command_kwargs,
+            on_result=on_result,
         )
 
     def profile_workload(
         self,
         workload: Workload,
         *,
+        on_result: _SyncResultCallback | None = None,
         verbosity: ProfileVerbosity = "executionStats",
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Synchronously profile workload; options match AsyncMongoExecutor.profile_workload."""
-        return self._call(
+        """Synchronously profile workload with serialized caller-thread callbacks.
+
+        on_result(position, entry, result) must be a regular callable returning None.
+        Other options and failure behavior match AsyncMongoExecutor.profile_workload.
+        Do not reenter this executor from a callback.
+        """
+        return self._call_workload(
             "profile_workload",
             workload,
             verbosity=verbosity,
             query_kwargs=query_kwargs,
             command_kwargs=command_kwargs,
+            on_result=on_result,
         )

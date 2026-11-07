@@ -54,3 +54,20 @@ The executor imposes no read-only guard; aggregation may write through `$out` or
 `$merge`. Database permissions determine access. These methods are not restricted
 to read-only queries merely because they are called run or explain.
 
+
+## Result callback contract
+
+All three workload methods accept `on_result(position, entry, result)`, with a
+zero-based workload position and the original entry/result objects. Callbacks are
+serialized per call in observed completion order; returned results retain input
+order. Each worker waits for callback completion before starting another query.
+Callback time is excluded from per-query timing and deadlines.
+
+Synchronous callbacks run on the calling thread and must not return awaitables
+or reenter the same executor. Async executors accept regular or awaitable callbacks
+on their event loop. Treat callback arguments as read-only. Captured errors/timeouts
+receive callbacks, including in-flight results drained after fail-fast scheduling.
+Callback exceptions propagate after worker cancellation/cleanup, independent of
+`continue_on_error`; pending callbacks are not guaranteed after any abort. Results
+remain retained in memory. See the [execution guide](../../executor.md#per-query-result-callbacks)
+for examples and full failure/thread behavior.

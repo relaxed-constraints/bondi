@@ -22,6 +22,9 @@ Executors own or borrow backend connections. Async implementations perform I/O;
 synchronous adapters use a dedicated background loop and are the teaching default.
 Workload concurrency stays inside the executor rather than a separate runner class.
 Queries are passed by reference and must not be mutated during operations.
+Per-result workload callbacks are serialized per call. Async callbacks run on the
+executor loop; synchronous facades dispatch ordinary callbacks onto the caller
+thread. Callback failures abort and drain workers without becoming database errors.
 
 `run`, `explain` and `profile` separate normal execution from diagnostics.
 `ExecutionResult` stores observations and raw data. Offline `summarize` functions

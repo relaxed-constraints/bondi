@@ -74,9 +74,16 @@ def test_operations_and_cleanup(adapter):
 @pytest.mark.parametrize("sync,asynchronous,options", PAIRS)
 def test_signature_parity(sync, asynchronous, options):
     for name in (*METHODS, "from_uri"):
-        assert inspect.signature(getattr(sync, name), eval_str=True) == inspect.signature(
-            getattr(asynchronous, name), eval_str=True
-        )
+        sync_signature = inspect.signature(getattr(sync, name), eval_str=True)
+        async_signature = inspect.signature(getattr(asynchronous, name), eval_str=True)
+        # Only async executors accept awaitable callbacks; all other options match.
+        if "on_result" in async_signature.parameters:
+            parameters = dict(async_signature.parameters)
+            parameters["on_result"] = parameters["on_result"].replace(
+                annotation=sync_signature.parameters["on_result"].annotation
+            )
+            async_signature = async_signature.replace(parameters=parameters.values())
+        assert sync_signature == async_signature
 
 
 def test_exception_cleanup(adapter):

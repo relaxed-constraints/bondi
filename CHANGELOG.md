@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add optional `on_result(position, entry, result)` to run/explain/profile workload
+  methods on MongoDB and Couchbase executors. Serialize callbacks per workload,
+  support awaitable callbacks in async executors, and execute synchronous callbacks
+  on the caller thread. Preserve input-aligned results and fail-fast draining;
+  propagate callback failures after cancellation and cleanup.
+
 - Add atomic `Schema.save()` and validated `Schema.load()` for versioned JSON
   snapshots, preserving observations, retained scalar values and further updates.
   Reuse Canonical Extended JSON with Python scalar adapters; document fixed-offset

@@ -10,7 +10,8 @@ This page tracks capabilities and open work, not a commitment to release dates.
 - Native MongoDB find/aggregation and Couchbase SQL++ query descriptions.
 - Single-backend workloads, JSONL persistence and query fingerprints.
 - Synchronous and asynchronous execution, explain and profile for both backends.
-- Bounded workload concurrency, error continuation and deadlines.
+- Bounded workload concurrency, error continuation, deadlines and serialized
+  per-query result callbacks (caller-thread callbacks for synchronous executors).
 - Offline summary parsing with conservative handling of unsupported metrics.
 - Backend-independent schema inspection, optional value retention and versioned
   offline schema snapshots.

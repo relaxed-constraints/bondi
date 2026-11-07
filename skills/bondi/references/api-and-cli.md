@@ -227,3 +227,24 @@ Save a schema with `schema.save("schema.json")`; restore with
 without database access. Global flat-field order is not preserved, and aware
 datetimes restore fixed offsets rather than named timezone identities. See the
 [schema guide](https://relaxed-constraints.github.io/bondi/schemas/#save-and-reuse-a-snapshot).
+
+## Workload result callbacks (after 0.1.8)
+
+Check the installed workload-method signature for `on_result` before using this
+unreleased API. MongoDB and Couchbase `run_workload`, `explain_workload` and
+`profile_workload` accept `on_result(position, entry, result)`. Use the original
+zero-based position to associate completion-order callbacks with queries.
+
+Prefer this hook for incremental progress and summary persistence instead of
+replacing workload scheduling with a consumer loop. Sync callbacks run serially
+on the caller thread, preserving Yanex context; do not use async callbacks or
+call/close the same executor inside one. Async executors accept ordinary or
+awaitable callbacks on their loop. Each worker awaits callback completion before
+starting another query. Keep synchronous callbacks short.
+
+Callbacks see success, captured-error and timeout outcomes, including in-flight
+results drained after fail-fast scheduling. Callback failures propagate after
+worker cleanup and are not database errors. Pending callbacks are not guaranteed
+after abort/cancellation. Treat arguments as read-only; results are shared with
+the return list and remain retained in memory. Keep persistence policy in the
+consumer project. See the [callback guide](https://relaxed-constraints.github.io/bondi/executor/#per-query-result-callbacks).

@@ -11,6 +11,7 @@ import pymongo
 from pymongo import AsyncMongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
 
+from bondi._callbacks import _CallbackAbort, _ResultCallback, _ResultCallbacks
 from bondi.execution import ExecutionResult
 from bondi.mongodb.aggregate import MongoAggregateQuery
 from bondi.mongodb.query import MongoFindQuery
@@ -282,6 +283,7 @@ class AsyncMongoExecutor:
         self,
         workload: Workload,
         *,
+        on_result: _ResultCallback | None = None,
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
@@ -291,6 +293,15 @@ class AsyncMongoExecutor:
         and timeout failures become results with error set. If continue_on_error is
         False, stop scheduling after observing failure but drain in-flight operations.
         Programming errors and caller cancellation propagate after worker cleanup.
+
+        on_result(position, entry, result) receives each completed outcome, including
+        captured errors/timeouts, on this event loop. Regular and awaitable callbacks
+        are serialized per workload in observed completion order. Each worker waits
+        for delivery before claiming another entry. The returned list stays in input
+        order and contains the same result objects; treat callback arguments as
+        read-only. Callback time is excluded from result timing/query deadlines.
+        Callback failures propagate after cancelling and draining remaining workers;
+        pending deliveries are not guaranteed after abort or caller cancellation.
         """
         if type(collect_results) is not bool:
             raise TypeError("collect_results must be a boolean")
@@ -298,16 +309,18 @@ class AsyncMongoExecutor:
         return await self._workload(
             workload,
             lambda query: self.run(query, collect_results=collect_results, query_kwargs=options),
+            on_result=on_result,
         )
 
     async def explain_workload(
         self,
         workload: Workload,
         *,
+        on_result: _ResultCallback | None = None,
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Collect planning-only explains with run_workload's scheduling/error policy.
+        """Collect planning-only explains with run_workload's scheduling/error and callback policy.
 
         Validate all query types and reserved options before issuing operations.
         """
@@ -316,17 +329,19 @@ class AsyncMongoExecutor:
         return await self._workload(
             workload,
             lambda query: self.explain(query, query_kwargs=inner, command_kwargs=outer),
+            on_result=on_result,
         )
 
     async def profile_workload(
         self,
         workload: Workload,
         *,
+        on_result: _ResultCallback | None = None,
         verbosity: ProfileVerbosity = "executionStats",
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Profile entries with run_workload's concurrency and failure policy.
+        """Profile entries with run_workload's concurrency, failure and callback policy.
 
         Validate verbosity, query types and reserved options before issuing operations.
         Results contain raw diagnostics, without automatic parsing or query documents.
@@ -339,11 +354,17 @@ class AsyncMongoExecutor:
             lambda query: self.profile(
                 query, verbosity=verbosity, query_kwargs=inner, command_kwargs=outer
             ),
+            on_result=on_result,
         )
 
     async def _workload(
-        self, workload: Workload, operation: Callable[[MongoQuery], Awaitable[ExecutionResult]]
+        self,
+        workload: Workload,
+        operation: Callable[[MongoQuery], Awaitable[ExecutionResult]],
+        *,
+        on_result: _ResultCallback | None = None,
     ) -> list[ExecutionResult | None]:
+        callbacks = _ResultCallbacks(on_result)
         self._check_open()
         if not isinstance(workload, Workload):
             raise TypeError("workload must be a Workload")
@@ -366,15 +387,23 @@ class AsyncMongoExecutor:
                     results[index] = ExecutionResult((perf_counter() - start) * 1000, error=error)
                     if not self.continue_on_error:
                         stopped = True
+                # Keep callback exceptions outside the database-error conversion above.
+                try:
+                    await callbacks.deliver(index, workload[index], results[index])
+                except BaseException:
+                    stopped = True
+                    raise
 
         workers = [
             asyncio.create_task(worker()) for _ in range(min(self.concurrency, len(workload)))
         ]
         try:
             await asyncio.gather(*workers)
-        except BaseException:
+        except BaseException as error:
             for task in workers:
                 task.cancel()
             await asyncio.gather(*workers, return_exceptions=True)
+            if isinstance(error, _CallbackAbort):
+                raise error.error
             raise
         return results

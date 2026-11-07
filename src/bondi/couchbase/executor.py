@@ -9,6 +9,7 @@ from datetime import timedelta
 from time import perf_counter
 from typing import TYPE_CHECKING, Any, Literal, Self
 
+from bondi._callbacks import _CallbackAbort, _ResultCallback, _ResultCallbacks
 from bondi.couchbase.query import CouchbaseQuery
 from bondi.execution import ExecutionResult
 from bondi.workload import Workload
@@ -288,6 +289,7 @@ class AsyncCouchbaseExecutor:
         self,
         workload: Workload,
         *,
+        on_result: _ResultCallback | None = None,
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
@@ -296,31 +298,48 @@ class AsyncCouchbaseExecutor:
         None marks unstarted entries. With continue_on_error=False, stop scheduling
         after observing a failure and drain in-flight operations. True attempts all
         entries. Partial rows are discarded on failure. Validate all inputs first.
+
+        on_result(position, entry, result) receives each completed outcome, including
+        captured errors/timeouts, on this event loop. Regular and awaitable callbacks
+        are serialized per workload in observed completion order. Each worker waits
+        for delivery before claiming another entry. The returned list stays in input
+        order and contains the same result objects; treat callback arguments as
+        read-only. Callback time is excluded from result timing/query deadlines.
+        Callback failures propagate after cancelling and draining remaining workers;
+        pending deliveries are not guaranteed after abort or caller cancellation.
         """
         self._collect(collect_results)
         options = _options(query_kwargs, _RESERVED)
         return await self._workload(
             workload,
             lambda query: self.run(query, collect_results=collect_results, query_kwargs=options),
+            on_result=on_result,
         )
 
     async def explain_workload(
-        self, workload: Workload, *, query_kwargs: Mapping[str, Any] | None = None
+        self,
+        workload: Workload,
+        *,
+        on_result: _ResultCallback | None = None,
+        query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Explain entries with run_workload's scheduling and failure policy."""
+        """Explain entries with run_workload's scheduling, failure and callback policy."""
         options = _options(query_kwargs, _RESERVED)
         return await self._workload(
-            workload, lambda query: self.explain(query, query_kwargs=options)
+            workload,
+            lambda query: self.explain(query, query_kwargs=options),
+            on_result=on_result,
         )
 
     async def profile_workload(
         self,
         workload: Workload,
         *,
+        on_result: _ResultCallback | None = None,
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Profile entries with run_workload's scheduling and failure policy."""
+        """Profile entries with run_workload's scheduling, failure and callback policy."""
         self._collect(collect_results)
         options = _options(query_kwargs, _RESERVED)
         return await self._workload(
@@ -328,9 +347,12 @@ class AsyncCouchbaseExecutor:
             lambda query: self.profile(
                 query, collect_results=collect_results, query_kwargs=options
             ),
+            on_result=on_result,
         )
 
-    async def _workload(self, workload, operation) -> list[ExecutionResult | None]:
+    async def _workload(
+        self, workload, operation, *, on_result: _ResultCallback | None = None
+    ) -> list[ExecutionResult | None]:
         from couchbase.exceptions import (
             AlreadyQueriedException,
             CouchbaseException,
@@ -338,6 +360,7 @@ class AsyncCouchbaseExecutor:
             InvalidValueException,
         )
 
+        callbacks = _ResultCallbacks(on_result)
         self._check_open()
         if not isinstance(workload, Workload):
             raise TypeError("workload must be a Workload")
@@ -362,15 +385,23 @@ class AsyncCouchbaseExecutor:
                     results[index] = ExecutionResult((perf_counter() - start) * 1000, error=error)
                     if not self.continue_on_error:
                         stopped = True
+                # Keep callback exceptions outside the database-error conversion above.
+                try:
+                    await callbacks.deliver(index, workload[index], results[index])
+                except BaseException:
+                    stopped = True
+                    raise
 
         workers = [
             asyncio.create_task(worker()) for _ in range(min(self.concurrency, len(workload)))
         ]
         try:
             await asyncio.gather(*workers)
-        except BaseException:
+        except BaseException as error:
             for task in workers:
                 task.cancel()
             await asyncio.gather(*workers, return_exceptions=True)
+            if isinstance(error, _CallbackAbort):
+                raise error.error
             raise
         return results

@@ -320,3 +320,36 @@ def test_invalid_config_does_not_connect(options):
             connect.assert_not_awaited()
 
     asyncio.run(scenario())
+
+
+def test_callback_failure_closes_inflight_rows():
+    async def scenario():
+        entered = asyncio.Event()
+
+        class Blocking(Response):
+            async def rows(self):
+                try:
+                    entered.set()
+                    await asyncio.Event().wait()
+                    yield 1
+                finally:
+                    self.cleaned = True
+
+        first, blocked = Response(), Blocking()
+        c = cluster(first)
+        c.query.side_effect = [first, blocked]
+        failure = ParsingFailedException("callback persistence failed")
+
+        async def callback(position, entry, result):
+            await entered.wait()
+            assert first.cleaned
+            raise failure
+
+        with pytest.raises(ParsingFailedException) as caught:
+            await AsyncCouchbaseExecutor(c, concurrency=2).run_workload(
+                workload(3), on_result=callback
+            )
+        assert caught.value is failure
+        assert blocked.cleaned and c.query.call_count == 2
+
+    asyncio.run(asyncio.wait_for(scenario(), 5))

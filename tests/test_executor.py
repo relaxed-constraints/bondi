@@ -440,3 +440,33 @@ def test_profile_verbosity_and_reserved_options():
         assert all(c.args[0]["verbosity"] == "allPlansExecution" for c in db.command.call_args_list)
 
     asyncio.run(scenario())
+
+
+def test_callback_failure_closes_inflight_cursor():
+    async def scenario():
+        entered = asyncio.Event()
+
+        class Blocking(Cursor):
+            async def __anext__(self):
+                entered.set()
+                await asyncio.Event().wait()
+
+        first, blocked = Cursor(), Blocking()
+        client, _, collection = driver()
+        collection.find.side_effect = [first, blocked]
+        failure = OperationFailure("callback persistence failed")
+
+        async def callback(position, entry, result):
+            await entered.wait()
+            first.close.assert_awaited_once()
+            raise failure
+
+        with pytest.raises(OperationFailure) as caught:
+            await AsyncMongoExecutor(client, concurrency=2).run_workload(
+                workload(3), on_result=callback
+            )
+        assert caught.value is failure
+        blocked.close.assert_awaited_once()
+        assert collection.find.call_count == 2
+
+    asyncio.run(asyncio.wait_for(scenario(), 5))
