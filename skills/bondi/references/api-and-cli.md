@@ -47,6 +47,17 @@ support this option. Versions must be numeric `major.minor.patch` strings.
 New deployments still default to MongoDB 8.0.16 and Couchbase 7.6.2; Couchbase
 edition is selected separately. Docker checks image availability at startup.
 
+For an installation supporting this feature:
+
+```python
+deploy_mongodb("example-mongo", version="8.0.16")
+deploy_couchbase("example-cb", version="7.6.12", edition="enterprise")
+```
+
+Equivalent CLI options are `bondi deploy mongodb --version 8.0.16` and
+`bondi deploy couchbase --version 7.6.12 --edition enterprise`. Version aliases
+such as `latest`, partial versions and arbitrary image references are rejected.
+
 Omitted version (`None`) preserves an existing deployment's saved image, including
 legacy custom images. An explicit version must match the saved image exactly;
 conflicts fail before Docker access. The selected version is stored in
