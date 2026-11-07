@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.7 — 2026-11-07
+
 - Extend MongoDB query statistics with expression depth, filter logical depth and
   fan-out, and recursive pipeline depth (including empty child pipelines).
   Document precise structural rules without changing existing version-1 counts.

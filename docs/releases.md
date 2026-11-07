@@ -2,18 +2,16 @@
 
 ## Current release
 
-[0.1.6 is published on PyPI](https://pypi.org/project/bondi/0.1.6/) with a matching
-[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.6).
-The tagged source provides the self-contained notebooks. The installed package
+Version 0.1.7 adds find-to-aggregation conversion and versioned MongoDB query
+statistics, including expression depth, filter logical depth/fan-out and nested
+pipeline depth. See the [query statistics guide](mongodb-query-statistics.md) and
+[changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md).
+
+Publication and fresh-install verification are being completed for 0.1.7.
+The previous verified release is
+[0.1.6 on PyPI](https://pypi.org/project/bondi/0.1.6/).
+The tagged source provides self-contained notebooks; the installed package
 includes deployment Compose assets and the demo dataset.
-
-## 0.1.6 verification
-
-Version 0.1.6 adds configurable Couchbase container memory limits through the
-Python API and CLI. See the [changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md) for release notes.
-Published on 2026-11-05. Release CI and documentation deployment passed.
-A fresh installation from PyPI with the Couchbase extra verified version 0.1.6
-and the configurable memory-limit API.
 
 ## Maintainer procedure
 
@@ -22,10 +20,10 @@ and the configurable memory-limit API.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.1.6` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.1.7` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.1.6` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.1.7` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.

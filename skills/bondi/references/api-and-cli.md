@@ -157,7 +157,7 @@ validation. Find persistence writes version 2 with BSON-aware projections, reads
 legacy version 1, and changes find fingerprints. Use the installed version's API.
 
 
-## Find-to-aggregation conversion (after 0.1.6)
+## Find-to-aggregation conversion (0.1.7+)
 
 `MongoFindQuery.to_aggregate()` creates an independent `MongoAggregateQuery`
 without connecting to a server. It emits filtering, sorting, skipping, limiting,
@@ -172,7 +172,7 @@ Consult the conversion section of `docs/find-query.md` for the exact condition
 subset. Statistics on converted pipelines count the translated expressions.
 
 
-## MongoDB query statistics (after 0.1.6)
+## MongoDB query statistics (0.1.7+)
 
 `bondi.mongodb.query_statistics(query, include_nested_pipelines=False)` accepts
 find and aggregation queries. Find queries use `to_aggregate()` first. It returns
