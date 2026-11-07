@@ -26,6 +26,7 @@ nav:
   - User guide:
       - Queries and workloads:
           - MongoDB queries: find-query.md
+          - MongoDB Query statistics: mongodb-query-statistics.md
           - Couchbase queries: couchbase-query.md
           - Building and saving workloads: workloads.md
       - Query execution:
@@ -45,6 +46,7 @@ nav:
       - Estimation interfaces: reference/estimation.md
       - MongoDB:
           - Queries: reference/mongodb/queries.md
+          - Query statistics: reference/mongodb/statistics.md
           - Executors: reference/mongodb/executors.md
           - Sampling estimation: reference/mongodb/estimation.md
           - Workload generation: reference/mongodb/generation.md

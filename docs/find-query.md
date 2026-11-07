@@ -208,3 +208,9 @@ BONDI_CONVERSION_URI=mongodb://localhost:27028 uv run pytest tests/test_mongodb_
 ```
 
 These tests create and remove only their own uniquely named temporary database.
+
+## Analyze query structure
+
+Use [`query_statistics()`](mongodb-query-statistics.md) for shared, versioned
+predicate, operator and stage counts. Find queries are analyzed through
+`to_aggregate()`; aggregation queries retain their submitted structure.

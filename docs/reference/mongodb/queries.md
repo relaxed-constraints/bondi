@@ -9,6 +9,9 @@ fingerprint behavior.
 `MongoFindQuery.to_aggregate()` converts supported find queries without database
 access, including bounded array-projection translations; see [conversion behavior and restrictions](../../find-query.md#convert-a-find-query-to-aggregation).
 
+For structural predicate, operator and stage counts, see the
+[query statistics API](statistics.md).
+
 ::: bondi.mongodb.MongoCollectionRef
     options:
       show_root_heading: true

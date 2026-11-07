@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add `query_statistics()`, `MongoQueryStatistics` and `MongoStageStatistics` for
+  versioned MongoDB predicate, operator and stage counts, including optional nested
+  pipelines and find normalization. Document complete rules in the new
+  MongoDB Query statistics user guide.
+
 - Add `MongoFindQuery.to_aggregate()` for independent, ordered conversion of supported
   find queries, with explicit errors for unsupported constructs.
 - Translate top-level `$slice`, bounded `$elemMatch`, and explicitly bound positional

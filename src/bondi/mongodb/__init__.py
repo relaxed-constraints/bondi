@@ -10,9 +10,13 @@ from bondi.mongodb.generation_config import MongoGenerationConfig
 from bondi.mongodb.json import loads_query_json
 from bondi.mongodb.pattern import MongoPredicateTemplate, MongoQueryPattern
 from bondi.mongodb.query import MongoFindQuery
+from bondi.mongodb.statistics import MongoQueryStatistics, MongoStageStatistics, query_statistics
 from bondi.mongodb.sync_executor import MongoExecutor
 
 __all__ = [
+    "query_statistics",
+    "MongoQueryStatistics",
+    "MongoStageStatistics",
     "loads_query_json",
     "MongoWorkloadGenerator",
     "WorkloadGenerationError",

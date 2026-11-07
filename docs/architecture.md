@@ -28,6 +28,11 @@ Queries are passed by reference and must not be mutated during operations.
 interpret those data into a conservative `QuerySummary`; missing information remains
 missing. Backend-specific evidence is retained rather than forced into shared totals.
 
+Offline MongoDB `query_statistics()` describes query syntax independently of
+execution diagnostics. It normalizes find queries through `to_aggregate()`, uses
+versioned definitions, and rejects unsupported selected syntax rather than
+returning partial counts.
+
 ## Schema, estimation and generation
 
 `Schema` consumes Python dictionaries incrementally without database access. Retaining

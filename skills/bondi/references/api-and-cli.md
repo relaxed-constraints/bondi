@@ -170,3 +170,16 @@ MongoDB 5.0+. Unsupported constructs raise `ValueError`, including `$where`,
 projections, dotted special-projection paths and ambiguous positional bindings.
 Consult the conversion section of `docs/find-query.md` for the exact condition
 subset. Statistics on converted pipelines count the translated expressions.
+
+
+## MongoDB query statistics (after 0.1.6)
+
+`bondi.mongodb.query_statistics(query, include_nested_pipelines=False)` accepts
+find and aggregation queries. Find queries use `to_aggregate()` first. It returns
+`MongoQueryStatistics` with versioned predicate/operator/stage totals, histograms,
+and ordered `MongoStageStatistics` records with tuple paths. Only `$match` stages
+contribute predicates. Stage operators are separate from below-stage operators;
+implicit filter equality counts as `$eq`. Nested pipelines are excluded by default
+from all counts, or selected recursively with the boolean flag. Unsupported selected
+syntax raises a path-bearing `ValueError`; partial counts are not returned. Use
+`docs/mongodb-query-statistics.md` for the complete definitions and supported syntax.
