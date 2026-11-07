@@ -8,6 +8,8 @@ and conflicting explicit requests fail before Docker access. See the
 [deployment guide](deployment.md#database-versions) and
 [changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md).
 
+[0.1.8 is published on PyPI](https://pypi.org/project/bondi/0.1.8/) with a matching
+[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.8).
 The tagged source provides self-contained notebooks and the agent skill; the
 installed package includes deployment Compose assets and the demo dataset.
 
@@ -22,6 +24,12 @@ A fresh wheel installation with the Couchbase extra verified explicit MongoDB
 8.0.16 and Couchbase Enterprise 7.6.12 deployments against their server versions,
 rejection of conflicting version requests without file changes, and omitted-version
 reuse after stop. All release-test deployments were removed.
+
+Release CI passed on Python 3.11–3.14; PyPI publication and documentation deployment
+completed successfully. A fresh installation of `bondi[couchbase]==0.1.8` from PyPI
+verified Python/CLI version options, MongoDB query persistence/statistics, Couchbase
+imports and bundled assets. The published deployment guide, API reference and
+release page were checked.
 
 ## 0.1.7 verification
 
