@@ -27,6 +27,9 @@ class MongoStageStatistics:
         predicate_count: Atomic filter conditions in this stage's $match body.
         operator_count: Operator occurrences below stage level.
         operator_counts: Occurrence histogram, including normalized implicit operators.
+        expression_depth: Maximum nested expression-operator depth in local syntax.
+        filter_logical_depth: Maximum Boolean-connective depth in a $match filter.
+        filter_logical_fan_out: Maximum connective arity in a $match filter.
     """
 
     path: tuple[str | int, ...]
@@ -34,6 +37,9 @@ class MongoStageStatistics:
     predicate_count: int
     operator_count: int
     operator_counts: dict[str, int]
+    expression_depth: int = 0
+    filter_logical_depth: int = 0
+    filter_logical_fan_out: int = 0
 
 
 @dataclass
@@ -48,6 +54,11 @@ class MongoQueryStatistics:
         stage_counts: Stage-name occurrence histogram.
         operator_counts: Combined below-stage operator histogram.
         stages: Ordered stage records; recursive selection uses depth-first preorder.
+        expression_depth: Maximum expression depth across selected stages, or zero.
+        filter_logical_depth: Maximum filter logical depth across selected stages, or zero.
+        filter_logical_fan_out: Maximum filter connective arity across selected stages, or zero.
+        nested_pipeline_depth: Maximum selected child-pipeline nesting, including empty
+            pipelines. Zero for outer-only analysis; the outer pipeline is level zero.
 
     Records and dictionaries are mutable, independent snapshots. Editing them does
     not change the input query, and totals are not recomputed after such edits.
@@ -60,6 +71,10 @@ class MongoQueryStatistics:
     stage_counts: dict[str, int]
     operator_counts: dict[str, int]
     stages: tuple[MongoStageStatistics, ...]
+    expression_depth: int = 0
+    filter_logical_depth: int = 0
+    filter_logical_fan_out: int = 0
+    nested_pipeline_depth: int = 0
 
 
 # Explicit registries prevent unknown syntax from silently producing partial counts.
@@ -115,40 +130,42 @@ def _keys(document: dict[str, Any], allowed: set[str], path: _Path) -> None:
 @dataclass
 class _Counts:
     predicates: int = 0
+    expression_depth: int = 0
     operators: Counter[str] = field(default_factory=Counter)
 
     def add(self, name: str, *, predicate: bool = False) -> None:
         self.operators[name] += 1
         self.predicates += int(predicate)
 
-    def expression_fields(self, value: Any, path: _Path) -> None:
+    def expression_fields(self, value: Any, path: _Path, depth: int = 0) -> None:
         for key, child in _document(value, path).items():
             if key.startswith("$"):
                 raise _error((*path, key), "expected a field/variable name, not an operator")
-            self.expression(child, (*path, key))
+            self.expression(child, (*path, key), depth)
 
-    def expression(self, value: Any, path: _Path) -> None:
+    def expression(self, value: Any, path: _Path, depth: int = 0) -> None:
         if isinstance(value, list):
             for index, child in enumerate(value):
-                self.expression(child, (*path, index))
+                self.expression(child, (*path, index), depth)
         elif isinstance(value, dict):
             document = _document(value, path)
             operators = [key for key in document if key.startswith("$")]
             if not operators:
-                self.expression_fields(document, path)
+                self.expression_fields(document, path, depth)
                 return
             if len(document) != 1:
                 raise _error(path, "expression operator must occupy a single-key document")
             name = operators[0]
             operand = document[name]
             location = (*path, name)
+            self.expression_depth = max(self.expression_depth, depth + 1)
             if name in {"$literal", "$const"}:
                 self.add(name)
                 return
             if name not in _EXPRESSIONS:
                 raise _error(location, "unsupported expression operator")
             self.add(name)
-            self.expression(operand, location)
+            self.expression(operand, location, depth + 1)
         # Strings (including references), BSON values and other scalars are leaves.
 
     def filter(self, value: Any, path: _Path, *, predicates: bool = True) -> None:
@@ -309,10 +326,67 @@ def _stage(name: str, body: Any, path: _Path, counts: _Counts) -> list[tuple[_Pa
     return []
 
 
-def _pipeline(pipeline: Any, path: _Path, recursive: bool) -> list[MongoStageStatistics]:
+def _connective(children: list[tuple[int, int]], *, explicit: bool = False) -> tuple[int, int]:
+    """Combine logical subtrees as (maximum depth, maximum fan-out)."""
+    depth = max((child[0] for child in children), default=0)
+    fan_out = max((child[1] for child in children), default=0)
+    if explicit or len(children) > 1:
+        return depth + 1, max(fan_out, len(children))
+    return depth, fan_out
+
+
+def _filter_shape(document: dict[str, Any]) -> tuple[int, int]:
+    """Measure validated $match syntax, flattening implicit same-scope conjunctions.
+
+    Expressions and atomic operands are boundaries. Element matching changes the
+    element scope without itself introducing a Boolean connective.
+    """
+    terms = []
+    for name, operand in document.items():
+        if name in _LOGICAL:
+            terms.append(_connective([_filter_shape(child) for child in operand], explicit=True))
+        elif name == "$comment":
+            continue
+        elif (
+            not name.startswith("$")
+            and isinstance(operand, dict)
+            and any(isinstance(key, str) and key.startswith("$") for key in operand)
+        ):
+            terms.extend(_field_shapes(operand))
+        else:
+            terms.append((0, 0))
+    return _connective(terms)
+
+
+def _field_shapes(document: dict[str, Any]) -> list[tuple[int, int]]:
+    terms = []
+    for name, operand in document.items():
+        if name == "$options":
+            continue
+        if name == "$not":
+            child = _connective(_field_shapes(operand)) if isinstance(operand, dict) else (0, 0)
+            terms.append(_connective([child], explicit=True))
+        elif name == "$elemMatch":
+            if any(key.startswith("$") and key not in _LOGICAL for key in operand):
+                terms.append(_connective(_field_shapes(operand)))
+            else:
+                terms.append(_filter_shape(operand))
+        else:
+            # $all remains atomic even when it contains $elemMatch operands.
+            terms.append((0, 0))
+    return terms
+
+
+def _pipeline(
+    pipeline: Any,
+    path: _Path,
+    recursive: bool,
+    depth: int = 0,
+) -> tuple[list[MongoStageStatistics], int]:
     if not isinstance(pipeline, list):
         raise _error(path, "pipeline must be a list")
     records = []
+    deepest = depth
     for index, stage in enumerate(pipeline):
         location = (*path, index)
         document = _document(stage, location)
@@ -321,6 +395,7 @@ def _pipeline(pipeline: Any, path: _Path, recursive: bool) -> list[MongoStageSta
         name, body = next(iter(document.items()))
         counts = _Counts()
         children = _stage(name, body, location, counts)
+        logical_depth, fan_out = _filter_shape(body) if name == "$match" else (0, 0)
         records.append(
             MongoStageStatistics(
                 location,
@@ -328,14 +403,19 @@ def _pipeline(pipeline: Any, path: _Path, recursive: bool) -> list[MongoStageSta
                 counts.predicates,
                 sum(counts.operators.values()),
                 dict(counts.operators),
+                expression_depth=counts.expression_depth,
+                filter_logical_depth=logical_depth,
+                filter_logical_fan_out=fan_out,
             )
         )
         for child_path, child in children:
             if not isinstance(child, list):
                 raise _error(child_path, "pipeline must be a list")
             if recursive:
-                records.extend(_pipeline(child, child_path, recursive))
-    return records
+                child_records, child_depth = _pipeline(child, child_path, recursive, depth + 1)
+                records.extend(child_records)
+                deepest = max(deepest, child_depth)
+    return records, deepest
 
 
 def query_statistics(
@@ -343,7 +423,7 @@ def query_statistics(
     *,
     include_nested_pipelines: bool = False,
 ) -> MongoQueryStatistics:
-    """Count predicates, operators and stages without database access.
+    """Measure counts, depth and logical fan-out without database access.
 
     Find queries are analyzed through ``to_aggregate()``. Counts describe the
     resulting syntax, including generated projection expressions. See the MongoDB
@@ -355,7 +435,7 @@ def query_statistics(
             exclude their bodies from all counts. Defaults to False.
 
     Returns:
-        An independent version-1 snapshot with totals, histograms and stage records.
+        An independent version-1 snapshot with counts, structural maxima and stage records.
 
     Raises:
         TypeError: Input or the recursion flag has the wrong type, or query
@@ -381,7 +461,8 @@ def query_statistics(
         query = query.to_aggregate()
     else:
         query.validate()
-    stages = tuple(_pipeline(query.pipeline, (), include_nested_pipelines))
+    records, nested_depth = _pipeline(query.pipeline, (), include_nested_pipelines)
+    stages = tuple(records)
     operators: Counter[str] = Counter()
     for stage in stages:
         operators.update(stage.operator_counts)
@@ -393,4 +474,8 @@ def query_statistics(
         stage_counts=dict(Counter(stage.name for stage in stages)),
         operator_counts=dict(operators),
         stages=stages,
+        expression_depth=max((stage.expression_depth for stage in stages), default=0),
+        filter_logical_depth=max((stage.filter_logical_depth for stage in stages), default=0),
+        filter_logical_fan_out=max((stage.filter_logical_fan_out for stage in stages), default=0),
+        nested_pipeline_depth=nested_depth,
     )

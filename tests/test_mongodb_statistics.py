@@ -296,3 +296,183 @@ def test_documentation_examples_execute():
         namespace = {}
         for block in re.findall(r"```python\n(.*?)```", (root / filename).read_text(), re.DOTALL):
             exec(compile(block, filename, "exec"), namespace)
+
+
+@pytest.mark.parametrize(
+    ("expression", "depth"),
+    [
+        ("$price", 0),
+        ("$$ROOT", 0),
+        (5, 0),
+        ({"$add": ["$price", 1]}, 1),
+        ({"$multiply": [{"$add": ["$price", 1]}, "$quantity"]}, 2),
+        ({"$literal": {"$add": [{"$multiply": [1, 2]}, 3]}}, 1),
+        ({"$add": [{"$const": {"$unknown": 1}}, 2]}, 2),
+        ({"nested": [{"value": {"$add": [1, 2]}}]}, 1),
+        ({"$let": {"vars": {"x": {"$add": [1, 2]}}, "in": {"$multiply": ["$$x", 3]}}}, 2),
+        (
+            {
+                "$filter": {
+                    "input": "$items",
+                    "as": "item",
+                    "cond": {"$and": [{"$gt": ["$$item", 1]}, {"$lt": ["$$item", 5]}]},
+                }
+            },
+            3,
+        ),
+    ],
+)
+def test_expression_depth(expression, depth):
+    stats = query_statistics(aggregate({"$project": {"value": expression}}))
+    assert stats.expression_depth == stats.stages[0].expression_depth == depth
+    assert stats.filter_logical_depth == stats.filter_logical_fan_out == 0
+
+
+@pytest.mark.parametrize(
+    ("predicate", "depth", "fan_out"),
+    [
+        ({}, 0, 0),
+        ({"a": 1}, 0, 0),
+        ({"a": {"x": 1, "y": 2}}, 0, 0),
+        ({"a": {1: "literal data"}}, 0, 0),
+        ({"a": {"$in": [1, 2, 3]}}, 0, 0),
+        ({"a": 1, "b": 2, "c": 3}, 1, 3),
+        ({"$and": [{"a": 1}, {"b": 2}, {"c": 3}]}, 1, 3),
+        ({"a": {"$gte": 1, "$lt": 5}}, 1, 2),
+        ({"a": {"$gte": 1, "$lt": 5}, "b": 2}, 1, 3),
+        ({"$or": [{"a": 1}, {"$and": [{"b": 2}, {"c": 3}]}, {"d": 4}]}, 2, 3),
+        ({"$or": [{"a": 1, "b": 2}, {"c": 3}]}, 2, 2),
+        ({"$or": [{"a": 1}, {"b": 2}], "c": 3}, 2, 2),
+        ({"$and": [{"$and": [{"a": 1}]}]}, 2, 1),
+        ({"$nor": [{"a": 1}, {"b": 2}]}, 1, 2),
+        ({"a": {"$not": {"$gt": 5}}}, 1, 1),
+        ({"a": {"$not": {"$gt": 5, "$lt": 10}}}, 2, 2),
+        ({"a": {"$not": Regex("foo")}}, 1, 1),
+        ({"a": {"$regex": "foo", "$options": "i"}, "$comment": "annotation"}, 0, 0),
+        ({"$comment": "annotation"}, 0, 0),
+        ({"a": {"$elemMatch": {"x": 1, "y": 2}}}, 1, 2),
+        ({"a": {"$elemMatch": {"x": 1, "y": 2}}, "b": 1}, 2, 2),
+        ({"a": {"$elemMatch": {"$gt": 1, "$lt": 5}}}, 1, 2),
+        ({"a": {"$elemMatch": {}}}, 0, 0),
+        ({"a": {"$all": [{"$elemMatch": {"x": 1, "y": 2}}]}}, 0, 0),
+        ({"$expr": {"$and": [{"$gt": ["$a", 1]}, {"$lt": ["$a", 5]}]}}, 0, 0),
+    ],
+)
+def test_filter_logical_structure(predicate, depth, fan_out):
+    stats = query_statistics(aggregate({"$match": predicate}))
+    assert stats.filter_logical_depth == stats.stages[0].filter_logical_depth == depth
+    assert stats.filter_logical_fan_out == stats.stages[0].filter_logical_fan_out == fan_out
+
+
+def test_expression_and_filter_depth_boundaries():
+    stats = query_statistics(
+        aggregate(
+            {
+                "$match": {
+                    "$and": [{"a": {"$gt": 1}}, {"$expr": {"$gt": [{"$add": ["$x", 1]}, "$y"]}}]
+                }
+            },
+            {"$group": {"_id": None, "total": {"$sum": {"$multiply": ["$x", "$y"]}}}},
+            {
+                "$graphLookup": {
+                    "from": "other",
+                    "as": "out",
+                    "startWith": "$x",
+                    "connectFromField": "a",
+                    "connectToField": "b",
+                    "restrictSearchWithMatch": {"a": 1, "b": 2, "c": 3},
+                }
+            },
+        )
+    )
+    assert stats.expression_depth == 2
+    assert stats.filter_logical_depth == 1
+    assert stats.filter_logical_fan_out == 2
+    assert stats.stages[0].expression_depth == 2  # $expr and $and add no expression levels.
+    assert stats.stages[1].expression_depth == 2  # Accumulator contributes one level.
+    assert stats.stages[2].filter_logical_depth == stats.stages[2].filter_logical_fan_out == 0
+    assert stats.stages[2].operator_counts == {"$eq": 3}
+
+
+def test_recursive_structural_maxima_and_empty_pipelines():
+    query = aggregate(
+        {
+            "$lookup": {
+                "from": "other",
+                "as": "out",
+                "let": {"v": {"$add": [1, 2]}},
+                "pipeline": [
+                    {"$match": {"$or": [{"a": 1, "b": 2}, {"c": 3}, {"d": 4}]}},
+                    {"$project": {"x": {"$sum": {"$multiply": ["$x", "$y"]}}}},
+                    {
+                        "$facet": {
+                            "deep": [{"$unionWith": {"coll": "other", "pipeline": []}}],
+                            "wide": [],
+                            "another": [],
+                        }
+                    },
+                ],
+            }
+        },
+        {"$merge": {"into": "other", "whenMatched": []}},
+    )
+    outer = query_statistics(query)
+    assert (
+        outer.expression_depth,
+        outer.filter_logical_depth,
+        outer.filter_logical_fan_out,
+        outer.nested_pipeline_depth,
+    ) == (1, 0, 0, 0)
+    recursive = query_statistics(query, include_nested_pipelines=True)
+    assert (
+        recursive.expression_depth,
+        recursive.filter_logical_depth,
+        recursive.filter_logical_fan_out,
+        recursive.nested_pipeline_depth,
+    ) == (2, 2, 3, 3)
+    assert recursive.stage_count == 6  # Empty pipelines have depth but no stage records.
+    assert recursive.stages[0].expression_depth == 1  # Parent excludes child expressions.
+    assert recursive.stages[0].filter_logical_depth == 0
+    assert recursive.stages[-1].name == "$merge"
+
+
+@pytest.mark.parametrize(
+    "stage",
+    [
+        {"$lookup": {"from": "other", "as": "out", "pipeline": []}},
+        {"$facet": {"a": [], "b": []}},
+        {"$unionWith": {"coll": "other", "pipeline": []}},
+        {"$merge": {"into": "other", "whenMatched": []}},
+    ],
+)
+def test_empty_child_pipeline_depth(stage):
+    query = aggregate(stage)
+    assert query_statistics(query).nested_pipeline_depth == 0
+    stats = query_statistics(query, include_nested_pipelines=True)
+    assert stats.nested_pipeline_depth == 1
+    assert stats.stage_count == 1
+
+
+def test_empty_and_flat_structure_and_find_generated_depth():
+    for query in (
+        aggregate(),
+        aggregate({"$facet": {}}),
+        aggregate({"$unionWith": "other"}, {"$merge": "other"}),
+        MongoFindQuery(TARGET, {}),
+    ):
+        stats = query_statistics(query, include_nested_pipelines=True)
+        assert (
+            stats.expression_depth
+            == stats.filter_logical_depth
+            == stats.filter_logical_fan_out
+            == 0
+        )
+        assert stats.nested_pipeline_depth == 0
+    query = MongoFindQuery(TARGET, {"a": 1, "b": 2}, projection={"items": {"$slice": 2}})
+    stats = query_statistics(query)
+    assert stats == query_statistics(query.to_aggregate())
+    assert stats.expression_depth == 2  # $cond contains $isArray and $slice.
+    assert (stats.filter_logical_depth, stats.filter_logical_fan_out) == (1, 2)
+    assert stats.operator_counts["$eq"] == 2
+    assert "$and" not in stats.operator_counts
+    assert stats.definition_version == 1

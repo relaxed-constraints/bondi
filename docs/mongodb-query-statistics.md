@@ -2,7 +2,8 @@
 
 BONDI's `query_statistics()` measures the **structure of a query**, without a
 MongoDB connection. Research projects can use the same definitions for predicate,
-operator and stage counts, rather than implementing subtly different counters.
+operator and stage counts, plus expression depth, filter logical depth/fan-out
+and nested pipeline depth, rather than implementing subtly different measurements.
 It returns totals, occurrence histograms and an ordered breakdown by stage.
 
 These are syntax measurements, not estimates of execution cost, selectivity or
@@ -63,9 +64,14 @@ assert first.operator_counts == {"$eq": 1}
 | `stage_counts` | Histogram keyed by stage name, including the `$` prefix |
 | `operator_counts` | Histogram keyed by operator name, including implicit operators normalized as described below |
 | `stages` | Tuple of `MongoStageStatistics` records in pipeline order, or depth-first preorder when recursive |
+| `expression_depth` | Maximum nested expression-operator depth across selected stages |
+| `filter_logical_depth` | Maximum Boolean-connective depth in selected `$match` filters |
+| `filter_logical_fan_out` | Maximum Boolean-connective arity in selected `$match` filters |
+| `nested_pipeline_depth` | Maximum selected child-pipeline nesting; outer pipeline is level zero |
 
 Each stage record contains `path`, `name`, `predicate_count`, `operator_count`
-and `operator_counts`. A stage owns its local syntax, never the contents of a
+and `operator_counts`, plus `expression_depth`, `filter_logical_depth`, and
+`filter_logical_fan_out`. A stage owns its local syntax, never the contents of a
 nested pipeline. Thus the following identities hold for the returned snapshot:
 
 ```python
@@ -269,6 +275,175 @@ assert recursive.stages[1].path == (0, "$lookup", "pipeline", 0)
 assert recursive.stages[1].operator_counts == {"$expr": 1, "$gt": 1}
 ```
 
+## Structural depth and fan-out
+
+These measurements complement the size counts. They are **maxima, not sums**:
+adding another equally deep stage does not increase depth. All four are zero for
+an empty pipeline. The first three are available on both query and stage records;
+`nested_pipeline_depth` is query-wide only.
+
+### Expression depth
+
+`expression_depth` is the maximum number of nested expression or accumulator
+operators on a path. Start each stage-local expression at zero:
+
+- A field/variable reference, scalar value or projection flag has depth zero.
+- Every supported expression/accumulator operator adds one level, including
+  Boolean expression operators, `$literal` and `$const`.
+- Lists, constructed objects, named arguments, field/variable names and stage
+  boundaries add no levels. Descend through them without resetting depth.
+- `$literal` and `$const` stop traversal: their contents cannot increase depth.
+- Query-filter operators do not contribute expression depth. `$expr` starts an
+  expression at zero; the operator immediately inside it has depth one.
+- Each selected stage has its own maximum. Nesting a stage in a child pipeline
+  does not increase its expression depth, and parent expressions do not become
+  ancestors of expressions in their child pipelines.
+
+| Expression or context | Expression depth |
+| --- | ---: |
+| `"$price"` | 0 |
+| `{"$add": ["$price", 1]}` | 1 |
+| `{"$multiply": [{"$add": ["$price", 1]}, "$quantity"]}` | 2 |
+| `{"$literal": {"$add": [{"$multiply": [1, 2]}, 3]}}` | 1 |
+| `{"nested": [{"value": {"$add": [1, 2]}}]}` | 1 |
+| `{"$sum": {"$multiply": ["$price", "$quantity"]}}` in `$group` | 2 |
+| `{"$expr": {"$gt": [{"$add": ["$price", 1]}, 10]}}` in `$match` | 2 |
+| `{"price": {"$gt": 10}}` in `$match` | 0 |
+
+```python
+expression_query = MongoAggregateQuery(
+    query.target,
+    [{"$project": {"total": {"$multiply": [{"$add": ["$price", 1]}, "$quantity"]}}}],
+)
+expression_stats = query_statistics(expression_query)
+assert expression_stats.expression_depth == 2
+assert expression_stats.stages[0].expression_depth == 2
+assert expression_stats.filter_logical_depth == 0
+```
+
+### Filter logical depth and fan-out
+
+These two metrics describe Boolean structure **only in `$match` filters**.
+`filter_logical_depth` is the maximum number of Boolean connectives on a path;
+`filter_logical_fan_out` is the largest immediate child count of any connective.
+A filter with no connective has zero for both. A single atomic predicate is not a
+unary connective.
+
+The logical tree uses these precise rules:
+
+1. Explicit `$and`, `$or` and `$nor` each add one level, with fan-out equal to their
+   operand-list length. Preserve explicit nesting, including single-child
+   connectives; do not flatten or simplify it. An empty filter inside an explicit
+   operand list still occupies a child slot.
+2. `$not` adds one level and has one child. Multiple conditions inside `$not` are
+   combined with an implicit conjunction, adding another level.
+3. Multiple conditions in the same filter scope form **one implicit conjunction**.
+   Flatten the ordinary field-condition containers within that scope: both
+   `{"a": {"$gte": 1, "$lt": 5}, "b": 2}` and an explicit `$and` of those three
+   conditions have depth one and fan-out three. Do not add separate conjunction
+   levels merely because the conditions are grouped by field in a dictionary.
+4. A scope containing zero or one condition adds no implicit connective. Ignore
+   `$comment` and `$options`; they do not create child slots or conjunctions.
+5. `$elemMatch` changes element scope but adds no Boolean level itself. Measure
+   conditions inside it, retaining any conjunction within that scope as a subtree
+   of an enclosing connective. Do not flatten across the element-scope boundary.
+6. Atomic conditions remain leaves: membership-list length, embedded-document or
+   array literals, geospatial coordinates and text options add no logical shape.
+   `$all` is atomic even when its operands contain `$elemMatch`, matching the
+   existing predicate-count boundary. Those internal operators still count in
+   `operator_counts`.
+7. `$expr` is an opaque logical leaf. Its internal `$and`, `$or`, `$not` and other
+   operators affect expression depth, not filter logical depth or fan-out.
+8. Filters outside `$match`, such as `$graphLookup.restrictSearchWithMatch`, do not
+   contribute these two metrics. Their operators still contribute operator counts.
+
+This normalization of **implicit conjunctions is only for logical shape**. It does
+not insert `$and` into `operator_counts`, change predicates, or mutate the query.
+
+| Filter | Logical depth | Logical fan-out |
+| --- | ---: | ---: |
+| `{}` or `{"a": 1}` | 0 | 0 |
+| `{"a": 1, "b": 2, "c": 3}` | 1 | 3 |
+| `{"$and": [{"a": 1}, {"b": 2}, {"c": 3}]}` | 1 | 3 |
+| `{"a": {"$gte": 1, "$lt": 5}, "b": 2}` | 1 | 3 |
+| `{"$or": [{"a": 1}, {"$and": [{"b": 2}, {"c": 3}]}, {"d": 4}]}` | 2 | 3 |
+| `{"a": {"$not": {"$gt": 5}}}` | 1 | 1 |
+| `{"a": {"$not": {"$gt": 5, "$lt": 10}}}` | 2 | 2 |
+| `{"a": {"$elemMatch": {"x": 1, "y": 2}}, "b": 1}` | 2 | 2 |
+| `{"a": {"$all": [{"$elemMatch": {"x": 1, "y": 2}}]}}` | 0 | 0 |
+
+```python
+logical_query = MongoAggregateQuery(
+    query.target,
+    [{"$match": {"$or": [{"a": 1}, {"$and": [{"b": 2}, {"c": 3}]}, {"d": 4}]}}],
+)
+logical_stats = query_statistics(logical_query)
+assert logical_stats.filter_logical_depth == 2
+assert logical_stats.filter_logical_fan_out == 3
+assert logical_stats.expression_depth == 0
+assert logical_stats.predicate_count == 4
+
+implicit = query_statistics(MongoFindQuery(query.target, {"a": 1, "b": 2, "c": 3}))
+assert (implicit.filter_logical_depth, implicit.filter_logical_fan_out) == (1, 3)
+assert implicit.operator_counts == {"$eq": 3}  # No synthetic $and operator.
+```
+
+### Nested pipeline depth
+
+`nested_pipeline_depth` counts child-pipeline boundaries, using the same recognized
+locations as recursive stage analysis. The outer pipeline has depth zero. A child
+`$lookup.pipeline` has depth one; a `$facet` branch inside that child has depth two.
+Sibling pipelines do not increase depth. `$graphLookup`'s data traversal is not a
+syntactically nested pipeline.
+
+- With `include_nested_pipelines=False`, this value is **always zero**. It describes
+  the selected outer-only scope, not a claim that the query has no child pipelines.
+- With recursion enabled, an explicitly present **empty child pipeline counts as
+  a nesting level**, despite having no stage records. An empty outer pipeline has
+  depth zero. A `$facet` with no branches has no child boundary.
+- String forms of `$unionWith`, `$merge`, or a string `whenMatched` action do not
+  create child pipelines. Only an actual pipeline list creates a boundary.
+- Expression and filter depths remain local to each stage. Pipeline nesting is a
+  separate measurement, never added to either of those depths.
+
+```python
+nested_empty = MongoAggregateQuery(
+    query.target,
+    [
+        {
+            "$lookup": {
+                "from": "other",
+                "as": "out",
+                "pipeline": [
+                    {"$facet": {"branch": []}},
+                ],
+            }
+        }
+    ],
+)
+assert query_statistics(nested_empty).nested_pipeline_depth == 0
+nested_stats = query_statistics(nested_empty, include_nested_pipelines=True)
+assert nested_stats.nested_pipeline_depth == 2
+assert nested_stats.stage_count == 2  # The empty branch adds depth but no stage.
+```
+
+Query-wide expression/logical maxima can be reconstructed from stage records:
+
+```python
+assert logical_stats.expression_depth == max(
+    (stage.expression_depth for stage in logical_stats.stages), default=0
+)
+assert logical_stats.filter_logical_depth == max(
+    (stage.filter_logical_depth for stage in logical_stats.stages), default=0
+)
+assert logical_stats.filter_logical_fan_out == max(
+    (stage.filter_logical_fan_out for stage in logical_stats.stages), default=0
+)
+```
+
+Nested pipeline depth is measured during traversal, rather than inferred only
+from stage paths, so that empty child pipelines are retained in the measurement.
+
 ## Find normalization and generated projections
 
 Find normalization emits filtering, sorting, skipping, limiting and projection in
@@ -291,7 +466,9 @@ assert query_statistics(sliced).predicate_count == 0
 ```
 
 For example, the type checks generated for a special projection are expression
-operators, not extra filter predicates. Conversion limitations remain those of
+operators, not extra filter predicates. Generated expressions also contribute expression
+depth (the `$slice` example has depth two because `$cond` contains `$isArray`
+and `$slice`). Conversion limitations remain those of
 [`to_aggregate()`](find-query.md#array-projections), including bounded positional
 bindings and special-projection paths. The statistics parser does not bypass them.
 
@@ -412,7 +589,9 @@ Malformed input or unsupported conversion can also fail before parser traversal;
 those errors come from the existing query validation/conversion contract. A wrong
 query type or non-boolean recursion flag raises `TypeError`.
 
-`definition_version=1` identifies these counting meanings. A change that alters
+`definition_version=1` identifies these counting meanings. The depth/fan-out
+measurements are additive extensions; existing counts retain their version-1
+meanings. A change that alters
 counts for previously supported syntax requires a new definition version. Adding
 support for syntax that previously raised an error need not change the definition
 version if existing meanings are preserved. Record the definition version, BONDI

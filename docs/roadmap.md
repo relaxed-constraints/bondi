@@ -4,7 +4,8 @@ This page tracks capabilities and open work, not a commitment to release dates.
 
 ## Available
 
-- Offline MongoDB query statistics with versioned counting rules and optional nested-pipeline scope.
+- Offline MongoDB query statistics with versioned counts, structural depth/fan-out,
+  and optional nested-pipeline scope.
 - Explicit conversion of supported MongoDB find queries to aggregation pipelines.
 - Native MongoDB find/aggregation and Couchbase SQL++ query descriptions.
 - Single-backend workloads, JSONL persistence and query fingerprints.

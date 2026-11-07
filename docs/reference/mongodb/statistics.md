@@ -13,6 +13,7 @@ query = MongoFindQuery(MongoCollectionRef("demo", "items"), {"price": {"$gte": 1
 stats = query_statistics(query)
 assert (stats.stage_count, stats.predicate_count, stats.operator_count) == (2, 1, 1)
 assert stats.operator_counts == {"$gte": 1}
+assert stats.expression_depth == stats.filter_logical_depth == stats.filter_logical_fan_out == 0
 ```
 
 ## Nested aggregation example
@@ -27,7 +28,22 @@ query = MongoAggregateQuery(
 stats = query_statistics(query, include_nested_pipelines=True)
 assert (stats.stage_count, stats.predicate_count, stats.operator_count) == (3, 1, 1)
 assert stats.stages[1].path == (0, "$facet", "active", 0)
+assert stats.nested_pipeline_depth == 1
 ```
+
+## Logical structure example
+
+```python
+query = MongoFindQuery(MongoCollectionRef("demo", "items"), {"a": 1, "b": 2})
+stats = query_statistics(query)
+assert stats.filter_logical_depth == 1
+assert stats.filter_logical_fan_out == 2
+assert stats.stages[0].filter_logical_depth == 1
+assert stats.operator_counts == {"$eq": 2}
+```
+
+Depth and fan-out fields are maxima, not totals. See the guide for implicit
+conjunction rules, expression boundaries and empty nested pipelines.
 
 ::: bondi.mongodb.query_statistics
     options:

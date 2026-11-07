@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Extend MongoDB query statistics with expression depth, filter logical depth and
+  fan-out, and recursive pipeline depth (including empty child pipelines).
+  Document precise structural rules without changing existing version-1 counts.
+
 - Add `query_statistics()`, `MongoQueryStatistics` and `MongoStageStatistics` for
   versioned MongoDB predicate, operator and stage counts, including optional nested
   pipelines and find normalization. Document complete rules in the new

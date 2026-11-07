@@ -183,3 +183,11 @@ implicit filter equality counts as `$eq`. Nested pipelines are excluded by defau
 from all counts, or selected recursively with the boolean flag. Unsupported selected
 syntax raises a path-bearing `ValueError`; partial counts are not returned. Use
 `docs/mongodb-query-statistics.md` for the complete definitions and supported syntax.
+
+
+Query statistics additionally expose `expression_depth`, `filter_logical_depth`,
+`filter_logical_fan_out` (query maxima and stage-local values), and query-wide
+`nested_pipeline_depth`. Logical shape recognizes implicit conjunctions without
+adding `$and` operators. `$expr` is opaque to filter shape; its operators contribute
+expression depth. Recursive pipeline depth includes empty child pipelines and is
+zero in outer-only scope. Existing definition-version-1 counts are unchanged.
