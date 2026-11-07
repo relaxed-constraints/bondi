@@ -1,10 +1,9 @@
 """Opt-in real-server checks using only a uniquely named disposable database.
 
-Set BONDI_TEST_MONGODB_URI to run. The caller owns the MongoDB server.
+Set BONDI_LIVE=1; the shared fixture owns its BONDI deployment.
 """
 
 import asyncio
-import os
 from uuid import uuid4
 
 import pytest
@@ -19,11 +18,11 @@ from bondi.mongodb import (
 )
 from bondi.workload import Workload, WorkloadEntry
 
+pytestmark = pytest.mark.live
 
-def test_executor_against_mongodb():
-    uri = os.environ.get("BONDI_TEST_MONGODB_URI")
-    if not uri:
-        pytest.skip("Set BONDI_TEST_MONGODB_URI for live checks")
+
+def test_executor_against_mongodb(live_mongodb):
+    uri = live_mongodb.uri
 
     async def scenario():
         client = AsyncMongoClient(uri, serverSelectionTimeoutMS=3000)

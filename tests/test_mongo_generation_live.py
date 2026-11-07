@@ -1,7 +1,6 @@
 """Opt-in notebook-style generation with Docker MongoDB and owned temporary samples."""
 
 import asyncio
-import os
 
 import pytest
 from pymongo import MongoClient
@@ -16,9 +15,10 @@ from bondi.mongodb import (
 )
 from bondi.schema import Schema
 
+pytestmark = pytest.mark.live
 
-@pytest.mark.skipif(os.getenv("BONDI_GENERATION_LIVE") != "1", reason="opt-in Docker test")
-def test_generation_live(tmp_path):
+
+def test_generation_live(tmp_path, live_mongodb):
     async def notebook():
         target = MongoCollectionRef("demo", "business")
         config = MongoGenerationConfig(
@@ -27,11 +27,11 @@ def test_generation_live(tmp_path):
             include_fields=["city", "stars", "review_count"],
             projection_probability=0.5,
         )
-        with MongoClient("mongodb://localhost:27017", serverSelectionTimeoutMS=3000) as client:
+        with MongoClient(live_mongodb.uri, serverSelectionTimeoutMS=3000) as client:
             before = list(client.demo.business.find().sort("_id", 1))
             assert len(before) >= 4, "Initialize the Docker demo collection first"
             with MongoExecutor.from_uri(
-                "mongodb://localhost:27017", concurrency=4, timeout_seconds=10
+                live_mongodb.uri, concurrency=4, timeout_seconds=10
             ) as executor:
                 docs = executor.run(MongoFindQuery(target, {}), collect_results=True).documents
                 with MongoSampleEstimator(

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Make live integration tests self-contained with shared, isolated BONDI deployment
+  fixtures and one `BONDI_LIVE=1` opt-in. Allocate dedicated high-numbered test ports,
+  prepare demo data/indexes automatically, and clean up only test-owned deployments.
+
 - Add optional `on_result(position, entry, result)` to run/explain/profile workload
   methods on MongoDB and Couchbase executors. Serialize callbacks per workload,
   support awaitable callbacks in async executors, and execute synchronous callbacks

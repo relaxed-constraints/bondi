@@ -201,13 +201,14 @@ Special projections can expand into multiple stages and expression operators.
 Statistics over the converted pipeline therefore measure the translated pipeline,
 not the number of operators originally written in the find projection.
 
-To run differential tests against an explicitly selected disposable/local MongoDB:
+To run differential tests using an isolated BONDI-managed MongoDB (Docker required):
 
 ```sh
-BONDI_CONVERSION_URI=mongodb://localhost:27028 uv run pytest tests/test_mongodb_conversion_live.py
+BONDI_LIVE=1 uv run pytest tests/test_mongodb_conversion_live.py
 ```
 
-These tests create and remove only their own uniquely named temporary database.
+These tests provision their own deployment and temporary database, then remove
+them during teardown.
 
 ## Analyze query structure
 

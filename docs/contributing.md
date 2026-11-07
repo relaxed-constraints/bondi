@@ -59,8 +59,8 @@ The offline suite checks query contracts, persistence, parsers and executor beha
 at SDK boundaries. Run `uv run --extra couchbase pytest` to include Couchbase SDK
 tests; they are skipped without the optional dependency. Live backend tests require
 explicit environment-variable opt-in. See [release validation](releases.md#ci-and-local-integration-tests) for the test commands.
-Managed-deployment tests create and remove isolated databases; other live tests
-require the disposable database fixtures described in their test modules.
+All live tests create and remove isolated BONDI deployments, prepare their own
+demo fixtures and use dedicated high-numbered ports.
 
 See the [documentation walkthrough](documentation.md) for a concrete docstring-to-site example.
 

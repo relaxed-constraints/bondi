@@ -1,9 +1,8 @@
 """Opt-in differential probes; only a uniquely named temporary database is modified.
 
-BONDI_CONVERSION_URI=mongodb://localhost:27028 uv run pytest tests/test_mongodb_conversion_live.py
+BONDI_LIVE=1 uv run pytest tests/test_mongodb_conversion_live.py
 """
 
-import os
 from uuid import uuid4
 
 import pytest
@@ -11,13 +10,12 @@ from pymongo import MongoClient
 
 from bondi.mongodb import MongoCollectionRef, MongoFindQuery
 
-URI = os.environ.get("BONDI_CONVERSION_URI")
-pytestmark = pytest.mark.skipif(not URI, reason="set BONDI_CONVERSION_URI for live comparison")
+pytestmark = pytest.mark.live
 
 
 @pytest.fixture(scope="module")
-def collection():
-    with MongoClient(URI, serverSelectionTimeoutMS=5000) as client:
+def collection(live_mongodb):
+    with MongoClient(live_mongodb.uri, serverSelectionTimeoutMS=5000) as client:
         database = client[f"bondi_conversion_test_{uuid4().hex}"]
         collection = database.items
         values = [

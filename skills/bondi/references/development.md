@@ -26,9 +26,12 @@ uv build
 Add focused behavior tests for changed contracts, not tests that merely mirror
 implementation. Pytest also executes source doctests. Use
 `uv run --extra couchbase pytest` when optional SDK coverage matters.
-Offline tests do not prove live database behavior. Live tests need the disposable
-fixtures and explicit opt-ins in the release guide; managed-deployment tests create
-and remove their own databases. Do not aim them at private research data.
+Offline tests do not prove live database behavior. With Docker running, use
+`BONDI_LIVE=1 uv run --extra couchbase pytest -m live -v`. Shared fixtures create isolated BONDI deployments, load demo data
+and indexes, and remove their own resources. They use MongoDB ports 27117–27126
+and Couchbase groups starting at 8191/8193/11310, stepping by ten for ten groups.
+Do not supply private research server URIs; old per-suite flags are no longer used.
+Run live tests serially. See the release guide for port pools and cleanup details.
 
 Keep `uv.lock` updated when dependencies change. Generated `site/` and `dist/`
 are not committed. Credentials belong in ignored local configuration.

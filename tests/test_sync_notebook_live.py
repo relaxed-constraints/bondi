@@ -11,22 +11,22 @@ from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
 from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
 from bondi.workload import Workload, WorkloadEntry
 
+pytestmark = pytest.mark.live
 
-@pytest.mark.skipif(os.getenv("BONDI_SYNC_LIVE") != "1", reason="opt-in Docker test")
+
 @pytest.mark.parametrize("backend", ["mongo", "community", "enterprise"])
-def test_notebook_live(backend):
+def test_notebook_live(backend, live_deployments):
+    db = live_deployments("mongodb" if backend == "mongo" else backend)
+
     async def notebook():
         if backend == "mongo":
-            executor = MongoExecutor.from_uri(
-                "mongodb://localhost:27017", concurrency=2, timeout_seconds=10
-            )
+            executor = MongoExecutor.from_uri(db.uri, concurrency=2, timeout_seconds=10)
             query = MongoFindQuery(MongoCollectionRef("demo", "business"), {}, limit=3)
         else:
-            port = 11210 if backend == "community" else 11211
             executor = CouchbaseExecutor.from_uri(
-                f"couchbase://127.0.0.1:{port}?network=external",
-                username="Administrator",
-                password="dbrtoolkit-local",
+                db.uri,
+                username=db.username,
+                password=db.password,
                 concurrency=2,
                 timeout_seconds=10,
             )

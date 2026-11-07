@@ -72,24 +72,68 @@ build the documentation without deploying it.
 ## CI and local integration tests
 
 CI runs offline tests on Python 3.11–3.14, Ruff, a strict MkDocs build, distribution
-checks and wheel installation in a fresh environment. No database containers run
-in CI. Database-backed tests are explicitly excluded there.
+checks and wheel installation in a fresh environment. CI selects `-m "not live"`;
+no database containers run there.
 
-Managed-deployment tests create and remove their own isolated databases. Start Docker, then run:
-
-```sh
-BONDI_DEPLOYMENT_LIVE=1 \
-  uv run --extra couchbase pytest tests/test_deployment_live.py tests/test_couchbase_deployment_live.py tests/test_demo_data_live.py -q
-```
-
-Other live suites require their documented disposable database fixtures first:
+All database-backed suites share one opt-in. Start Docker, then run:
 
 ```sh
-BONDI_GENERATION_LIVE=1 BONDI_ESTIMATOR_LIVE=1 BONDI_SYNC_LIVE=1 \
-  uv run --extra couchbase pytest -q
+BONDI_LIVE=1 uv run --extra couchbase pytest -m live -v
 ```
 
-Additional Community/Enterprise executor probes use the opt-in variables documented
-in `tests/test_couchbase_executor_live.py`. Never point these tests at private research
-data. Notebooks and Docker assets ship in the tagged GitHub source archive; the
-PyPI wheel contains the library, deployment assets, demo data and license.
+To select a smaller suite, pass its file instead:
+
+```sh
+BONDI_LIVE=1 uv run pytest tests/test_executor_mongodb.py -q
+BONDI_LIVE=1 uv run pytest tests/test_mongodb_conversion_live.py -q
+BONDI_LIVE=1 uv run --extra couchbase pytest tests/test_couchbase_executor_live.py -q
+```
+
+Without `BONDI_LIVE=1`, all tests marked `live` are skipped before fixture setup.
+The older per-suite flags and externally supplied test-server URIs are no longer
+used. No manual database initialization or credentials are needed.
+
+### Deployment ownership
+
+The shared fixtures in `tests/conftest.py` lazily create BONDI-managed MongoDB,
+Couchbase Community and Couchbase Enterprise deployments in a temporary registry.
+They load the packaged demo collection and the Couchbase `city_stars` index needed
+by executor probes. Each backend/edition is reused within the test session and
+removed, including its data, during teardown—even when a test or demo setup fails.
+Lifecycle and demo-loader tests create separate deployments because they exercise
+stop/remove/restart and mutate their own fixtures.
+
+Tests never look up or reuse your normal BONDI deployments. The temporary registry
+produces distinct Docker project identities; cleanup only targets deployments
+created by the tests. Startup failures use BONDI's existing rollback behavior.
+A hard process kill or unavailable Docker daemon can prevent teardown; in that
+case inspect the temporary test registry and remove only its test deployments.
+
+### Dedicated test ports
+
+The harness probes these ten-slot pools and skips occupied ports/groups:
+
+| Backend | Test pool |
+| --- | --- |
+| MongoDB | `27117–27126` |
+| Couchbase management | `8191 + 10 × slot` |
+| Couchbase query | `8193 + 10 × slot` |
+| Couchbase KV | `11310 + 10 × slot` |
+
+Couchbase `slot` runs from 0 through 9; the first two groups are
+`8191 / 8193 / 11310` and `8201 / 8203 / 11320`. These start 100 above the
+standard ports, leaving the first ten ordinary MongoDB ports and ten Couchbase
+groups spaced by ten available for regular deployments. The separate MongoDB
+range `20217–20227` is also untouched.
+
+Every test deployment claims a distinct slot for the duration of the test process,
+including while stopped or removed during lifecycle testing. If no slot is free,
+setup fails clearly instead of falling back to standard ports. Port probes are
+advisory: another process can race Docker's bind, which fails rather than taking
+over that process. Run the live suite serially; parallel pytest workers and
+concurrent live runs are not supported by this per-process allocator.
+
+The full suite starts both Couchbase editions and may pull their pinned Docker
+images. Docker needs capacity for the fixtures in addition to existing containers.
+Notebooks and Docker assets ship in the tagged GitHub source archive; the PyPI
+wheel contains the library, deployment assets, demo data and license.

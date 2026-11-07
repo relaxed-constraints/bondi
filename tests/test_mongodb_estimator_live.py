@@ -1,7 +1,6 @@
-"""Opt-in Docker fixture test: BONDI_ESTIMATOR_LIVE=1 uv run pytest -k estimator_live."""
+"""Opt-in Docker fixture test: BONDI_LIVE=1 uv run pytest -k estimator_live."""
 
 import asyncio
-import os
 
 import pytest
 from pymongo import MongoClient
@@ -15,11 +14,12 @@ from bondi.mongodb import (
     MongoSampleEstimator,
 )
 
+pytestmark = pytest.mark.live
 
-@pytest.mark.skipif(os.getenv("BONDI_ESTIMATOR_LIVE") != "1", reason="opt-in Docker test")
-def test_estimator_live():
+
+def test_estimator_live(live_mongodb):
     """Read demo data; only estimator-owned sample collections are created/dropped."""
-    uri = "mongodb://localhost:27017"
+    uri = live_mongodb.uri
     target = MongoCollectionRef("demo", "business")
     query = MongoFindQuery(target, {"stars": {"$gte": 4}}, limit=1)
     with MongoClient(uri, serverSelectionTimeoutMS=3000) as client:

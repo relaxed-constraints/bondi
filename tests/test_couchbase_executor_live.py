@@ -1,8 +1,7 @@
-"""Opt-in read-only checks against the initialized Compose demo collection."""
+"""Opt-in checks against a shared, isolated BONDI demo deployment."""
 
 import asyncio
 import json
-import os
 
 import pytest
 
@@ -17,18 +16,18 @@ from bondi.couchbase import (  # noqa: E402
 )
 from bondi.workload import Workload, WorkloadEntry  # noqa: E402
 
+pytestmark = pytest.mark.live
 
-@pytest.mark.parametrize("edition", ["COMMUNITY", "ENTERPRISE"])
-def test_live_couchbase(edition):
-    uri = os.environ.get(f"BONDI_TEST_COUCHBASE_{edition}_URI")
-    if not uri:
-        pytest.skip(f"Set BONDI_TEST_COUCHBASE_{edition}_URI to opt in")
+
+@pytest.mark.parametrize("edition", ["community", "enterprise"])
+def test_live_couchbase(edition, live_deployments):
+    db = live_deployments(edition)
 
     async def scenario():
         async with await AsyncCouchbaseExecutor.from_uri(
-            uri,
-            username=os.environ["BONDI_TEST_COUCHBASE_USERNAME"],
-            password=os.environ["BONDI_TEST_COUCHBASE_PASSWORD"],
+            db.uri,
+            username=db.username,
+            password=db.password,
             concurrency=2,
             continue_on_error=True,
             timeout_seconds=10,
@@ -49,7 +48,7 @@ def test_live_couchbase(edition):
             profile = await executor.profile(query, collect_results=True, query_kwargs=options)
             assert profile.documents == run.documents
             assert profile.raw["metrics"]["execution_ms"] >= 0
-            if edition == "ENTERPRISE":
+            if edition == "enterprise":
                 assert profile.raw["profile"]["executionTimings"]
                 assert profile.warnings == ()
             else:
@@ -59,7 +58,7 @@ def test_live_couchbase(edition):
             assert summarize(run.raw).rows_returned == 3
             summary = summarize(profile.raw)
             assert summary.rows_returned == 3
-            assert summary.index_names == (("city_stars",) if edition == "ENTERPRISE" else None)
+            assert summary.index_names == (("city_stars",) if edition == "enterprise" else None)
             assert summary.documents_examined is summary.keys_examined is None
             json.dumps(profile.raw)
             positional = CouchbaseQuery("SELECT RAW $1", positional_parameters=[[1, None]])

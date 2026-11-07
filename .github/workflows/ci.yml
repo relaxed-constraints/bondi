@@ -24,7 +24,7 @@ jobs:
           version: "0.13.6"
           python-version: ${{ matrix.python }}
       - run: uv sync --locked --extra couchbase
-      - run: uv run pytest --ignore-glob='tests/*_live.py'
+      - run: uv run pytest -m 'not live'
   quality:
     name: Lint, docs and distributions
     runs-on: ubuntu-latest

@@ -1,9 +1,5 @@
 """Opt-in end-to-end demo loads on isolated MongoDB and Couchbase deployments."""
 
-import os
-import socket
-from contextlib import ExitStack
-
 import pytest
 from pymongo import MongoClient
 
@@ -11,19 +7,13 @@ from bondi._cli import main
 from bondi.deployment import deploy_couchbase, deploy_mongodb
 from bondi.deployment._couchbase import request
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("BONDI_DEPLOYMENT_LIVE") != "1", reason="requires local Docker"
-)
+pytestmark = pytest.mark.live
 
 
 @pytest.mark.parametrize("backend", ["mongodb", "couchbase"])
-def test_load_repeat_cli_and_preserve_other_data(tmp_path, monkeypatch, backend):
+def test_load_repeat_cli_and_preserve_other_data(tmp_path, monkeypatch, backend, live_ports):
     monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
-    with ExitStack() as stack:
-        sockets = [stack.enter_context(socket.socket()) for _ in range(3)]
-        for sock in sockets:
-            sock.bind(("127.0.0.1", 0))
-        ports = [sock.getsockname()[1] for sock in sockets]
+    ports = live_ports.claim(backend)
     db = None
     try:
         if backend == "mongodb":

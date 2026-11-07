@@ -1,6 +1,5 @@
-"""Opt in with BONDI_DEPLOYMENT_LIVE=1; creates/deletes an isolated Docker volume."""
+"""Opt in with BONDI_LIVE=1; creates/deletes an isolated Docker volume."""
 
-import os
 import socket
 
 import pytest
@@ -8,16 +7,12 @@ from pymongo import MongoClient
 
 from bondi.deployment import deploy_mongodb, get_deployment, list_deployments
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("BONDI_DEPLOYMENT_LIVE") != "1", reason="requires local Docker"
-)
+pytestmark = pytest.mark.live
 
 
-def test_mongo_lifecycle_and_persistence(tmp_path, monkeypatch):
+def test_mongo_lifecycle_and_persistence(tmp_path, monkeypatch, live_ports):
     monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        port = sock.getsockname()[1]
+    port = live_ports.claim("mongodb")[0]
     try:
         db = deploy_mongodb("lifecycle-test", port=port)
         assert db.status() == "running"
@@ -38,15 +33,13 @@ def test_mongo_lifecycle_and_persistence(tmp_path, monkeypatch):
     assert list_deployments() == []
 
 
-def test_cli_lifecycle(tmp_path, monkeypatch):
+def test_cli_lifecycle(tmp_path, monkeypatch, live_ports):
     """Exercise actual command parsing and exit codes against an isolated deployment."""
     import subprocess
     import sys
 
     monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        port = sock.getsockname()[1]
+    port = live_ports.claim("mongodb")[0]
 
     def cli(*args):
         return subprocess.run(
@@ -72,7 +65,7 @@ def test_cli_lifecycle(tmp_path, monkeypatch):
             get_deployment("cli-test").remove(delete_data=True)
 
 
-def test_failed_new_setup_rolls_back_real_resources(tmp_path, monkeypatch):
+def test_failed_new_setup_rolls_back_real_resources(tmp_path, monkeypatch, live_ports):
     """Inject a failure after Docker starts to verify actual rollback and port retry."""
     import subprocess
     from unittest.mock import patch
@@ -88,9 +81,7 @@ def test_failed_new_setup_rolls_back_real_resources(tmp_path, monkeypatch):
         original_start(self, **kwargs)
         raise RuntimeError("injected startup failure")
 
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        first_port = sock.getsockname()[1]
+    first_port = live_ports.claim("mongodb")[0]
     try:
         with patch.object(Deployment, "start", fail_after_start):
             with pytest.raises(RuntimeError, match="new deployment and its data were removed"):
@@ -109,12 +100,10 @@ def test_failed_new_setup_rolls_back_real_resources(tmp_path, monkeypatch):
             )
             assert not result.stdout.strip(), resource
         # Keep the original port occupied while retrying the same name on another.
-        with socket.socket() as occupied, socket.socket() as free:
+        with socket.socket() as occupied:
             occupied.bind(("127.0.0.1", first_port))
             occupied.listen()
-            free.bind(("127.0.0.1", 0))
-            retry_port = free.getsockname()[1]
-            free.close()
+            retry_port = live_ports.claim("mongodb")[0]
             db = deploy_mongodb("rollback-test", port=retry_port)
             assert db.status() == "running"
     finally:

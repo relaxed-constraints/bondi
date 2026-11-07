@@ -52,6 +52,7 @@ packages = ["src/bondi"]
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/bondi"]
 addopts = "--import-mode=importlib --doctest-modules"
+markers = ["live: opt-in Docker integration tests using isolated BONDI deployments"]
 
 [tool.ruff]
 line-length = 100
