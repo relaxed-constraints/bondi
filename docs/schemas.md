@@ -184,8 +184,11 @@ dependency:
 
 ```python
 # Inside a Yanex experiment:
-yanex.save_artifact(schema, "schema.json", saver=lambda obj, path: obj.save(path))
+yanex.save_artifact(schema, "schema.json", saver=Schema.save)
 restored = yanex.load_artifact("schema.json", loader=Schema.load)
 ```
+
+Accessing `Schema.save` through the class leaves the schema argument for Yanex to
+supply; no wrapper function or static method is needed.
 
 Artifact dependency selection and sampling remain responsibilities of the consumer.

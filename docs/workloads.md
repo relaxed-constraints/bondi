@@ -38,5 +38,17 @@ The workload copies the entry list but keeps references to entries and queries.
 Edits are visible through those references; validation occurs at explicit checkpoints,
 including saving and execution. Do not mutate a workload while it is running.
 
+## Experiment artifact integration
+
+Inside a Yanex experiment, pass the class methods directly as artifact callbacks:
+
+```python
+yanex.save_artifact(workload, "workload.jsonl", saver=Workload.save)
+restored = yanex.load_artifact("workload.jsonl", loader=Workload.load)
+```
+
+Yanex supplies the workload and path to `Workload.save`; no wrapper function is
+needed. Yanex remains an optional consumer-project dependency.
+
 Next: [execute the workload](executor.md) or [generate patterns](workload-generation.md).
 See the [reference](reference/queries.md) for custom queries, validation and persistence errors.

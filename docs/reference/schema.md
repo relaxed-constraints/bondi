@@ -175,7 +175,8 @@ no database or Couchbase SDK is needed.
 `Schema.save(path)` and `Schema.load(path)` persist versioned, offline schema
 snapshots and preserve incremental updates. See the [format and fidelity
 contract](../schemas.md#save-and-reuse-a-snapshot) for exact scalar encodings,
-validation and atomic-save behavior. Paths accept strings and path objects.
+validation and atomic-save behavior. Paths accept strings and path objects. Yanex can use `saver=Schema.save` and
+`loader=Schema.load` directly; no lambda wrapper is required.
 
 Local field/type and full-mode counter order survive loading; global `flat_fields`
 and `primitive_fields` order does not. Aware datetimes restore fixed offsets rather

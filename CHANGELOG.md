@@ -5,7 +5,8 @@
 - Add atomic `Schema.save()` and validated `Schema.load()` for versioned JSON
   snapshots, preserving observations, retained scalar values and further updates.
   Reuse Canonical Extended JSON with Python scalar adapters; document fixed-offset
-  datetime restoration and the exclusion of global field order.
+  datetime restoration and the exclusion of global field order. Show direct
+  `Schema.save` and `Workload.save` callbacks in Yanex artifact examples.
 
 ## 0.1.8 — 2026-11-07
 
