@@ -12,7 +12,8 @@ This page tracks capabilities and open work, not a commitment to release dates.
 - Synchronous and asynchronous execution, explain and profile for both backends.
 - Bounded workload concurrency, error continuation and deadlines.
 - Offline summary parsing with conservative handling of unsupported metrics.
-- Backend-independent schema inspection and optional value retention.
+- Backend-independent schema inspection, optional value retention and versioned
+  offline schema snapshots.
 - MongoDB sampling estimation with temporary sample lifecycle management.
 - Synchronous single-collection MongoDB flat-find workload generation.
 - Local Docker databases and runnable teaching notebooks.
@@ -23,7 +24,7 @@ This page tracks capabilities and open work, not a commitment to release dates.
 - Logical, array-expression and aggregation workload generation beyond flat find patterns.
 - Couchbase sampling estimation and workload generation.
 - Executor sampling helpers and bounded schema value retention.
-- Schema persistence and merging.
+- Schema merging.
 - Warmups and repetitions for experiment execution.
 - Broader explain-layout support and backend-specific measurement interpretation.
 

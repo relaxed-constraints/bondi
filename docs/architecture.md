@@ -48,5 +48,8 @@ Queries are mutable and validated at checkpoints. JSONL workloads persist concre
 native query envelopes and pattern IDs, not connections or execution results.
 MongoDB filter/projection/pipeline payloads preserve BSON types; envelope metadata uses plain
 JSON. Fingerprints describe serialized representations, not semantic equivalence.
+Versioned schema snapshots persist the observation tree and typed retained scalars.
+Loading rebuilds parent links and lookup indexes; global field encounter order is
+not a persistence guarantee.
 The API is still evolving; changes are explicit and tested rather than hidden behind
 speculative compatibility layers.

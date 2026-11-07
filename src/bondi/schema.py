@@ -7,8 +7,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from math import isfinite
+from os import PathLike
 from types import MappingProxyType
-from typing import Any, Literal
+from typing import Any, Literal, Self
 from uuid import UUID
 
 from bson import Binary, Int64, ObjectId
@@ -295,6 +296,38 @@ class Schema:
             _validate(document, set())
             self._count += 1
             self._object(document, self, ())
+
+    def save(self, path: str | PathLike[str]) -> None:
+        """Atomically save a version-1 UTF-8 JSON schema snapshot.
+
+        Preserve observations, local field/type order and retained values. Global
+        flat-field order is not preserved. Parent directories must exist. Do not
+        mutate the schema while saving. Failed saves preserve an existing file.
+        Datetimes retain microseconds, offset and fold, but not timezone identity.
+
+        Raises:
+            ValueError: Observations cannot be serialized as a valid snapshot.
+            OSError: File creation, writing or replacement fails.
+        """
+        from ._schema_persistence import save
+
+        save(self, path)
+
+    @classmethod
+    def load(cls, path: str | PathLike[str]) -> Self:
+        """Load a validated snapshot that supports further update() calls.
+
+        Rebuild parent links, paths and flat indexes from the saved tree. Unknown
+        versions, malformed records and inconsistent counts are rejected. See
+        the schema persistence guide for scalar fidelity and format details.
+
+        Raises:
+            ValueError: The artifact is malformed or uses an unsupported format.
+            OSError: The file cannot be read.
+        """
+        from ._schema_persistence import load
+
+        return load(path, cls)
 
     def _object(self, document, parent, prefix):
         for name, value in document.items():

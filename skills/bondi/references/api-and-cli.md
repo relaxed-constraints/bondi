@@ -218,3 +218,12 @@ Query statistics additionally expose `expression_depth`, `filter_logical_depth`,
 adding `$and` operators. `$expr` is opaque to filter shape; its operators contribute
 expression depth. Recursive pipeline depth includes empty child pipelines and is
 zero in outer-only scope. Existing definition-version-1 counts are unchanged.
+
+## Schema snapshots (after 0.1.8)
+
+Check for `Schema.save`/`Schema.load` before using unreleased persistence support.
+Save a schema with `schema.save("schema.json")`; restore with
+`Schema.load("schema.json")`. Snapshots retain observations and support updates,
+without database access. Global flat-field order is not preserved, and aware
+datetimes restore fixed offsets rather than named timezone identities. See the
+[schema guide](https://relaxed-constraints.github.io/bondi/schemas/#save-and-reuse-a-snapshot).
