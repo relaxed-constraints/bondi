@@ -2,15 +2,26 @@
 
 ## Current release
 
-Version 0.1.7 adds find-to-aggregation conversion and versioned MongoDB query
-statistics, including expression depth, filter logical depth/fan-out and nested
-pipeline depth. See the [query statistics guide](mongodb-query-statistics.md) and
+Version 0.1.8 adds explicit MongoDB and Couchbase deployment versions through
+Python `version=` and CLI `--version`. Existing deployments retain saved images,
+and conflicting explicit requests fail before Docker access. See the
+[deployment guide](deployment.md#database-versions) and
 [changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md).
 
-[0.1.7 is published on PyPI](https://pypi.org/project/bondi/0.1.7/) with a matching
-[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.7).
-The tagged source provides self-contained notebooks; the installed package
-includes deployment Compose assets and the demo dataset.
+The tagged source provides self-contained notebooks and the agent skill; the
+installed package includes deployment Compose assets and the demo dataset.
+
+## 0.1.8 verification
+
+Local release checks passed on 2026-11-07: 929 offline tests passed with one
+database-dependent test skipped, and all seven disposable MongoDB/Couchbase
+deployment and demo-data integration tests passed. Ruff lint/format, the strict
+documentation build and wheel/source-distribution validation passed.
+
+A fresh wheel installation with the Couchbase extra verified explicit MongoDB
+8.0.16 and Couchbase Enterprise 7.6.12 deployments against their server versions,
+rejection of conflicting version requests without file changes, and omitted-version
+reuse after stop. All release-test deployments were removed.
 
 ## 0.1.7 verification
 
@@ -34,10 +45,10 @@ reference were checked for the new metrics.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.1.7` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.1.8` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.1.7` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.1.8` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.

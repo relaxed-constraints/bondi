@@ -40,9 +40,10 @@ Use the managed API/CLI rather than legacy repository Compose scripts.
 
 ### Database versions
 
-The version-selection API accepts `version="8.0.16"` to
+BONDI 0.1.8 adds version selection: pass `version="8.0.16"` to
 `deploy_mongodb` and `version="7.6.12"` to `deploy_couchbase`, with matching
-`--version` CLI options. Check installed signatures/help for availability. Versions must be numeric `major.minor.patch` strings.
+`--version` CLI options. Check installed signatures/help for availability.
+Versions must be numeric `major.minor.patch` strings.
 New deployments still default to MongoDB 8.0.16 and Couchbase 7.6.2; Couchbase
 edition is selected separately. Docker checks image availability at startup.
 
