@@ -19,12 +19,12 @@ def db():
 def test_deploy_defaults_and_options(db, capsys):
     with patch("bondi._cli.deploy_mongodb", return_value=db) as deploy:
         assert main(["deploy", "mongodb"]) == 0
-        deploy.assert_called_once_with("mongodb", port=27017, timeout=120)
+        deploy.assert_called_once_with("mongodb", port=27017, version=None, timeout=120)
         assert (
             main(["deploy", "mongodb", "--name", "demo", "--port", "27019", "--timeout", "300"])
             == 0
         )
-        deploy.assert_called_with("demo", port=27019, timeout=300)
+        deploy.assert_called_with("demo", port=27019, version=None, timeout=300)
     output = capsys.readouterr().out
     assert db.uri in output
     assert f'mongosh "{db.uri}"' in output

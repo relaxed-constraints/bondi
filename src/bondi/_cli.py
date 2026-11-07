@@ -34,6 +34,11 @@ def _parser() -> argparse.ArgumentParser:
         help="Container memory limit in MiB, separate from Couchbase quotas (default: 4096)",
     )
     couchbase.add_argument("--timeout", type=float, default=300)
+    for command in (mongo, couchbase):
+        command.add_argument(
+            "--version",
+            help="Database major.minor.patch version; omitted reuses saved image or pinned default",
+        )
     for name, help_text in (
         ("start", "Start a saved deployment and wait for readiness"),
         ("stop", "Stop a deployment, retaining data"),
@@ -81,7 +86,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "deploy":
             if args.backend == "mongodb":
-                db = deploy_mongodb(args.name, port=args.port, timeout=args.timeout)
+                db = deploy_mongodb(
+                    args.name, port=args.port, version=args.version, timeout=args.timeout
+                )
             else:
                 password = "bondi-local"
                 if args.password_env:
@@ -96,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
                     query_port=args.query_port,
                     kv_port=args.kv_port,
                     edition=args.edition,
+                    version=args.version,
                     username=args.username,
                     password=password,
                     bucket=args.bucket,

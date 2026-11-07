@@ -119,7 +119,8 @@ class Deployment:
         except subprocess.CalledProcessError as exc:
             detail = (exc.stderr or exc.stdout or "").strip()
             raise RuntimeError(
-                f"Docker Compose failed: {detail}\nCheck Docker is running, Compose v2 is "
+                f"Docker Compose failed for image {self.image!r}: {detail}\n"
+                "Check the image tag exists for your platform, Docker is running, Compose v2 is "
                 "installed, and the configured port is free. Inspect logs() for startup failures."
             ) from exc
         return result.stdout
@@ -276,6 +277,7 @@ def deploy_mongodb(
     name: str = "mongodb",
     *,
     port: int = 27017,
+    version: str | None = None,
     timeout: float = 120,
 ) -> Deployment:
     """Create and start a named local MongoDB database, or reuse a matching one.
@@ -283,13 +285,15 @@ def deploy_mongodb(
     Args:
         name: Deployment identity, default mongodb.
         port: Localhost port (1–65535); each simultaneous deployment needs its own.
+        version: Numeric major.minor.patch version. None reuses a saved image or
+            selects 8.0.16 for a new deployment. Explicit conflicts are rejected.
         timeout: Startup deadline in seconds, including image download.
 
     Returns:
         A ready Deployment, usable with MongoExecutor.from_uri(deployment.uri).
 
     Raises:
-        ValueError: Invalid arguments or a saved port conflicts with this request.
+        ValueError: Invalid arguments or saved port/image conflicts with this request.
         RuntimeError: Port unavailable or startup failed. New deployments are cleaned
             up on failure; existing deployments retain their data and configuration.
             If cleanup fails, metadata is retained with recovery instructions.
@@ -297,7 +301,7 @@ def deploy_mongodb(
     Saved deployments retain their original image and assets across BONDI upgrades.
     Calls managing the same deployment must be serialized by the caller.
     """
-    return _deploy(name, {"backend": "mongodb", "port": port}, timeout=timeout)
+    return _deploy(name, {"backend": "mongodb", "port": port}, version=version, timeout=timeout)
 
 
 def deploy_couchbase(
@@ -307,6 +311,7 @@ def deploy_couchbase(
     query_port: int = 8093,
     kv_port: int = 11210,
     edition: Literal["community", "enterprise"] = "community",
+    version: str | None = None,
     username: str = "Administrator",
     password: str = "bondi-local",
     bucket: str = "demo",
@@ -324,7 +329,9 @@ def deploy_couchbase(
         management_port: Console/REST port.
         query_port: SQL++ service port.
         kv_port: SDK bootstrap/key-value port.
-        edition: community or enterprise (both pinned to 7.6.2).
+        edition: community or enterprise, independent of version.
+        version: Numeric major.minor.patch version. None reuses a saved image or
+            selects 7.6.2 for a new deployment. Explicit conflicts are rejected.
         username: Local administrator username.
         password: Local password, at least six characters.
         bucket: Bucket name, default demo.
@@ -367,14 +374,27 @@ def deploy_couchbase(
             "bucket": bucket,
             "memory_limit_mb": memory_limit_mb,
         },
+        version=version,
         timeout=timeout,
     )
 
 
-def _deploy(name: str, settings: dict, *, timeout: float) -> Deployment:
+def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -> Deployment:
     path = _directory(name)
     _timeout(timeout)
     backend = settings["backend"]
+    if version is not None and (
+        not isinstance(version, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version)
+    ):
+        raise ValueError("version must be a numeric major.minor.patch string, e.g. '8.0.16'")
+    selected_version = (
+        version if version is not None else ("8.0.16" if backend == "mongodb" else "7.6.2")
+    )
+    image = (
+        f"mongo:{selected_version}"
+        if backend == "mongodb"
+        else f"couchbase:{settings['edition']}-{selected_version}"
+    )
     ports = [settings[key] for key in ("port", "query_port", "kv_port") if key in settings]
     if any(type(port) is not int or not 1 <= port <= 65535 for port in ports):
         raise ValueError("ports must be integers between 1 and 65535")
@@ -383,6 +403,10 @@ def _deploy(name: str, settings: dict, *, timeout: float) -> Deployment:
     if path.exists():
         deployment = get_deployment(name)
         differences = [key for key, value in settings.items() if getattr(deployment, key) != value]
+        # Saved images are authoritative, including legacy maintenance edits.
+        # Omission must never replace them with this release's default.
+        if version is not None and deployment.image != image:
+            differences.append("version (image)")
         if differences:
             raise ValueError(
                 f"Deployment {name!r} already uses saved configuration; conflicting fields: "
@@ -406,9 +430,9 @@ def _deploy(name: str, settings: dict, *, timeout: float) -> Deployment:
     service["ports"] = [
         f"127.0.0.1:{host}:{internal}" for host, internal in zip(ports, internal_ports)
     ]
+    service["image"] = image
     if backend == "couchbase":
         service["mem_limit"] = f"{settings['memory_limit_mb']}m"
-        service["image"] = f"couchbase:{settings['edition']}-7.6.2"
     config = {"format_version": 1, **settings, "image": service["image"], "project": project}
     path.mkdir(parents=True, exist_ok=False, mode=0o700)
     try:

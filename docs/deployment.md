@@ -3,9 +3,54 @@
 BONDI can create and manage named local MongoDB and Couchbase instances using Docker Compose.
 Install and start Docker with Compose v2 first. 
 
+## Database versions
+
+Select an explicit numeric `major.minor.patch` version when creating a deployment:
+
+```python
+from bondi.deployment import deploy_mongodb, deploy_couchbase
+
+mongo = deploy_mongodb("example-mongo", version="8.0.16")
+cb = deploy_couchbase("example-cb", version="7.6.12", edition="enterprise")
+print(mongo.image)  # mongo:8.0.16
+print(cb.image)  # couchbase:enterprise-7.6.12
+```
+
+Equivalent CLI commands:
+
+```sh
+bondi deploy mongodb --name example-mongo --version 8.0.16
+bondi deploy couchbase --name example-cb --version 7.6.12 --edition enterprise
+```
+
+For **new** deployments, omitting the version selects MongoDB 8.0.16 or Couchbase
+7.6.2. Couchbase edition remains a separate option (default community).
+Versions must be strings with three numeric components; aliases such as `latest`,
+partial versions, tag suffixes and arbitrary image references are rejected before
+Docker is contacted. A valid version string does not guarantee an available image
+or compatibility with BONDI's initialization. Docker resolves the tag at startup;
+failures include the image and Docker diagnostic, such as a missing manifest or
+unsupported platform. BONDI does not discover available versions.
+
+For **existing** names, `version=None` (or no `--version`) reuses the saved image.
+An explicit version must produce exactly the saved image, otherwise the call fails
+before contacting Docker or changing files. Even explicitly requesting the default
+version conflicts with a deployment saved at another version. Other settings still
+need to match, including Couchbase edition and memory limit.
+
+The image in `deployment.json` stores the selected version. No new metadata field
+or migration is needed: older configurations, including custom images saved during
+manual maintenance, remain usable when version is omitted. Saved Compose assets
+are preserved across reuse, stop/start and removal with data retained. The image
+metadata describes the saved configuration, not an inspection of the running server.
+
+This API does not upgrade or downgrade an existing deployment or migrate its data.
+Use a new name and free ports for a different version. Use `get_deployment(name).start()`
+or `bondi start NAME` to reuse all saved settings.
+
 ## MongoDB deployments
 
-MongoDB uses the pinned `mongo:8.0.16` image and binds only to `127.0.0.1`.
+New MongoDB deployments default to the pinned `mongo:8.0.16` image and binds only to `127.0.0.1`.
 This is an unauthenticated local research database. Python and Docker must be on
 the same machine; remote Docker contexts are not supported. A script running on
 a remote host can use this API with Docker on that host. Readiness is verified
@@ -136,7 +181,7 @@ deployments with `bondi list` before retrying.
 For Couchbase deployments, ensure that the `bondi[couchbase]` variant is installed.
 
 Community is the default; Enterprise is available explicitly for users entitled
-to use it. This API does not grant an Enterprise license. Both use pinned 7.6.2
+to use it. This API does not grant an Enterprise license. Both default to pinned 7.6.2
 images with Data, Query and Index services and a default 4 GiB container memory limit.
 Allow Docker sufficient memory, especially when running several databases.
 

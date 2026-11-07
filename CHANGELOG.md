@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add optional `version=` / `--version` selection for MongoDB and Couchbase
+  deployments, preserving pinned defaults and saved images on reuse. Reject
+  explicit version conflicts before Docker access, support legacy image metadata,
+  and include the image in Docker failure diagnostics.
+
 ## 0.1.7 — 2026-11-07
 
 - Extend MongoDB query statistics with expression depth, filter logical depth and

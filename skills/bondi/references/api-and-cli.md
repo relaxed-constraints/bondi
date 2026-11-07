@@ -38,6 +38,22 @@ Use the managed API/CLI rather than legacy repository Compose scripts.
 
 [Deployment guide](https://relaxed-constraints.github.io/bondi/deployment/)
 
+### Database versions
+
+The unreleased version-selection API adds `version="8.0.16"` to
+`deploy_mongodb` and `version="7.6.12"` to `deploy_couchbase`, with matching
+`--version` CLI options. Check installed signatures/help first; 0.1.7 does not
+support this option. Versions must be numeric `major.minor.patch` strings.
+New deployments still default to MongoDB 8.0.16 and Couchbase 7.6.2; Couchbase
+edition is selected separately. Docker checks image availability at startup.
+
+Omitted version (`None`) preserves an existing deployment's saved image, including
+legacy custom images. An explicit version must match the saved image exactly;
+conflicts fail before Docker access. The selected version is stored in
+`Deployment.image`, without a separate version field. Other saved settings must
+still match. Use a new name and free ports for another version; this feature does
+not upgrade, downgrade or migrate an existing database.
+
 ### Couchbase container memory
 
 BONDI 0.1.6 adds
