@@ -7,11 +7,25 @@ statistics, including expression depth, filter logical depth/fan-out and nested
 pipeline depth. See the [query statistics guide](mongodb-query-statistics.md) and
 [changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md).
 
-Publication and fresh-install verification are being completed for 0.1.7.
-The previous verified release is
-[0.1.6 on PyPI](https://pypi.org/project/bondi/0.1.6/).
+[0.1.7 is published on PyPI](https://pypi.org/project/bondi/0.1.7/) with a matching
+[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.7).
 The tagged source provides self-contained notebooks; the installed package
 includes deployment Compose assets and the demo dataset.
+
+## 0.1.7 verification
+
+Published on 2026-11-07. Local release checks passed: 1,038 tests passed and six
+were skipped, including enabled disposable MongoDB/Couchbase deployment tests,
+MongoDB generation/estimation tests and 163 conversion comparisons. The separately
+selected MongoDB notebook-style integration test also passed. Ruff lint/format,
+the strict documentation build, wheel/source-distribution validation and a fresh
+wheel installation passed.
+
+Release CI passed on Python 3.11–3.14; PyPI publication and documentation deployment
+completed successfully. A fresh installation of `bondi[couchbase]==0.1.7` from PyPI
+verified conversion, statistics (including structural depth), BSON persistence,
+Couchbase imports and bundled demo data. The published statistics guide and API
+reference were checked for the new metrics.
 
 ## Maintainer procedure
 
