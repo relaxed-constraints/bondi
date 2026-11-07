@@ -20,8 +20,8 @@ it is not a query translator or an experiment-tracking framework.
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
 and dependency constraints before using an API. This skill describes the 0.1.4
-API baseline, with newer APIs and unreleased deployment version selection
-explicitly marked in the API/CLI reference. For version selection, check that
+API baseline, with newer APIs and deployment version selection
+covered in the API/CLI reference. For version selection, check that
 the installed deployment function accepts `version` or its CLI exposes `--version`. Online documentation follows published releases; it may be newer
 than the user's installation. For discrepancies, inspect installed signatures or
 matching tagged source instead of inventing compatibility or upgrading silently.
