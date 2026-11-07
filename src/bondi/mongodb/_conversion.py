@@ -20,25 +20,3 @@ def check_filter(document: dict[str, Any]) -> None:
                 check_filter(value)
         elif name == "$not" and isinstance(value, dict):
             check_filter(value)
-
-
-def projection_stages(projection: dict[str, Any] | None) -> list[dict[str, Any]]:
-    if not projection:
-        return []
-    normalized = {}
-    for field, value in projection.items():
-        if (
-            not isinstance(field, str)
-            or not field
-            or any(not part or part.startswith("$") or part.isdigit() for part in field.split("."))
-        ):
-            raise ValueError(f"to_aggregate() does not support projection path {field!r}")
-        if type(value) not in (int, bool):
-            raise ValueError(
-                f"to_aggregate() supports only inclusion/exclusion projections; field {field!r}"
-            )
-        normalized[field] = int(bool(value))
-    modes = {value for field, value in normalized.items() if field != "_id"}
-    if len(modes) > 1:
-        raise ValueError("to_aggregate() cannot mix inclusion and exclusion projections")
-    return [{"$project": normalized}]

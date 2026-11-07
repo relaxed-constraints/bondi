@@ -7,7 +7,7 @@ operator documents; native regex values use `$regularExpression`. See the
 fingerprint behavior.
 
 `MongoFindQuery.to_aggregate()` converts supported find queries without database
-access; see [conversion behavior and restrictions](../../find-query.md#convert-a-find-query-to-aggregation).
+access, including bounded array-projection translations; see [conversion behavior and restrictions](../../find-query.md#convert-a-find-query-to-aggregation).
 
 ::: bondi.mongodb.MongoCollectionRef
     options:

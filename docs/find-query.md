@@ -147,8 +147,64 @@ assert aggregate.pipeline == [
 
 Conversion validates the current query and deep-copies its payload. It does not
 connect to MongoDB. Ordinary inclusion/exclusion projections are supported;
-other projection forms raise `ValueError`. `$where`, `$near`, `$nearSphere`,
+$slice`, `$elemMatch` and positional `$` support is described below. Other
+projection forms raise `ValueError`. `$where`, `$near`, `$nearSphere`,
 `$natural` sorting, duplicate sort keys and numeric projection path components
 also raise clear errors. This is a conservative conversion, not a complete MongoDB
 syntax validator. Result ordering among tied sort keys remains unspecified; use a
 unique tie-breaker such as `_id` when comparing results.
+
+
+### Array projections
+
+The conversion supports the following bounded translations (verified against
+MongoDB 8.0.16). `$getField` in element matching requires MongoDB 5.0 or newer.
+
+- **`$slice`** on top-level fields accepts an integer (including zero and negative
+  values), or `[skip, positive_limit]`. Non-array values remain unchanged; missing
+  fields remain missing. Slice-only/exclusion projections use `$set` and, when
+  needed, a final exclusion `$project`, preserving other fields. Inclusion
+  projections use a computed `$project`.
+- **`$elemMatch`** on top-level fields uses `$filter` and keeps the first matching
+  element. The field is omitted if there is no match or the input is not an array.
+  Exclusion projections preserve unspecified fields using `$set`; combining
+  `$slice` and `$elemMatch` without explicit inclusions also preserves them.
+  Conditions support scalar `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`
+  and `$not`, or conditions on immediate object fields with `$and`, `$or`, `$nor`.
+  Operands are finite Python numbers (`int`/`float`), strings, booleans, and null
+  (null supports equality and membership, including their negations). Range
+  comparisons preserve query type bracketing; object fields preserve implicit
+  array matching and missing/null behavior.
+- **Positional `$`** on a top-level array supports a sole query filter of the form
+  `{array: {"$elemMatch": condition}}`, using the same condition subset. This binds
+  all conditions to one element. Other positional filters raise `ValueError`,
+  including implicit bindings and filters involving additional fields.
+
+For example:
+
+```python
+query = MongoFindQuery(
+    MongoCollectionRef("demo", "items"),
+    {"scores": {"$elemMatch": {"$gte": 80, "$lt": 90}}},
+    projection={"scores.$": 1, "_id": 0},
+)
+aggregate = query.to_aggregate()
+```
+
+Dotted paths for special projections or element-condition fields, numeric path
+components, nested `$elemMatch` conditions, regex conditions, object/array literal
+operands, computed find projections and ambiguous positional bindings are not
+translated. They raise `ValueError` rather than approximating query behavior.
+Field order in returned documents is not a conversion guarantee.
+
+Special projections can expand into multiple stages and expression operators.
+Statistics over the converted pipeline therefore measure the translated pipeline,
+not the number of operators originally written in the find projection.
+
+To run differential tests against an explicitly selected disposable/local MongoDB:
+
+```sh
+BONDI_CONVERSION_URI=mongodb://localhost:27028 uv run pytest tests/test_mongodb_conversion_live.py
+```
+
+These tests create and remove only their own uniquely named temporary database.

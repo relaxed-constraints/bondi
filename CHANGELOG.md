@@ -4,6 +4,8 @@
 
 - Add `MongoFindQuery.to_aggregate()` for independent, ordered conversion of supported
   find queries, with explicit errors for unsupported constructs.
+- Translate top-level `$slice`, bounded `$elemMatch`, and explicitly bound positional
+  `$` projections, with opt-in live find/aggregation equivalence tests.
 
 ## 0.1.6 — 2026-11-05
 

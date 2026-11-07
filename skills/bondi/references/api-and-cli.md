@@ -155,3 +155,18 @@ with BSON dates/ObjectIds while preserving `$regex` operator documents. Explicit
 ValueError; non-string input raises TypeError. This is data decoding, not query
 validation. Find persistence writes version 2 with BSON-aware projections, reads
 legacy version 1, and changes find fingerprints. Use the installed version's API.
+
+
+## Find-to-aggregation conversion (after 0.1.6)
+
+`MongoFindQuery.to_aggregate()` creates an independent `MongoAggregateQuery`
+without connecting to a server. It emits filtering, sorting, skipping, limiting,
+then projection stages, omitting default/empty components. It supports ordinary
+projection flags, top-level `$slice`, bounded `$elemMatch` conditions, and positional
+`$` with a sole `{array: {"$elemMatch": condition}}` filter. Special projections may
+expand into `$set` and computed `$project` expressions; element matching requires
+MongoDB 5.0+. Unsupported constructs raise `ValueError`, including `$where`,
+`$near`, `$nearSphere`, `$natural` sort, duplicate sort keys, computed find
+projections, dotted special-projection paths and ambiguous positional bindings.
+Consult the conversion section of `docs/find-query.md` for the exact condition
+subset. Statistics on converted pipelines count the translated expressions.

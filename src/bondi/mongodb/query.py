@@ -5,7 +5,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, ClassVar, Self
 
-from bondi.mongodb._conversion import check_filter, projection_stages
+from bondi.mongodb._conversion import check_filter
+from bondi.mongodb._projection import projection_stages
 from bondi.mongodb._serialization import (
     _check_canonical_payload,
     _dump_envelope,
@@ -120,6 +121,8 @@ class MongoFindQuery:
         Stages follow filter, sort, skip, limit, projection order. Empty filters,
         sorts and projections, zero skip and absent limits produce no stage.
         The target is preserved and all mutable pipeline contents are deep-copied.
+        Array projections may expand into $set and/or computed $project stages.
+        Element matching translations require MongoDB 5.0 or newer.
         No database connection is needed. As with the query constructors, this
         does not validate every MongoDB operator or guarantee server acceptance.
 
@@ -130,7 +133,9 @@ class MongoFindQuery:
             TypeError: Current query structure is invalid.
             ValueError: Current values are invalid or conversion is unsupported:
                 $where/$near/$nearSphere filters, $natural or duplicate sort keys,
-                or projections other than ordinary inclusion/exclusion fields.
+                or unsupported projections. Supports inclusion/exclusion, top-level
+                $slice and bounded $elemMatch/positional $ translations; see
+                the conversion guide for supported element conditions.
 
         Examples:
             >>> query = MongoFindQuery(MongoCollectionRef("demo", "items"), {"foo": "bar"},
@@ -153,7 +158,7 @@ class MongoFindQuery:
             pipeline.append({"$skip": self.skip})
         if self.limit is not None:
             pipeline.append({"$limit": self.limit})
-        pipeline.extend(projection_stages(self.projection))
+        pipeline.extend(projection_stages(self.projection, self.filter))
         return MongoAggregateQuery(self.target, pipeline)
 
     def to_json(self) -> str:
