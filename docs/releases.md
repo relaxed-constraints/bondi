@@ -10,7 +10,7 @@ deployments with dedicated high-numbered port pools.
 See the [schema persistence guide](schemas.md#save-and-reuse-a-snapshot),
 [callback guide](executor.md#per-query-result-callbacks) and
 [changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md).
-Release artifacts: [PyPI 0.1.9](https://pypi.org/project/bondi/0.1.9/) and
+Version 0.1.9 is published on [PyPI](https://pypi.org/project/bondi/0.1.9/) and
 [GitHub v0.1.9](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.9).
 The tagged source provides self-contained notebooks and the agent skill; the
 installed package includes deployment Compose assets and the demo dataset.
@@ -26,6 +26,11 @@ Ruff lint/format, the strict documentation build and wheel/source-distribution
 validation passed. A fresh wheel installation with the Couchbase extra verified
 schema snapshot round-trips and further updates, workload persistence, caller-thread
 callback delivery, callback signatures for both backends, and bundled assets.
+
+Release CI passed on Python 3.11–3.14; PyPI publication and documentation deployment
+completed successfully. A fresh installation of `bondi[couchbase]==0.1.9` from PyPI
+passed the same installed-package checks. The published installation, schema and
+execution guides, both executor API references and release page were verified.
 
 ## 0.1.8 verification
 
