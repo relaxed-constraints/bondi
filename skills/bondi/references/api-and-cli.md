@@ -219,20 +219,20 @@ adding `$and` operators. `$expr` is opaque to filter shape; its operators contri
 expression depth. Recursive pipeline depth includes empty child pipelines and is
 zero in outer-only scope. Existing definition-version-1 counts are unchanged.
 
-## Schema snapshots (after 0.1.8)
+## Schema snapshots (0.1.9+)
 
-Check for `Schema.save`/`Schema.load` before using unreleased persistence support.
+Schema persistence requires BONDI 0.1.9 or newer.
 Save a schema with `schema.save("schema.json")`; restore with
 `Schema.load("schema.json")`. Snapshots retain observations and support updates,
 without database access. Global flat-field order is not preserved, and aware
 datetimes restore fixed offsets rather than named timezone identities. See the
 [schema guide](https://relaxed-constraints.github.io/bondi/schemas/#save-and-reuse-a-snapshot).
 
-## Workload result callbacks (after 0.1.8)
+## Workload result callbacks (0.1.9+)
 
-Check the installed workload-method signature for `on_result` before using this
-unreleased API. MongoDB and Couchbase `run_workload`, `explain_workload` and
-`profile_workload` accept `on_result(position, entry, result)`. Use the original
+Workload callbacks require BONDI 0.1.9 or newer; check the installed signature
+for `on_result` when working with older environments. MongoDB and Couchbase
+`run_workload`, `explain_workload` and `profile_workload` accept `on_result(position, entry, result)`. Use the original
 zero-based position to associate completion-order callbacks with queries.
 
 Prefer this hook for incremental progress and summary persistence instead of

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.9 — 2026-11-09
+
 - Make live integration tests self-contained with shared, isolated BONDI deployment
   fixtures and one `BONDI_LIVE=1` opt-in. Allocate dedicated high-numbered test ports,
   prepare demo data/indexes automatically, and clean up only test-owned deployments.

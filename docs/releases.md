@@ -2,16 +2,30 @@
 
 ## Current release
 
-Version 0.1.8 adds explicit MongoDB and Couchbase deployment versions through
-Python `version=` and CLI `--version`. Existing deployments retain saved images,
-and conflicting explicit requests fail before Docker access. See the
-[deployment guide](deployment.md#database-versions) and
-[changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md).
+Version 0.1.9 adds versioned schema snapshots and per-query workload callbacks for
+MongoDB and Couchbase. Synchronous callbacks run on the caller thread; asynchronous
+executors also accept awaitable callbacks. Live tests now provision isolated BONDI
+deployments with dedicated high-numbered port pools.
 
-[0.1.8 is published on PyPI](https://pypi.org/project/bondi/0.1.8/) with a matching
-[GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.8).
+See the [schema persistence guide](schemas.md#save-and-reuse-a-snapshot),
+[callback guide](executor.md#per-query-result-callbacks) and
+[changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md).
+Release artifacts: [PyPI 0.1.9](https://pypi.org/project/bondi/0.1.9/) and
+[GitHub v0.1.9](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.9).
 The tagged source provides self-contained notebooks and the agent skill; the
 installed package includes deployment Compose assets and the demo dataset.
+
+## 0.1.9 verification
+
+Local release checks passed on 2026-11-09: 1,116 offline tests and all 178
+Docker-backed integration tests passed. The live suite provisioned isolated BONDI
+MongoDB and Couchbase deployments, prepared its own fixtures and removed all test
+resources afterward. Existing containers were unchanged.
+
+Ruff lint/format, the strict documentation build and wheel/source-distribution
+validation passed. A fresh wheel installation with the Couchbase extra verified
+schema snapshot round-trips and further updates, workload persistence, caller-thread
+callback delivery, callback signatures for both backends, and bundled assets.
 
 ## 0.1.8 verification
 
@@ -53,10 +67,10 @@ reference were checked for the new metrics.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.1.8` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.1.9` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.1.8` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.1.9` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.
