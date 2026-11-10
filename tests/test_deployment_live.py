@@ -109,3 +109,34 @@ def test_failed_new_setup_rolls_back_real_resources(tmp_path, monkeypatch, live_
     finally:
         for db in list_deployments():
             db.remove(delete_data=True)
+
+
+def test_mongo_memory_limits(tmp_path, monkeypatch, live_ports):
+    """Observe both limits in a disposable deployment, including after restart."""
+    import json
+    import subprocess
+
+    monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
+    name = "memory-test"
+    try:
+        db = deploy_mongodb(
+            name,
+            port=live_ports.claim("mongodb")[0],
+            memory_limit_mb=1024,
+            wiredtiger_cache_size_gb=0.25,
+        )
+        for restart in (False, True):
+            if restart:
+                db.stop()
+                db.start()
+            container = db._run("ps", "-q", "mongodb").strip()
+            inspected = subprocess.run(
+                ["docker", "inspect", container], capture_output=True, text=True, check=True
+            )
+            assert json.loads(inspected.stdout)[0]["HostConfig"]["Memory"] == 1024 * 1024**2
+            with MongoClient(db.uri, serverSelectionTimeoutMS=5000) as client:
+                status = client.admin.command("serverStatus")
+                assert status["wiredTiger"]["cache"]["maximum bytes configured"] == 256 * 1024**2
+    finally:
+        for db in list_deployments():
+            db.remove(delete_data=True)

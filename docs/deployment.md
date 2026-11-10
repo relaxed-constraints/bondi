@@ -3,6 +3,60 @@
 BONDI can create and manage named local MongoDB and Couchbase instances using Docker Compose.
 Install and start Docker with Compose v2 first. 
 
+## MongoDB memory limits
+
+Configure container and WiredTiger cache limits independently for a new deployment:
+
+```python
+from bondi.deployment import deploy_mongodb
+
+db = deploy_mongodb(
+    "mongo-limited",
+    port=27019,
+    memory_limit_mb=1024,
+    wiredtiger_cache_size_gb=0.25,
+)
+```
+
+```sh
+bondi deploy mongodb --name mongo-limited --port 27019 \
+  --memory-limit-mb 1024 --wiredtiger-cache-size-gb 0.25
+bondi status mongo-limited
+```
+
+`memory_limit_mb` is a positive integer in MiB. The cache option accepts finite
+integers or floats from 0.25 through 10000 in GiB (MongoDB names its option
+`--wiredTigerCacheSizeGB`). Booleans are rejected. An explicitly configured cache
+must be smaller than an explicitly configured container cap for a new deployment.
+This is only a basic compatibility check: queries, other server components and
+filesystem caching need additional memory. BONDI does not choose a headroom
+percentage or change Docker Desktop's VM memory allocation.
+
+Both options default to `None`: new deployments have no explicit container cap
+and use MongoDB's automatic cache sizing. Existing deployments reuse their
+existing settings. Explicitly different valid memory options emit `UserWarning`
+(visible on CLI stderr) and are ignored; the deployment starts with existing
+settings. For example: `memory_limit_mb: requested 2048 MiB, existing 1024 MiB.
+Existing settings unchanged; the requested value is ignored.`
+Omitted or matching options do not warn. Invalid individual values still fail
+validation; incompatible pairs are rejected only for new deployments because
+existing deployments ignore requested changes. Port and image conflicts still
+raise errors, and Couchbase's memory conflict behavior is unchanged.
+
+Both values persist in `deployment.json` and are exposed on `Deployment` as
+`memory_limit_mb` and `wiredtiger_cache_size_gb`. Stop/start retains them.
+`bondi status NAME` reports saved settings, not observed resource usage.
+Legacy MongoDB metadata without these fields loads them as `None`, displayed
+as “not explicitly saved.” This does not prove that a manually maintained
+Compose file has no limits.
+
+Existing Compose files, including manual overrides, are never rewritten or
+used to infer metadata. Passing options does not adopt a manual override,
+even if it matches the requested value. This API provides new-deployment
+configuration and safe reuse, not resource reconfiguration or automatic adoption.
+Use a new name and free port for a separately configured deployment; do not
+delete an existing database to apply these settings.
+
 ## Database versions
 
 Select an explicit numeric `major.minor.patch` version when creating a deployment:

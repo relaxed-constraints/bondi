@@ -17,6 +17,19 @@ def _parser() -> argparse.ArgumentParser:
     mongo = backends.add_parser("mongodb", help="Deploy MongoDB")
     mongo.add_argument("--name", default="mongodb")
     mongo.add_argument("--port", type=int, default=27017)
+    mongo.add_argument(
+        "--memory-limit-mb",
+        type=int,
+        help=(
+            "Container cap in MiB; omitted reuses existing value; "
+            "differing values warn and are ignored"
+        ),
+    )
+    mongo.add_argument(
+        "--wiredtiger-cache-size-gb",
+        type=float,
+        help="WiredTiger cache in GiB (0.25–10000); differing existing values warn and are ignored",
+    )
     mongo.add_argument("--timeout", type=float, default=120)
     couchbase = backends.add_parser("couchbase", help="Deploy and initialize Couchbase")
     couchbase.add_argument("--name", default="couchbase")
@@ -87,7 +100,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "deploy":
             if args.backend == "mongodb":
                 db = deploy_mongodb(
-                    args.name, port=args.port, version=args.version, timeout=args.timeout
+                    args.name,
+                    port=args.port,
+                    version=args.version,
+                    timeout=args.timeout,
+                    memory_limit_mb=args.memory_limit_mb,
+                    wiredtiger_cache_size_gb=args.wiredtiger_cache_size_gb,
                 )
             else:
                 password = "bondi-local"
@@ -148,6 +166,19 @@ def main(argv: list[str] | None = None) -> int:
                 )
             elif args.command == "status":
                 print(f"{db.name}: {db.status()} — {db.uri}")
+                memory = (
+                    "not explicitly saved"
+                    if db.memory_limit_mb is None
+                    else f"{db.memory_limit_mb} MiB"
+                )
+                print(f"Saved container memory limit: {memory}")
+                if db.backend == "mongodb":
+                    cache = (
+                        "not explicitly saved"
+                        if db.wiredtiger_cache_size_gb is None
+                        else f"{db.wiredtiger_cache_size_gb} GiB"
+                    )
+                    print(f"Saved WiredTiger cache size: {cache}")
             elif args.command == "logs":
                 print(db.logs(tail=args.tail), end="")
             elif args.command == "remove":

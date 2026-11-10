@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add optional MongoDB container memory and WiredTiger cache limits through Python
+  and CLI, persisted on deployment handles and shown in status output. Differing
+  requests for existing MongoDB deployments warn and retain existing settings;
+  legacy metadata and manually maintained Compose assets remain unchanged.
+
 ## 0.1.9 — 2026-11-09
 
 - Make live integration tests self-contained with shared, isolated BONDI deployment

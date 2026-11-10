@@ -62,8 +62,37 @@ Omitted version (`None`) preserves an existing deployment's saved image, includi
 legacy custom images. An explicit version must match the saved image exactly;
 conflicts fail before Docker access. The selected version is stored in
 `Deployment.image`, without a separate version field. Other saved settings must
-still match. Use a new name and free ports for another version; this feature does
+still match, except MongoDB memory options described below. Use a new name and free ports for another version; this feature does
 not upgrade, downgrade or migrate an existing database.
+
+### MongoDB memory limits (unreleased)
+
+Check the installed signature/help for `memory_limit_mb` and
+`wiredtiger_cache_size_gb` before using them. For a new deployment:
+
+```python
+deploy_mongodb("mongo-limited", port=27019, memory_limit_mb=1024, wiredtiger_cache_size_gb=0.25)
+```
+
+CLI equivalents are `--memory-limit-mb 1024 --wiredtiger-cache-size-gb 0.25`.
+Container limits are positive integer MiB; cache sizes are finite numbers from
+0.25 to 10000 GiB despite MongoDB's GB spelling. Booleans are invalid.
+An explicit cache must be smaller than an explicit container cap for new
+deployments; leave additional workload-dependent headroom. These options do
+not increase Docker Desktop VM memory or automatically tune the cache.
+
+Omission means no explicit cap/automatic cache for new deployments and reuse
+for existing ones. Differing explicit MongoDB memory values emit UserWarning
+and are ignored: existing settings remain unchanged and the deployment starts.
+Do not describe a successful deploy call as having applied requested new limits;
+inspect the returned handle. Other conflicts still fail. Couchbase behavior is
+unchanged. `None` never clears a limit.
+
+Handles expose both values; status reports saved configuration, not live
+measurements. Missing legacy fields are `None`. Manual Compose overrides remain
+untouched and are not inferred or adopted into metadata, even when requested
+values match them. Do not remove a user's database to change memory settings.
+See the [memory guide](https://relaxed-constraints.github.io/bondi/deployment/#mongodb-memory-limits).
 
 ### Couchbase container memory
 

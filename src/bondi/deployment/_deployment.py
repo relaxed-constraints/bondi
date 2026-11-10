@@ -9,6 +9,7 @@ import shutil
 import socket
 import subprocess
 import time
+import warnings
 from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
@@ -66,7 +67,8 @@ class Deployment:
         bucket: Default Couchbase bucket.
         edition: Couchbase community or enterprise.
         image: Pinned database Docker image.
-        memory_limit_mb: Saved Couchbase container limit in MiB; None for MongoDB.
+        memory_limit_mb: Saved container limit in MiB, or None if not explicitly saved.
+        wiredtiger_cache_size_gb: Saved MongoDB cache size in GiB, or None.
     """
 
     name: str
@@ -82,6 +84,7 @@ class Deployment:
     bucket: str | None = None
     edition: str | None = None
     memory_limit_mb: int | None = None
+    wiredtiger_cache_size_gb: float | None = None
 
     @property
     def uri(self) -> str:
@@ -264,6 +267,9 @@ def get_deployment(name: str) -> Deployment:
     if config["backend"] == "couchbase":
         # Version-1 deployments predating this option used a 4 GiB template.
         extra["memory_limit_mb"] = config.get("memory_limit_mb", 4096)
+    else:
+        extra["memory_limit_mb"] = config.get("memory_limit_mb")
+        extra["wiredtiger_cache_size_gb"] = config.get("wiredtiger_cache_size_gb")
     return Deployment(name, config["port"], config["image"], path, config["project"], **extra)
 
 
@@ -277,6 +283,8 @@ def deploy_mongodb(
     name: str = "mongodb",
     *,
     port: int = 27017,
+    memory_limit_mb: int | None = None,
+    wiredtiger_cache_size_gb: float | None = None,
     version: str | None = None,
     timeout: float = 120,
 ) -> Deployment:
@@ -287,6 +295,13 @@ def deploy_mongodb(
         port: Localhost port (1–65535); each simultaneous deployment needs its own.
         version: Numeric major.minor.patch version. None reuses a saved image or
             selects 8.0.16 for a new deployment. Explicit conflicts are rejected.
+        memory_limit_mb: Positive integer container cap in MiB. None leaves new
+            deployments uncapped or reuses an existing value.
+        wiredtiger_cache_size_gb: Finite number from 0.25 to 10000 in GiB
+            (MongoDB calls this GB). None uses automatic sizing for new deployments
+            or reuses an existing value. An explicit cache must be smaller than
+            an explicit container cap for new deployments; this does not guarantee
+            sufficient headroom.
         timeout: Startup deadline in seconds, including image download.
 
     Returns:
@@ -298,10 +313,30 @@ def deploy_mongodb(
             up on failure; existing deployments retain their data and configuration.
             If cleanup fails, metadata is retained with recovery instructions.
 
+    Differing explicit memory options emit UserWarning and retain the existing
+    settings. None does not clear a limit. Other configuration conflicts raise.
     Saved deployments retain their original image and assets across BONDI upgrades.
     Calls managing the same deployment must be serialized by the caller.
     """
-    return _deploy(name, {"backend": "mongodb", "port": port}, version=version, timeout=timeout)
+    if memory_limit_mb is not None and (type(memory_limit_mb) is not int or memory_limit_mb <= 0):
+        raise ValueError("memory_limit_mb must be a positive integer in MiB")
+    if wiredtiger_cache_size_gb is not None and (
+        isinstance(wiredtiger_cache_size_gb, bool)
+        or not isinstance(wiredtiger_cache_size_gb, (int, float))
+        or not 0.25 <= wiredtiger_cache_size_gb <= 10000
+    ):
+        raise ValueError("wiredtiger_cache_size_gb must be a finite number from 0.25 to 10000 GiB")
+    return _deploy(
+        name,
+        {
+            "backend": "mongodb",
+            "port": port,
+            "memory_limit_mb": memory_limit_mb,
+            "wiredtiger_cache_size_gb": wiredtiger_cache_size_gb,
+        },
+        version=version,
+        timeout=timeout,
+    )
 
 
 def deploy_couchbase(
@@ -402,7 +437,14 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
         raise ValueError("Couchbase service ports must be distinct")
     if path.exists():
         deployment = get_deployment(name)
-        differences = [key for key, value in settings.items() if getattr(deployment, key) != value]
+        memory_keys = (
+            {"memory_limit_mb", "wiredtiger_cache_size_gb"} if backend == "mongodb" else set()
+        )
+        differences = [
+            key
+            for key, value in settings.items()
+            if key not in memory_keys and getattr(deployment, key) != value
+        ]
         # Saved images are authoritative, including legacy maintenance edits.
         # Omission must never replace them with this release's default.
         if version is not None and deployment.image != image:
@@ -413,6 +455,21 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
                 f"{', '.join(differences)}. Inspect 'bondi status {name}'. "
                 "Use another name to keep it, or remove it only if its data is disposable."
             )
+        # Memory requests never reconfigure existing MongoDB assets.
+        for key in ("memory_limit_mb", "wiredtiger_cache_size_gb"):
+            if key not in memory_keys or settings[key] is None:
+                continue
+            existing = getattr(deployment, key)
+            if settings[key] != existing:
+                unit = "MiB" if key == "memory_limit_mb" else "GiB"
+                existing_text = "not explicitly saved" if existing is None else f"{existing} {unit}"
+                warnings.warn(
+                    f"Deployment {name!r}: {key}: requested {settings[key]} {unit}, "
+                    f"existing {existing_text}. Existing settings unchanged; "
+                    "the requested value is ignored.",
+                    UserWarning,
+                    stacklevel=3,
+                )
         try:
             deployment.start(timeout=timeout)
         except (RuntimeError, OSError, ValueError) as exc:
@@ -421,6 +478,11 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
                 f"Inspect 'bondi logs {name}' and retry 'bondi start {name}'."
             ) from exc
         return deployment
+    if backend == "mongodb":
+        memory = settings["memory_limit_mb"]
+        cache = settings["wiredtiger_cache_size_gb"]
+        if memory is not None and cache is not None and cache * 1024 >= memory:
+            raise ValueError("wiredtiger_cache_size_gb must be smaller than memory_limit_mb")
     for port in ports:
         _check_port(port)
     template = json.loads(files("bondi.deployment").joinpath(f"{backend}.compose.json").read_text())
@@ -431,8 +493,15 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
         f"127.0.0.1:{host}:{internal}" for host, internal in zip(ports, internal_ports)
     ]
     service["image"] = image
-    if backend == "couchbase":
+    if settings.get("memory_limit_mb") is not None:
         service["mem_limit"] = f"{settings['memory_limit_mb']}m"
+    if backend == "mongodb" and settings["wiredtiger_cache_size_gb"] is not None:
+        service["command"] = [
+            "mongod",
+            "--bind_ip_all",
+            "--wiredTigerCacheSizeGB",
+            str(settings["wiredtiger_cache_size_gb"]),
+        ]
     config = {"format_version": 1, **settings, "image": service["image"], "project": project}
     path.mkdir(parents=True, exist_ok=False, mode=0o700)
     try:
