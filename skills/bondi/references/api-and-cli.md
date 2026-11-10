@@ -65,7 +65,7 @@ conflicts fail before Docker access. The selected version is stored in
 still match, except MongoDB memory options described below. Use a new name and free ports for another version; this feature does
 not upgrade, downgrade or migrate an existing database.
 
-### MongoDB memory limits (unreleased)
+### MongoDB memory limits (0.1.10+)
 
 Check the installed signature/help for `memory_limit_mb` and
 `wiredtiger_cache_size_gb` before using them. For a new deployment:
@@ -279,7 +279,7 @@ the return list and remain retained in memory. Keep persistence policy in the
 consumer project. See the [callback guide](https://relaxed-constraints.github.io/bondi/executor/#per-query-result-callbacks).
 
 
-## Executor health checks (unreleased)
+## Executor health checks (0.1.10+)
 
 Check installed signatures for `health_check_timeout_seconds` before using it.
 Both backend executors provide `ping(timeout_seconds=5)` (await on async).
