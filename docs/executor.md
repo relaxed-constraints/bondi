@@ -145,3 +145,99 @@ Use the public async executors only when integrating with other asynchronous cod
 Native options and connection ownership details are covered in the
 [MongoDB](reference/mongodb/executors.md) and [Couchbase](reference/couchbase/executors.md)
 references. Continue with [explain and profile](profiling.md) for diagnostic operations.
+
+## Bounded health checks
+
+Use an explicit probe before starting work, or opt into one before each operation:
+
+```python
+from bondi.execution import DatabaseUnavailableError
+from bondi.mongodb import MongoExecutor
+
+with MongoExecutor.from_uri(
+    "mongodb://localhost:27017/",
+    timeout_seconds=600,
+    health_check_timeout_seconds=5,
+    continue_on_error=True,
+) as executor:
+    executor.ping(timeout_seconds=5)  # None on success; raises on failure.
+    results = executor.run_workload(workload, on_result=checkpoint)
+    unavailable = any(
+        result is not None and isinstance(result.error, DatabaseUnavailableError)
+        for result in results
+    )
+```
+
+Here `checkpoint(position, entry, result)` is your callback and `workload` is an
+existing workload. The same options and `ping()` are available on Couchbase.
+Async executors use `await executor.ping(timeout_seconds=5)`.
+Timeouts must be positive finite numbers (not booleans).
+
+`health_check_timeout_seconds=None` is the default: no probe is added and
+existing error-continuation behavior is unchanged. Explicit `ping()` remains
+available independently. Enabling checks adds one probe per run/explain/profile
+operation, including workload entries; workload scheduling adds no second probe.
+
+MongoDB sends a real ping using a short PyMongo timeout context and an async
+deadline. This is independent of the long query deadline and bounds borrowed
+clients too, without modifying or closing them. PyMongo's operation deadline can
+override server-selection timeout settings; a short `serverSelectionTimeoutMS`
+alone is not a substitute for this check.
+
+Couchbase pings only the Query service, using an explicit SDK timeout and an async
+deadline. A nonempty report with all reported Query endpoints healthy is required;
+a missing service or any unhealthy endpoint fails conservatively. Management or
+KV health alone is insufficient. This does not prove every subsequent query can
+succeed or that its collections and permissions are valid.
+
+### Failure policy
+
+With checks enabled, a failed probe or recognized connection/service failure stops
+new workload scheduling, even with `continue_on_error=True`. Captured availability
+failures use `DatabaseUnavailableError` from `bondi.execution`, with the original
+driver exception as `__cause__` where available. Its result status is `"error"`,
+not an ordinary query `"timeout"`. A failed probe means unavailable or unresponsive
+within the deadline, not proof of a crashed database.
+
+Classification is conservative:
+
+- MongoDB connection failures (including server-selection failures) are availability
+  failures; a query's `NetworkTimeout` alone remains a query timeout.
+- Couchbase `ServiceUnavailableException` and `MissingConnectionException` are
+  availability failures. Ordinary ambiguous/unambiguous query timeouts remain
+  query timeouts.
+- Syntax errors and server-side execution limits remain query-local failures.
+- MongoDB authentication/authorization codes 18/13 and Couchbase
+  `AuthenticationException` retain their native errors and stop scheduling when
+  checks are enabled.
+- Invalid API/SDK configuration and programming errors propagate and cancel/drain
+  workers. No retries or automatic restarts are added by BONDI.
+
+Single-query calls retain native mid-query errors; probe failures raise
+`DatabaseUnavailableError`. The workload policy classifies captured errors without
+performing an extra probe or changing normal mid-query execution handling.
+
+In-flight entries drain and deliver callbacks, including captured failures.
+Unstarted entries remain `None` and receive no callback. Draining can take the
+remaining execution deadline; stopping scheduling is not immediate cancellation.
+Caller cancellation and callback failures retain the existing cancellation/cleanup
+rules. A successful probe is only a point-in-time observation; outages or overload
+can occur immediately afterward.
+
+### Probe timing
+
+`ExecutionResult.health_check_elapsed_ms` records probe overhead separately
+(zero when disabled). `elapsed_ms` excludes the probe for both successful and
+captured failed queries; it is zero when preflight prevents query execution.
+Captured failure timing otherwise retains the small delegated-call overhead.
+
+The query receives its full `timeout_seconds` after preflight. Total wall time can
+include probe time, query time, cleanup and callback time. Async deadlines depend
+on cooperative cancellation and cannot interrupt arbitrary blocking Python code.
+Connection setup, including Couchbase's factory readiness check, remains separate
+from the per-operation health deadline. Client shutdown also retains native driver
+behavior: for example, PyMongo may contact the server to end sessions during close
+and use its configured client timeouts. A short ping deadline does not bound close().
+
+Checkpointing, paired-backend pipeline aborts and rerun decisions remain consumer
+responsibilities. Check the returned results before scheduling another workload.

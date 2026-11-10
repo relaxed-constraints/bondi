@@ -34,6 +34,7 @@ class CouchbaseExecutor(_SyncExecutor):
         concurrency: int = 1,
         continue_on_error: bool = False,
         timeout_seconds: float | None = None,
+        health_check_timeout_seconds: float | None = None,
         cluster_kwargs: Mapping[str, Any] | None = None,
     ) -> Self:
         """Create an owned connection on a private event loop.
@@ -50,10 +51,15 @@ class CouchbaseExecutor(_SyncExecutor):
                 concurrency=concurrency,
                 continue_on_error=continue_on_error,
                 timeout_seconds=timeout_seconds,
+                health_check_timeout_seconds=health_check_timeout_seconds,
                 cluster_kwargs=cluster_kwargs,
             )
 
         return cls._create(connect)
+
+    def ping(self, *, timeout_seconds: float = 5) -> None:
+        """Synchronously probe; options and errors match AsyncCouchbaseExecutor.ping."""
+        return self._call("ping", timeout_seconds=timeout_seconds)
 
     def run(
         self,

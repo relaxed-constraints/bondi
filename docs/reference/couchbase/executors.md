@@ -27,7 +27,7 @@ profiles = executor.profile_workload(workload)
 All methods share bounded concurrency, input ordering and failure policy. With
 `continue_on_error=False`, scheduling stops after observing an error while in-flight
 operations finish. Unstarted entries are `None`. With True, remaining entries are
-attempted. Expected SDK failures are stored in `.error`; single-query methods raise.
+attempted unless enabled health checks identify availability/access failures. Expected SDK failures are stored in `.error`; single-query methods raise.
 Partial results are discarded. SDK argument errors, programming errors and caller
 cancellation propagate after workers are cleaned up. Timeout status recognizes
 both ambiguous and unambiguous SDK timeouts and local deadlines.
@@ -65,3 +65,18 @@ Callback exceptions propagate after worker cancellation/cleanup, independent of
 `continue_on_error`; pending callbacks are not guaranteed after any abort. Results
 remain retained in memory. See the [execution guide](../../executor.md#per-query-result-callbacks)
 for examples and full failure/thread behavior.
+
+
+## Health-check contract
+
+Both synchronous and asynchronous executors expose `ping(timeout_seconds=5)`,
+returning None or raising `bondi.execution.DatabaseUnavailableError` on probe
+failure. Authentication/configuration errors propagate as documented in the
+[health-check guide](../../executor.md#bounded-health-checks).
+
+Constructors/factories accept `health_check_timeout_seconds=None`. A positive
+finite value enables one preflight per operation and stops workload scheduling
+on availability/access failures regardless of `continue_on_error`. In-flight
+entries drain with callbacks, and unstarted entries stay None. Defaults are
+unchanged. `ExecutionResult.health_check_elapsed_ms` separates probe overhead
+from execution timing; a prevented query has `elapsed_ms=0`.

@@ -221,3 +221,10 @@ def test_close_error_still_stops_thread(adapter, monkeypatch):
     executor.close()
     assert executor._loop.is_closed()
     assert not executor._worker.is_alive()
+
+
+def test_ping_adapter(adapter):
+    sync, options, created = adapter
+    with sync.from_uri("unused", health_check_timeout_seconds=2, **options) as executor:
+        assert executor.ping(timeout_seconds=0.5) == ("ping", (), {"timeout_seconds": 0.5})
+    assert created[0].closed == 1

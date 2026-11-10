@@ -277,3 +277,34 @@ worker cleanup and are not database errors. Pending callbacks are not guaranteed
 after abort/cancellation. Treat arguments as read-only; results are shared with
 the return list and remain retained in memory. Keep persistence policy in the
 consumer project. See the [callback guide](https://relaxed-constraints.github.io/bondi/executor/#per-query-result-callbacks).
+
+
+## Executor health checks (unreleased)
+
+Check installed signatures for `health_check_timeout_seconds` before using it.
+Both backend executors provide `ping(timeout_seconds=5)` (await on async).
+It returns None on success; availability/probe failures raise
+`bondi.execution.DatabaseUnavailableError`. Native authentication/configuration
+errors remain distinguishable.
+
+For long-query workloads use `timeout_seconds=600,
+health_check_timeout_seconds=5, continue_on_error=True`. Enabling checks adds
+one bounded probe per operation and stops scheduling on availability/access
+failures despite continue_on_error. No separate fail-fast flag exists.
+None disables preflight and preserves old behavior. A standalone ping does not
+enable preflight. MongoDB serverSelectionTimeoutMS alone may be overridden by its
+operation deadline; Couchbase probes must test Query service, not just KV.
+
+In-flight entries drain and deliver callbacks; unstarted entries remain None.
+This can take the remaining query deadline. Do not describe it as immediate
+cancellation. Probe failures have status "error", not a query timeout, and retain
+their original cause where available. Query syntax errors and execution timeouts
+may continue. Authentication failures stop scheduling; configuration/API errors
+propagate. Normal single-query mid-execution errors retain their native types.
+
+Probe overhead is `health_check_elapsed_ms`, excluded from `elapsed_ms` and the
+query deadline. A query prevented by preflight has elapsed_ms=0. Availability is
+a point-in-time observation, not proof of process death or future query success.
+Keep checkpoint/rerun decisions downstream; do not add retries or restart
+containers automatically. See the
+[health-check guide](https://relaxed-constraints.github.io/bondi/executor/#bounded-health-checks).

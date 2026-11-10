@@ -10,8 +10,17 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 from bondi._callbacks import _CallbackAbort, _ResultCallback, _ResultCallbacks
+from bondi._health import (
+    _availability_error,
+    _bounded_probe,
+    _failure_result,
+    _fatal_access_error,
+    _preflight,
+    _probe_timing,
+    _validate_timeout,
+)
 from bondi.couchbase.query import CouchbaseQuery
-from bondi.execution import ExecutionResult
+from bondi.execution import DatabaseUnavailableError, ExecutionResult
 from bondi.workload import Workload
 
 if TYPE_CHECKING:
@@ -81,6 +90,9 @@ class AsyncCouchbaseExecutor:
         cluster: Borrowed acouchbase Cluster; the caller closes it.
         concurrency: Positive maximum in-flight entries per workload call.
         continue_on_error: Continue scheduling after database/timeout failures.
+        health_check_timeout_seconds: Optional positive finite preflight deadline.
+            Enables stopping workload scheduling on availability/access failures even
+            with continue_on_error=True. None preserves existing behavior.
         timeout_seconds: Positive finite per-operation deadline, including row
             consumption. None retains the SDK's configured query timeout.
 
@@ -97,6 +109,7 @@ class AsyncCouchbaseExecutor:
         concurrency: int = 1,
         continue_on_error: bool = False,
         timeout_seconds: float | None = None,
+        health_check_timeout_seconds: float | None = None,
     ) -> None:
         try:
             import acouchbase.cluster  # noqa: F401
@@ -116,6 +129,9 @@ class AsyncCouchbaseExecutor:
             or timeout_seconds <= 0
         ):
             raise ValueError("timeout_seconds must be positive and finite, or None")
+        if health_check_timeout_seconds is not None:
+            _validate_timeout(health_check_timeout_seconds)
+        self.health_check_timeout_seconds = health_check_timeout_seconds
         self.cluster = cluster
         self.concurrency = concurrency
         self.continue_on_error = continue_on_error
@@ -133,6 +149,7 @@ class AsyncCouchbaseExecutor:
         concurrency: int = 1,
         continue_on_error: bool = False,
         timeout_seconds: float | None = None,
+        health_check_timeout_seconds: float | None = None,
         cluster_kwargs: Mapping[str, Any] | None = None,
     ) -> Self:
         """Connect an owned cluster and wait up to 30 seconds for the Query service.
@@ -147,6 +164,7 @@ class AsyncCouchbaseExecutor:
             concurrency=concurrency,
             continue_on_error=continue_on_error,
             timeout_seconds=timeout_seconds,
+            health_check_timeout_seconds=health_check_timeout_seconds,
         )
         from acouchbase.cluster import Cluster
         from couchbase.auth import PasswordAuthenticator
@@ -166,6 +184,44 @@ class AsyncCouchbaseExecutor:
             await executor.close()
             raise
         return executor
+
+    async def ping(self, *, timeout_seconds: float = 5) -> None:
+        """Probe the Query service with an independent deadline.
+
+        Require a nonempty report with every Query endpoint healthy.
+        Raise DatabaseUnavailableError on a failed probe; authentication,
+        configuration errors and caller cancellation propagate.
+        """
+        from couchbase.diagnostics import PingState, ServiceType
+        from couchbase.exceptions import (
+            AlreadyQueriedException,
+            CouchbaseException,
+            InvalidArgumentException,
+            InvalidValueException,
+        )
+        from couchbase.options import PingOptions
+
+        self._check_open()
+
+        async def probe():
+            report = await self.cluster.ping(
+                PingOptions(
+                    timeout=timedelta(seconds=timeout_seconds),
+                    service_types=[ServiceType.Query],
+                )
+            )
+            endpoints = report.endpoints.get(ServiceType.Query, [])
+            if not endpoints or any(endpoint.state != PingState.OK for endpoint in endpoints):
+                raise DatabaseUnavailableError(
+                    "Query service probe returned unhealthy or no endpoints"
+                )
+
+        await _bounded_probe(
+            probe,
+            timeout_seconds,
+            (CouchbaseException, TimeoutError),
+            (InvalidArgumentException, InvalidValueException, AlreadyQueriedException),
+        )
 
     async def close(self) -> None:
         """Close an owned cluster once; leave borrowed clusters open."""
@@ -257,6 +313,7 @@ class AsyncCouchbaseExecutor:
         statement = "EXPLAIN " + query.statement if mode == "explain" else query.statement
         rows = [] if collect_results or mode == "explain" else None
         count = 0
+        probe_ms = await _preflight(self)
         start = perf_counter()
         # SDK cancellation finalizes its async streaming iterator. A local deadline
         # also bounds time spent consuming rows; the SDK timeout bounds server work.
@@ -283,6 +340,7 @@ class AsyncCouchbaseExecutor:
             documents=rows if collect_results else None,
             raw=raw,
             warnings=warnings,
+            health_check_elapsed_ms=probe_ms,
         )
 
     async def run_workload(
@@ -298,6 +356,11 @@ class AsyncCouchbaseExecutor:
         None marks unstarted entries. With continue_on_error=False, stop scheduling
         after observing a failure and drain in-flight operations. True attempts all
         entries. Partial rows are discarded on failure. Validate all inputs first.
+
+        Enabled health checks stop scheduling on availability/access failures even
+        with continue_on_error=True. In-flight entries drain; unstarted entries stay
+        None. Probe time is separate in health_check_elapsed_ms, with elapsed_ms=0
+        if preflight prevents execution.
 
         on_result(position, entry, result) receives each completed outcome, including
         captured errors/timeouts, on this event loop. Regular and awaitable callbacks
@@ -376,14 +439,20 @@ class AsyncCouchbaseExecutor:
             while not stopped and next_index < len(workload):
                 index = next_index
                 next_index += 1
+                _probe_timing.set((0.0, True))
                 start = perf_counter()
                 try:
                     results[index] = await operation(workload[index].query)
                 except (InvalidArgumentException, InvalidValueException, AlreadyQueriedException):
                     raise  # Invalid SDK options are API misuse, not database outcomes.
-                except (CouchbaseException, TimeoutError) as error:
-                    results[index] = ExecutionResult((perf_counter() - start) * 1000, error=error)
-                    if not self.continue_on_error:
+                except (CouchbaseException, TimeoutError, DatabaseUnavailableError) as error:
+                    enabled = self.health_check_timeout_seconds is not None
+                    results[index] = _failure_result(
+                        error, (perf_counter() - start) * 1000, enabled
+                    )
+                    if not self.continue_on_error or (
+                        enabled and (_availability_error(error) or _fatal_access_error(error))
+                    ):
                         stopped = True
                 # Keep callback exceptions outside the database-error conversion above.
                 try:

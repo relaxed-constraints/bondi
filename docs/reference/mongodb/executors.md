@@ -71,3 +71,18 @@ Callback exceptions propagate after worker cancellation/cleanup, independent of
 `continue_on_error`; pending callbacks are not guaranteed after any abort. Results
 remain retained in memory. See the [execution guide](../../executor.md#per-query-result-callbacks)
 for examples and full failure/thread behavior.
+
+
+## Health-check contract
+
+Both synchronous and asynchronous executors expose `ping(timeout_seconds=5)`,
+returning None or raising `bondi.execution.DatabaseUnavailableError` on probe
+failure. Authentication/configuration errors propagate as documented in the
+[health-check guide](../../executor.md#bounded-health-checks).
+
+Constructors/factories accept `health_check_timeout_seconds=None`. A positive
+finite value enables one preflight per operation and stops workload scheduling
+on availability/access failures regardless of `continue_on_error`. In-flight
+entries drain with callbacks, and unstarted entries stay None. Defaults are
+unchanged. `ExecutionResult.health_check_elapsed_ms` separates probe overhead
+from execution timing; a prevented query has `elapsed_ms=0`.

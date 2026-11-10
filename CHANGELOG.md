@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add bounded sync/async executor ping and optional health_check_timeout_seconds
+  for MongoDB and Couchbase Query service. Enabled checks stop workload scheduling
+  on availability/access failures while draining callbacks; defaults are unchanged.
+  Add DatabaseUnavailableError and separate health_check_elapsed_ms result timing.
+
+
 - Add optional MongoDB container memory and WiredTiger cache limits through Python
   and CLI, persisted on deployment handles and shown in status output. Differing
   requests for existing MongoDB deployments warn and retain existing settings;

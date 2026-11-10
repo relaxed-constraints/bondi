@@ -21,7 +21,7 @@ Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
 and dependency constraints before using an API. This skill describes the 0.1.9
 API, including schema snapshots, deployment version selection and workload result
-callbacks. The API/CLI reference also covers unreleased MongoDB memory controls;
+callbacks. The API/CLI reference also covers unreleased MongoDB memory controls and executor health checks;
 check installed signatures before using them. For version selection, check that the installed deployment function
 accepts `version` or its CLI exposes `--version`. Online documentation follows
 published releases; it may be newer

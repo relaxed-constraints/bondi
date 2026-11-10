@@ -12,7 +12,16 @@ from pymongo import AsyncMongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
 
 from bondi._callbacks import _CallbackAbort, _ResultCallback, _ResultCallbacks
-from bondi.execution import ExecutionResult
+from bondi._health import (
+    _availability_error,
+    _bounded_probe,
+    _failure_result,
+    _fatal_access_error,
+    _preflight,
+    _probe_timing,
+    _validate_timeout,
+)
+from bondi.execution import DatabaseUnavailableError, ExecutionResult
 from bondi.mongodb.aggregate import MongoAggregateQuery
 from bondi.mongodb.query import MongoFindQuery
 from bondi.workload import Workload
@@ -61,6 +70,9 @@ class AsyncMongoExecutor:
         client: Borrowed AsyncMongoClient; caller retains ownership and closes it.
         concurrency: Maximum in-flight entries per workload call; positive integer.
         continue_on_error: Whether to schedule remaining entries after an operation error.
+        health_check_timeout_seconds: Optional positive finite preflight deadline.
+            Enables stopping workload scheduling on availability/access failures even
+            with continue_on_error=True. None preserves existing behavior.
         timeout_seconds: Optional positive, finite deadline shared by the operation
             and all cursor batches. None leaves client timeout configuration in effect.
 
@@ -77,6 +89,7 @@ class AsyncMongoExecutor:
         concurrency: int = 1,
         continue_on_error: bool = False,
         timeout_seconds: float | None = None,
+        health_check_timeout_seconds: float | None = None,
     ) -> None:
         if type(concurrency) is not int or concurrency < 1:
             raise ValueError("concurrency must be a positive integer")
@@ -88,6 +101,9 @@ class AsyncMongoExecutor:
             or timeout_seconds <= 0
         ):
             raise ValueError("timeout_seconds must be positive and finite, or None")
+        if health_check_timeout_seconds is not None:
+            _validate_timeout(health_check_timeout_seconds)
+        self.health_check_timeout_seconds = health_check_timeout_seconds
         self.client = client
         self.concurrency = concurrency
         self.continue_on_error = continue_on_error
@@ -103,6 +119,7 @@ class AsyncMongoExecutor:
         concurrency: int = 1,
         continue_on_error: bool = False,
         timeout_seconds: float | None = None,
+        health_check_timeout_seconds: float | None = None,
         client_kwargs: Mapping[str, Any] | None = None,
     ) -> Self:
         """Create an owned async client; pass native client_kwargs to PyMongo.
@@ -116,10 +133,26 @@ class AsyncMongoExecutor:
             concurrency=concurrency,
             continue_on_error=continue_on_error,
             timeout_seconds=timeout_seconds,
+            health_check_timeout_seconds=health_check_timeout_seconds,
         )
         executor.client = AsyncMongoClient(uri, **options)
         executor._owns_client = True
         return executor
+
+    async def ping(self, *, timeout_seconds: float = 5) -> None:
+        """Probe MongoDB independently of the query deadline.
+
+        Return None on success; raise DatabaseUnavailableError on probe failure.
+        Authentication/configuration errors and caller cancellation propagate.
+        Borrowed clients are not modified or closed.
+        """
+        self._check_open()
+
+        async def probe():
+            with pymongo.timeout(timeout_seconds):
+                await self.client.admin.command("ping")
+
+        await _bounded_probe(probe, timeout_seconds, _OPERATION_ERRORS)
 
     async def close(self) -> None:
         """Close an owned client once; leave a borrowed client open.
@@ -182,6 +215,7 @@ class AsyncMongoExecutor:
         count = 0
         cursor = None
         failed = False
+        probe_ms = await _preflight(self)
         start = perf_counter()
         try:
             with self._timeout():
@@ -212,7 +246,10 @@ class AsyncMongoExecutor:
                     if not failed:
                         raise
         return ExecutionResult(
-            (perf_counter() - start) * 1000, row_count=count, documents=documents
+            (perf_counter() - start) * 1000,
+            row_count=count,
+            documents=documents,
+            health_check_elapsed_ms=probe_ms,
         )
 
     async def explain(
@@ -274,10 +311,13 @@ class AsyncMongoExecutor:
             inner = {"aggregate": query.target.collection, "pipeline": query.pipeline, "cursor": {}}
         inner.update(inner_options)
         db = self.client[query.target.database]
+        probe_ms = await _preflight(self)
         start = perf_counter()
         with self._timeout():
             response = await db.command({"explain": inner, "verbosity": verbosity}, **outer_options)
-        return ExecutionResult((perf_counter() - start) * 1000, raw=response)
+        return ExecutionResult(
+            (perf_counter() - start) * 1000, raw=response, health_check_elapsed_ms=probe_ms
+        )
 
     async def run_workload(
         self,
@@ -293,6 +333,11 @@ class AsyncMongoExecutor:
         and timeout failures become results with error set. If continue_on_error is
         False, stop scheduling after observing failure but drain in-flight operations.
         Programming errors and caller cancellation propagate after worker cleanup.
+
+        Enabled health checks stop scheduling on availability/access failures even
+        with continue_on_error=True. In-flight entries drain; unstarted entries stay
+        None. Probe time is separate in health_check_elapsed_ms, with elapsed_ms=0
+        if preflight prevents execution.
 
         on_result(position, entry, result) receives each completed outcome, including
         captured errors/timeouts, on this event loop. Regular and awaitable callbacks
@@ -380,12 +425,18 @@ class AsyncMongoExecutor:
             while not stopped and next_index < len(workload):
                 index = next_index
                 next_index += 1  # No await between checking and claiming an entry.
+                _probe_timing.set((0.0, True))
                 start = perf_counter()
                 try:
                     results[index] = await operation(workload[index].query)
-                except _OPERATION_ERRORS as error:
-                    results[index] = ExecutionResult((perf_counter() - start) * 1000, error=error)
-                    if not self.continue_on_error:
+                except (*_OPERATION_ERRORS, DatabaseUnavailableError) as error:
+                    enabled = self.health_check_timeout_seconds is not None
+                    results[index] = _failure_result(
+                        error, (perf_counter() - start) * 1000, enabled
+                    )
+                    if not self.continue_on_error or (
+                        enabled and (_availability_error(error) or _fatal_access_error(error))
+                    ):
                         stopped = True
                 # Keep callback exceptions outside the database-error conversion above.
                 try:

@@ -31,6 +31,7 @@ class MongoExecutor(_SyncExecutor):
         concurrency: int = 1,
         continue_on_error: bool = False,
         timeout_seconds: float | None = None,
+        health_check_timeout_seconds: float | None = None,
         client_kwargs: Mapping[str, Any] | None = None,
     ) -> Self:
         """Create an owned connection on a private event loop.
@@ -45,10 +46,15 @@ class MongoExecutor(_SyncExecutor):
                 concurrency=concurrency,
                 continue_on_error=continue_on_error,
                 timeout_seconds=timeout_seconds,
+                health_check_timeout_seconds=health_check_timeout_seconds,
                 client_kwargs=client_kwargs,
             )
 
         return cls._create(connect)
+
+    def ping(self, *, timeout_seconds: float = 5) -> None:
+        """Synchronously probe; options and errors match AsyncMongoExecutor.ping."""
+        return self._call("ping", timeout_seconds=timeout_seconds)
 
     def run(
         self,

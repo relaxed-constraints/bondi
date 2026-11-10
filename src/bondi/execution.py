@@ -6,6 +6,14 @@ from typing import Any, Literal
 from pymongo.errors import PyMongoError
 
 
+class DatabaseUnavailableError(RuntimeError):
+    """A probe failed or a workload observed a connection/service availability failure.
+
+    This means unavailable or unresponsive, not proof of a crashed process.
+    The original driver exception is retained as __cause__ when available.
+    """
+
+
 @dataclass
 class ExecutionResult:
     """Record one successful operation or a captured workload failure.
@@ -19,7 +27,10 @@ class ExecutionResult:
         raw: Backend-native diagnostic response or execution metadata when available.
             Parsing is explicit; this result does not contain a QuerySummary.
         warnings: Nonfatal operation warnings; empty when none were reported.
-        error: Original exception for a failed workload entry; otherwise None.
+        health_check_elapsed_ms: Preflight duration, excluded from elapsed_ms; zero if disabled.
+        error: Exception for a failed workload entry; otherwise None. Enabled health
+            checks wrap availability failures in DatabaseUnavailableError with the
+            original exception as its cause.
 
     Partial documents and counts are discarded on failure. Exception objects are
     retained for inspection; this class does not provide persistence.
@@ -31,6 +42,7 @@ class ExecutionResult:
     raw: dict[str, Any] | None = None
     warnings: tuple[str, ...] = ()
     error: Exception | None = None
+    health_check_elapsed_ms: float = 0.0
 
     @property
     def status(self) -> Literal["success", "timeout", "error"]:

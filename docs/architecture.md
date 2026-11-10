@@ -36,6 +36,11 @@ execution diagnostics. It normalizes find queries through `to_aggregate()`, uses
 versioned definitions, and rejects unsupported selected syntax rather than
 returning partial counts.
 
+Optional executor health checks use independent short deadlines and separate
+probe timing. Enabled checks stop workload scheduling on availability/access
+failures while draining in-flight entries and preserving result callbacks.
+Database health is observed through native probes, without Docker dependencies.
+
 ## Schema, estimation and generation
 
 `Schema` consumes Python dictionaries incrementally without database access. Retaining

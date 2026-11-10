@@ -4,6 +4,8 @@ This page tracks capabilities and open work, not a commitment to release dates.
 
 ## Available
 
+- Bounded executor health probes and opt-in preflight checks with availability fail-fast scheduling.
+
 - Offline MongoDB query statistics with versioned counts, structural depth/fan-out,
   and optional nested-pipeline scope.
 - Explicit conversion of supported MongoDB find queries to aggregation pipelines.
