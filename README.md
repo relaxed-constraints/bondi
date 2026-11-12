@@ -178,3 +178,10 @@ print(len(workload))  # 500
 BONDI is maintained by **Relaxed Constraints** and distributed under the [MIT license](LICENSE).
 For development, see [Contributing](https://relaxed-constraints.github.io/bondi/contributing/).
 Report problems or suggest improvements through [GitHub issues](https://github.com/relaxed-constraints/bondi/issues).
+
+## Dataset loading (unreleased)
+
+Use `bondi.data.load_data()` or `bondi datasets load` to insert files, Hub datasets
+or Python documents into MongoDB and Couchbase. See the
+[dataset guide](docs/datasets.md) and [demo notebook](notebooks/dataset_loading.ipynb).
+Optional format and Hub readers are available through the `data` extra.

@@ -86,6 +86,9 @@ def _parser() -> argparse.ArgumentParser:
     load.add_argument("--collection", default="business")
     load.add_argument("--create-primary-index", action="store_true", help="Couchbase only")
     commands.add_parser("list", help="List saved deployments with current status")
+    from bondi.data._cli import add_parser
+
+    add_parser(commands)
     return parser
 
 
@@ -97,6 +100,10 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _parser().parse_args(argv)
     try:
+        if args.command == "datasets":
+            from bondi.data._cli import run
+
+            return run(args)
         if args.command == "deploy":
             if args.backend == "mongodb":
                 db = deploy_mongodb(
@@ -211,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError as exc:
         print(f"bondi: saved deployment files not found: {exc.filename or exc}", file=sys.stderr)
         return 1
-    except (ValueError, RuntimeError, OSError) as exc:
+    except (ValueError, RuntimeError, OSError, ImportError) as exc:
         print(f"bondi: {exc}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:

@@ -123,3 +123,11 @@ Run parameterised SQL++ queries and workloads against a Couchbase Community
 deployment, then compare execution, explain plans and profiling metadata. Learn
 how to interpret row counts, index consistency and common summaries, including
 which detailed diagnostics are unavailable in Community edition.
+
+## Load datasets into MongoDB
+
+[Open `dataset_loading.ipynb`](https://github.com/relaxed-constraints/bondi/blob/main/notebooks/dataset_loading.ipynb)
+
+Load JSONL files and split datasets into a disposable MongoDB database.
+Inspect dates, IDs, replacement and progress reports. The final cell removes the demo deployment.
+See [Loading datasets](datasets.md) for the API and CLI workflow.

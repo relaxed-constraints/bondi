@@ -31,3 +31,5 @@ BONDI [0.2.0](https://pypi.org/project/bondi/0.2.0/) is available under the MIT 
 
 Explore the **User guide** by task, follow a **Tutorial** for a complete workflow,
 or use the [API reference](api.md) to look up a particular class or method.
+
+Read [Loading datasets](datasets.md) to load local files, Hub datasets or generated documents into either backend.

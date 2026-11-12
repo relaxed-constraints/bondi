@@ -67,3 +67,10 @@ Loading rebuilds parent links and lookup indexes; global field encounter order i
 not a persistence guarantee.
 The API is still evolving; changes are explicit and tested rather than hidden behind
 speculative compatibility layers.
+
+## Dataset loading
+
+`bondi.data` reads existing documents and writes them to native databases.
+Source readers, conversion rules and writers remain separate. Consumers own data generation and benchmark-specific verification.
+Manifests describe sources and destinations without wrapping document rows in a new dataset class.
+Loading is synchronous and non-atomic. Partial results report acknowledged writes.

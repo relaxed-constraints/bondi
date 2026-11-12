@@ -30,6 +30,7 @@ nav = [
         { "Schema inspection" = "schemas.md" },
         { "Cardinality estimation" = "mongodb-estimation.md" },
         { "Workload generation" = "workload-generation.md" },
+        { "Loading datasets" = "datasets.md" },
     ] },
     { "Tutorials" = "tutorials.md" },
     { "API reference" = [
@@ -38,6 +39,7 @@ nav = [
         { "Queries and workloads" = "reference/queries.md" },
         { "Results and summaries" = "reference/results.md" },
         { "Load generation" = "reference/load.md" },
+        { "Dataset loading" = "reference/data.md" },
         { "Schema inspection" = "reference/schema.md" },
         { "Estimation interfaces" = "reference/estimation.md" },
         { "MongoDB" = [

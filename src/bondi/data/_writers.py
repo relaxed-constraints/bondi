@@ -1,0 +1,225 @@
+"""Native database writers. Only explicitly selected collections are cleared."""
+
+import hashlib
+import json
+import re
+from datetime import timedelta
+
+from pymongo import MongoClient
+
+from ._types import CouchbaseConnection, MongoConnection
+
+METADATA = "bondi_load_metadata"
+
+
+def name(value):
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_-]{0,62}", value):
+        raise ValueError("Destination names require 1-63 letters, digits, underscores or hyphens")
+    if value == METADATA:
+        raise ValueError("The metadata collection name is reserved")
+    return value
+
+
+def connection(target):
+    if isinstance(target, (MongoConnection, CouchbaseConnection)):
+        return target
+    from bondi.deployment import Deployment
+
+    if not isinstance(target, Deployment):
+        raise TypeError("target must be a Deployment, MongoConnection or CouchbaseConnection")
+    if target.backend == "mongodb":
+        return MongoConnection(target.uri)
+    return CouchbaseConnection(target.uri, target.username, target.password)
+
+
+def marker_key(destination):
+    return hashlib.sha256(json.dumps(destination).encode()).hexdigest()
+
+
+class MongoWriter:
+    backend = "mongodb"
+
+    def __init__(self, target):
+        self.client = MongoClient(target.uri, timeoutMS=30000)
+
+    def preflight(self, dest, quota):
+        database, _, collection = dest
+        db = self.client[database]
+        existing = db[collection].find_one({}, {"_id": 1}) is not None
+        marker = db[METADATA].find_one({"_id": marker_key(dest)})
+        return existing, marker
+
+    def prepare(self, dest, mode, namespace, *, claim=True):
+        database, _, collection = dest
+        db = self.client[database]
+        if collection not in db.list_collection_names():
+            db.create_collection(collection)
+        if claim:
+            db[METADATA].replace_one(
+                {"_id": marker_key(dest)},
+                {"_id": marker_key(dest), "namespace": namespace, "loader": 1},
+                upsert=True,
+            )
+        if mode == "replace":
+            db[collection].delete_many({})
+
+    def write_one(self, dest, key, document, mode):
+        collection = self.client[dest[0]][dest[2]]
+        if mode == "upsert":
+            result = collection.replace_one({"_id": document["_id"]}, document, upsert=True)
+        else:
+            result = collection.insert_one(document)
+        if not result.acknowledged:
+            raise RuntimeError("MongoDB did not acknowledge the write")
+
+    def indexes(self, dest, definitions):
+        for definition in definitions:
+            self.client[dest[0]][dest[2]].create_index(
+                [tuple(pair) for pair in definition["keys"]],
+                name=definition["name"],
+                **definition.get("options", {}),
+            )
+
+    def close(self):
+        self.client.close()
+
+
+class CouchbaseWriter:
+    backend = "couchbase"
+
+    def __init__(self, target):
+        from couchbase.auth import PasswordAuthenticator
+        from couchbase.cluster import Cluster
+        from couchbase.options import ClusterOptions
+
+        self.cluster = Cluster(
+            target.uri, ClusterOptions(PasswordAuthenticator(target.username, target.password))
+        )
+        self.cluster.wait_until_ready(timedelta(seconds=30))
+        self.buckets = {}
+
+    def _bucket(self, bucket):
+        if bucket not in self.buckets:
+            self.buckets[bucket] = self.cluster.bucket(bucket)
+            self.cluster.wait_until_ready(timedelta(seconds=30))
+        return self.buckets[bucket]
+
+    def _collection(self, dest):
+        return self._bucket(dest[0]).scope(dest[1]).collection(dest[2])
+
+    def _scan(self, dest):
+        from couchbase.kv_range_scan import RangeScan
+        from couchbase.options import ScanOptions
+
+        return self._collection(dest).scan(
+            RangeScan(), ScanOptions(ids_only=True, timeout=timedelta(seconds=30))
+        )
+
+    def preflight(self, dest, quota):
+        from couchbase.exceptions import (
+            BucketDoesNotExistException,
+            BucketNotFoundException,
+            DocumentNotFoundException,
+        )
+
+        try:
+            self.cluster.buckets().get_bucket(dest[0])
+        except (BucketNotFoundException, BucketDoesNotExistException):
+            if type(quota) is not int or quota < 100:
+                raise ValueError(
+                    "A missing Couchbase bucket requires bucket_memory_mb >= 100"
+                ) from None
+            return False, None
+        scopes = self._bucket(dest[0]).collections().get_all_scopes()
+        scope = next((s for s in scopes if s.name == dest[1]), None)
+        exists = scope is not None and any(c.name == dest[2] for c in scope.collections)
+        marker_exists = scope is not None and any(c.name == METADATA for c in scope.collections)
+        marker = None
+        if marker_exists:
+            try:
+                marker = (
+                    self._bucket(dest[0])
+                    .scope(dest[1])
+                    .collection(METADATA)
+                    .get(marker_key(dest))
+                    .content_as[dict]
+                )
+            except DocumentNotFoundException:
+                pass
+        if not exists:
+            return False, marker
+        scan = self._scan(dest)
+        try:
+            occupied = next(iter(scan), None) is not None
+        finally:
+            scan.cancel_scan()
+        return occupied, marker
+
+    def prepare(self, dest, mode, namespace, quota=None, *, claim=True):
+        from couchbase.exceptions import BucketDoesNotExistException, BucketNotFoundException
+        from couchbase.management.buckets import CreateBucketSettings
+
+        try:
+            self.cluster.buckets().get_bucket(dest[0])
+        except (BucketNotFoundException, BucketDoesNotExistException):
+            self.cluster.buckets().create_bucket(
+                CreateBucketSettings(name=dest[0], ram_quota_mb=quota, num_replicas=0)
+            )
+        bucket = self._bucket(dest[0])
+        manager = bucket.collections()
+        scopes = manager.get_all_scopes()
+        current = next((s for s in scopes if s.name == dest[1]), None)
+        if current is None:
+            manager.create_scope(dest[1])
+        names = {c.name for c in current.collections} if current else set()
+        for collection in (dest[2], METADATA) if claim else (dest[2],):
+            if collection not in names:
+                manager.create_collection(dest[1], collection)
+        # SDK retries collection-map refresh during ordinary KV operations.
+        if claim:
+            bucket.scope(dest[1]).collection(METADATA).upsert(
+                marker_key(dest), {"namespace": namespace, "loader": 1}
+            )
+        if mode == "replace":
+            scan = self._scan(dest)
+            try:
+                for item in scan:
+                    self._collection(dest).remove(item.id)
+            finally:
+                scan.cancel_scan()
+
+    def write_one(self, dest, key, document, mode):
+        collection = self._collection(dest)
+        if mode == "upsert":
+            collection.upsert(key, document)
+        else:
+            collection.insert(key, document)
+
+    def indexes(self, dest, definitions):
+        from couchbase.management.options import CreateQueryIndexOptions, GetAllQueryIndexOptions
+
+        for definition in definitions:
+            manager = self.cluster.query_indexes()
+            existing = manager.get_all_indexes(
+                dest[0], GetAllQueryIndexOptions(scope_name=dest[1], collection_name=dest[2])
+            )
+            match = next((index for index in existing if index.name == definition["name"]), None)
+            keys = [f"`{key}`" for key in definition["keys"]]
+            if match is not None:
+                if (
+                    match.index_key != keys
+                    or match.condition
+                    or match.is_primary
+                    or match.partition
+                ):
+                    raise ValueError("Existing Couchbase index differs from the selected profile")
+                continue
+            manager.create_index(
+                dest[0],
+                definition["name"],
+                [f"`{key}`" for key in definition["keys"]],
+                CreateQueryIndexOptions(scope_name=dest[1], collection_name=dest[2]),
+            )
+
+    def close(self):
+        self.cluster.close()

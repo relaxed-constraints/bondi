@@ -67,3 +67,11 @@ while `return_load_results=False` streams observations without retaining their l
 Drain expiry records unresolved results and requests cooperative cancellation;
 no hard process deadline or server-side cancellation guarantee is provided.
 See `docs/load-generation.md` in the source checkout.
+
+## Dataset loading (unreleased)
+
+Check the installed version before using `bondi.data.load_data` or `bondi datasets`.
+Sources can be files, Hub datasets or document iterables. Use a namespace when anonymous sources lack IDs.
+Create mode refuses nonempty collections. Replacement requires ownership or an explicit override.
+Do not change a user's write mode to bypass a refusal. Report partial writes if a load fails.
+See `docs/datasets.md` and `notebooks/dataset_loading.ipynb` in the source checkout.

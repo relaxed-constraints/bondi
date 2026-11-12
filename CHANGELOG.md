@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add dataset loading for MongoDB and Couchbase with local files, Hub sources,
+  Python iterables, split handling, stable IDs, write modes and ownership checks.
+  Add explicit Extended JSON conversion, bucket creation, optional index profiles,
+  progress reports, `bondi datasets` commands and a demo notebook.
+
 ## 0.2.0 — 2026-11-13
 
 - Add `ByPattern` load selection with weighted, uniform or sequential pattern
