@@ -371,15 +371,15 @@ class AsyncCouchbaseExecutor:
         on_result: LoadCallback | None = None,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[LoadResult]:
-        """Generate repeated closed-loop query load with shared phase boundaries.
+        """Run queries repeatedly through warm-up, measurement and drain phases.
 
         Args:
             workload: Nonempty native workload for this executor's backend.
             selection: [WeightedRandom][bondi.load.WeightedRandom],
                 [UniformRandom][bondi.load.UniformRandom] or
                 [Sequential][bondi.load.Sequential] policy. Each call creates fresh
-                per-client streams, continuous across phases.
-            measurement_seconds: Positive finite admission-window duration.
+                selection streams for each client. Streams continue across phases.
+            measurement_seconds: Measurement duration in seconds. Must be positive and finite.
             drain_timeout_seconds: Positive finite allowance after admissions stop.
                 Expiry requests cancellation of operations and emits unresolved
                 LoadResults, not an exception. Cleanup can exceed this allowance.
@@ -388,10 +388,10 @@ class AsyncCouchbaseExecutor:
             return_load_results: Retain observations for the returned list.
                 False returns [] without suppressing callbacks.
             on_result: [LoadCallback][bondi.load.LoadCallback] receiving one
-                LoadResult per completed
-                or drain-expired invocation, including warm-up. Async callbacks
-                are awaited. Callback time is excluded from observation duration;
-                workers wait for delivery before submitting another query.
+                LoadResult per completed or drain-expired attempt, including warm-up.
+                The executor awaits async callbacks. Observation duration excludes
+                callback time. Each worker waits for its callback before starting
+                another query.
             query_kwargs: Native options applied to every query, as for run().
 
         Inherits concurrency, timeout_seconds, continue_on_error and enabled

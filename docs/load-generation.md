@@ -45,26 +45,26 @@ with MongoExecutor.from_uri(
 ```
 
 Use `await executor.generate_load(...)` with an async executor. Async callbacks
-may return awaitables; synchronous callbacks execute on the calling thread and
+may return awaitables. Synchronous callbacks execute on the calling thread and
 must not return awaitables or reenter the same executor.
 
 ## Selection and reproducibility
 
-Policies live in `bondi.load`; weights are not attached to workload entries.
+Policies live in `bondi.load`. Weights are not attached to workload entries.
 
 - `WeightedRandom(weights=[1, 3], seed=42)` samples with replacement using relative
-  weights. Zero excludes an entry; weights must be finite and nonnegative, at
+  weights. Zero excludes an entry. Weights must be finite and nonnegative, at
   least one positive, with one weight per entry.
 - `UniformRandom(seed=42)` uses the same algorithm with equal weights.
 - `Sequential()` starts each client at entry zero, advances in order and loops.
-  Clients may initially contend on the same query; starting positions are not staggered.
+  Clients may initially contend on the same query. Starting positions are not staggered.
 
 Each call creates fresh streams for client IDs `0` through `concurrency - 1`,
 independent of the number of entries. Random streams use a SHA-256-derived integer
 seed from the ASCII string `bondi-load-v1:<seed>:<client_id>` and a private Python
 `random.Random`. No global random state or Python object hash is used. Random
 policies require an integer seed (not a boolean). Match Python/BONDI versions for
-replay; this is not a cross-version stream-format guarantee.
+replay. This is not a cross-version stream-format guarantee.
 
 Equal seeds, weights and entry order reproduce each client's selection prefix.
 Adding clients does not change the existing streams. Timings determine how far
@@ -72,49 +72,55 @@ clients progress and the order in which results arrive, so neither total counts
 nor concurrent interleavings are reproducible. To compare two backends, order
 corresponding queries identically. Streams continue through warm-up into
 measurement: different warm-up progress can change the measurement query mix.
-Each admitted attempt consumes one selection even if it fails; there is no
+Each admitted attempt consumes one selection even if it fails. There is no
 scheduler retry. Choose different seeds for different repetitions.
 
 ## Phases and observations
 
-Preparation validates arguments and the entire workload before starting a shared
-monotonic clock. Warm-up admits queries in `[0, warmup_seconds)`; measurement
-admits queries in `[warmup_seconds, warmup_seconds + measurement_seconds)`.
-There is no phase barrier: a warm-up query can finish during measurement, and a
-measurement query can finish during drain. No new invocations are admitted once
-admissions stop. Existing invocations include any time spent in health preflight.
+Before the run, BONDI checks the arguments and every query in the workload.
+It then starts one monotonic clock for all clients. This clock does not depend on changes to the system time.
 
-Every terminal observation is a `LoadResult` with the invocation and client IDs,
-per-client sequence, workload position, admission phase, offsets from the common
-origin, an optional `ExecutionResult`, and `stop_reason`. IDs and sequence numbers
-start at zero. `query_started` means execution passed preflight, not proof the
-server received the request.
+An admission is the point when a client selects a query and starts an attempt.
+The phases use these time intervals:
+
+- Warm-up admits attempts in `[0, warmup_seconds)`.
+- Measurement admits attempts in `[warmup_seconds, warmup_seconds + measurement_seconds)`.
+- Drain admits no new attempts. It gives existing attempts time to finish.
+
+Clients do not wait for other clients at a phase boundary.
+A warm-up query can finish during measurement. A measurement query can finish during drain.
+An attempt starts before its health check, if health checks are enabled.
+
+Each finished or drain-expired attempt produces a `LoadResult`.
+It records the attempt ID, client ID, client sequence, workload position and phase at admission.
+It also records times relative to the shared clock, an optional `ExecutionResult`, and a `stop_reason`.
+IDs and sequence numbers start at zero.
+`query_started` means the attempt passed its health check. It does not prove that the server received the query.
 
 `duration` is a derived property: `ended_seconds - admitted_seconds`, in seconds.
-It includes scheduling after admission and health preflight, but excludes callback
-delivery. `result.elapsed_ms` describes the underlying query, in milliseconds,
-excluding health preflight. At drain expiry, `ended_seconds` records the expiry
-observation, not when the database actually stopped working.
+It includes scheduling time after admission and the health check. It excludes callback time.
+`result.elapsed_ms` measures the database query in milliseconds and excludes the health check.
+At drain expiry, `ended_seconds` records when BONDI observed expiry. It does not record when the database stopped the query.
 
-Publication metrics, repetitions, persistence and profiling remain separate from
-load generation. In particular, an observation with `result=None` is not a
-successful completion or a normal query timeout.
+Your experiment code calculates publication metrics, repeats runs, saves results and profiles queries.
+An observation with `result=None` is neither a successful query nor a normal query timeout.
 
 ## Retention and callbacks
 
-`collect_results=False` still fully consumes database rows but does not keep the
-documents in `ExecutionResult`. `return_load_results=True` retains observations
-and returns a list in callback-delivery order; set it to False for long runs to
-avoid an ever-growing list. The latter returns `[]`.
+`collect_results=False` reads every database row but does not store the documents in `ExecutionResult`.
+`return_load_results=True` stores the observations and returns them in callback order.
+Set it to False for long runs to avoid storing an ever-growing list. The method then returns `[]`.
 
-`on_result` receives warm-up, measurement, error, timeout and drain-expiry
-observations regardless of either flag. Callbacks are serialized. Each client
-waits for its callback before another admission, so slow logging can limit load.
-There is no unbounded background logging queue. A completed result waiting for
-callback delivery is not converted into a drain timeout. Delivery and cleanup
-can extend past the drain deadline. Callback errors propagate after worker
-cancellation and cleanup; remaining deliveries are not guaranteed on exceptional
-termination or caller cancellation. Treat callback arguments as read-only.
+`on_result` receives observations from all phases, including errors, timeouts and drain expiry.
+Both retention settings leave callbacks enabled.
+BONDI calls one callback at a time. Each client waits for its callback before it starts another attempt.
+Slow callbacks can therefore reduce the query rate. BONDI does not use an unbounded queue for background logging.
+
+A completed query can wait for its callback. Drain expiry does not change that query's outcome to a drain timeout.
+Callbacks and cleanup can continue past the drain deadline.
+If a callback raises an exception, BONDI cancels the workers and waits for cleanup before it raises the exception.
+After an exception or caller cancellation, BONDI does not guarantee delivery of the remaining callbacks.
+Treat callback arguments as read-only.
 
 ## Failures, health checks and drain expiry
 
@@ -123,31 +129,30 @@ and failure classification, and [backend timing and native options](executor.md#
 for driver deadlines and `query_kwargs`. These executor settings also apply to
 each query admitted by `generate_load()`.
 
-`continue_on_error` is inherited from the executor and defaults to False. An
-ordinary captured database error or query timeout stops admissions when False;
-True allows continued execution. Enabled health checks stop admissions on observed
-availability/access failures regardless of that setting. The triggering result
-has `stop_reason="query_error"` or `"database_unavailable"`; in-flight queries
-still drain and can deliver later results without a stop reason. Database health
-preflight time is separate from the query deadline. There is no background health
-monitor or automatic database restart.
+`generate_load()` uses the executor's `continue_on_error` setting, which defaults to False.
+With False, a captured database error or query timeout stops new attempts. With True, clients can start more attempts.
+When health checks are enabled, an observed availability or access failure stops new attempts regardless of this setting.
+The result that triggers the stop has `stop_reason="query_error"` or `"database_unavailable"`.
+Queries already in progress can finish during drain. Their results do not need a stop reason.
+The health check has its own deadline, separate from the query deadline.
+BONDI does not monitor health in the background or restart the database.
 
-Draining starts when admissions stop, including early stops. At expiry, remaining
-operations receive cancellation requests and produce exactly one unresolved
-`LoadResult` each, with `result=None` and `stop_reason="drain_timeout"`.
-After worker cleanup and completed-result callbacks, these observations are
-delivered in attempt-ID order. They do not raise a drain-expiry exception.
-A driver that suppresses cancellation and later returns cannot produce a second
-terminal result for the same invocation.
+Drain starts when admissions stop, including early stops.
+When drain expires, BONDI requests cancellation of the remaining operations.
+Each unfinished attempt produces exactly one `LoadResult` with `result=None` and `stop_reason="drain_timeout"`.
+BONDI first waits for worker cleanup and callbacks for completed queries.
+It then delivers the drain-expired results in attempt-ID order. Drain expiry does not raise an exception.
+If a driver ignores cancellation and returns later, BONDI does not produce a second result for that attempt.
 
-Cancellation is cooperative: cleanup, a blocking native driver or a blocking
-callback can delay return. There is no hard wall-clock or server-side termination
-guarantee. Use an external process supervisor if an unattended experiment requires
-one. Programming errors and callback errors propagate rather than becoming query
-outcomes. Caller cancellation also propagates after cleanup.
+Cancellation requires the driver and callbacks to cooperate.
+Cleanup, a blocking driver or a blocking callback can delay the method's return.
+The drain deadline does not guarantee when the method returns or when the server stops a query.
+Use an external process supervisor if your unattended experiment needs a hard deadline.
+Programming errors and callback errors raise exceptions instead of producing query outcomes.
+Caller cancellation also propagates after cleanup.
 
-Measurement and drain durations are required, positive and finite; warm-up
-defaults to zero and must be nonnegative and finite. A finite query timeout is
-recommended but not mandatory. Normally choose a drain allowance greater than
-the health-preflight allowance plus query timeout and cleanup margin. A shorter
-drain allowance is permitted when unresolved observations are intentional.
+You must supply positive, finite measurement and drain durations.
+Warm-up defaults to zero. Its duration must be finite and cannot be negative.
+A finite query timeout is recommended but not required.
+Normally, allow enough drain time for the health check, query timeout and cleanup.
+You can use a shorter drain period if you intend to record unfinished attempts.

@@ -118,14 +118,14 @@ class CouchbaseExecutor(_SyncExecutor):
         on_result: SyncLoadCallback | None = None,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[LoadResult]:
-        """Generate timed closed-loop load with callbacks on the calling thread.
+        """Run queries repeatedly, with callbacks on the calling thread.
 
         Args:
             workload: Nonempty workload for this executor's backend.
             selection: Per-client [WeightedRandom][bondi.load.WeightedRandom],
                 [UniformRandom][bondi.load.UniformRandom] or
                 [Sequential][bondi.load.Sequential] policy.
-            measurement_seconds: Positive finite measurement admission duration.
+            measurement_seconds: Measurement duration in seconds. Must be positive and finite.
             drain_timeout_seconds: Positive finite drain allowance; expiry produces
                 unresolved observations and requests cooperative cancellation.
             warmup_seconds: Nonnegative finite warm-up duration, default zero.
@@ -137,8 +137,9 @@ class CouchbaseExecutor(_SyncExecutor):
             query_kwargs: Native options as accepted by run().
 
         Inherits executor concurrency, query timeout, error policy and health checks.
-        Callbacks are serialized, provide backpressure and run even when retention
-        is disabled. Their time is excluded from LoadResult.duration. Cleanup and
+        Callbacks run one at a time, even when result retention is disabled.
+        Each client waits for its callback before starting another query.
+        LoadResult.duration excludes callback time. Cleanup and
         callbacks may extend beyond drain expiry; no hard process deadline or
         server-side termination guarantee is provided. Programming/callback errors
         and caller interruption propagate after cleanup.

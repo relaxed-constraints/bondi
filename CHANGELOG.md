@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Simplify the execution and load-generation guides and load API descriptions
+  with shorter sentences, plain wording and definitions of phase terms.
+
 - Keep executor API pages focused on generated references; consolidate timing,
   native options, callbacks and health-check explanations in the user guides.
 
