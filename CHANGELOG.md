@@ -4,7 +4,8 @@
 
 - Add `ByPattern` load selection with weighted, uniform or sequential pattern
   selection and independent uniform or sequential instance streams.
-  Include validation, documentation and a MongoDB notebook example.
+  Include validation, documentation and a MongoDB notebook example that compares
+  expected and observed pattern shares with 3:1 weights.
 
 - Add linked uv and pip tabs for installation, notebooks, and contributor workflows.
 
