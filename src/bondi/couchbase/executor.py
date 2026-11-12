@@ -375,8 +375,10 @@ class AsyncCouchbaseExecutor:
 
         Args:
             workload: Nonempty native workload for this executor's backend.
-            selection: WeightedRandom, UniformRandom or Sequential policy. Each
-                call creates fresh per-client streams, continuous across phases.
+            selection: [WeightedRandom][bondi.load.WeightedRandom],
+                [UniformRandom][bondi.load.UniformRandom] or
+                [Sequential][bondi.load.Sequential] policy. Each call creates fresh
+                per-client streams, continuous across phases.
             measurement_seconds: Positive finite admission-window duration.
             drain_timeout_seconds: Positive finite allowance after admissions stop.
                 Expiry requests cancellation of operations and emits unresolved

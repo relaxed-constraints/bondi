@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Link selection policies directly from each executor’s `generate_load()` API
+  parameter documentation.
+
 - Add sync/async executor `generate_load()` with per-client weighted random,
   uniform random and sequential selection, shared warm-up/measurement boundaries,
   cooperative draining, streamed callbacks and optional observation retention.
