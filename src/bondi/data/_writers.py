@@ -40,7 +40,12 @@ class MongoWriter:
     backend = "mongodb"
 
     def __init__(self, target):
-        self.client = MongoClient(target.uri, timeoutMS=30000)
+        credentials = {
+            key: value
+            for key, value in (("username", target.username), ("password", target.password))
+            if value is not None
+        }
+        self.client = MongoClient(target.uri, timeoutMS=30000, **credentials)
 
     def preflight(self, dest, quota):
         database, _, collection = dest

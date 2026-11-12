@@ -83,3 +83,25 @@ def test_couchbase_new_bucket_and_native_indexes(live_deployments):
         assert any(i.name == "field_idx" for i in cluster.query_indexes().get_all_indexes(bucket))
     finally:
         cluster.close()
+
+
+def test_mongo_explicit_credentials_live(live_deployments):
+    from pymongo import MongoClient
+
+    from bondi.data import MongoConnection
+
+    deployment = live_deployments("mongodb")
+    database = "auth_" + uuid4().hex[:10]
+    password = "test@password:/%"
+    with MongoClient(deployment.uri) as admin:
+        admin[database].command(
+            "createUser", "loader", pwd=password, roles=[{"role": "readWrite", "db": database}]
+        )
+    # Explicit fields override URI credentials. The password is not URI-encoded.
+    uri = deployment.uri.replace("mongodb://", "mongodb://ignored:ignored@")
+    uri = uri.rstrip("/") + ("&" if "?" in uri else "/?") + f"authSource={database}"
+    target = MongoConnection(uri, username="loader", password=password)
+    result = load_data([{"_id": "a"}], target=target, database=database, collection="items")
+    assert result.destinations == {f"{database}/items": 1}
+    with MongoClient(deployment.uri) as admin:
+        assert admin[database].items.count_documents({}) == 1

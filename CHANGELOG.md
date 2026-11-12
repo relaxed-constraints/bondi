@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add optional username and password fields to dataset MongoConnection.
+  MongoDB CLI connection files can read passwords through password_env.
+
 - Add dataset loading for MongoDB and Couchbase with local files, Hub sources,
   Python iterables, split handling, stable IDs, write modes and ownership checks.
   Add explicit Extended JSON conversion, bucket creation, optional index profiles,

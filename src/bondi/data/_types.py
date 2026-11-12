@@ -9,10 +9,22 @@ class MongoConnection:
     """Connect to MongoDB without a managed deployment.
 
     Args:
-        uri: MongoDB connection string. Never included in load reports.
+        uri: MongoDB connection string. Can include authSource and URI credentials.
+        username: Optional username passed directly to PyMongo, without URI encoding.
+        password: Optional password passed directly to PyMongo, without URI encoding.
+
+    Supplied fields override the corresponding URI credentials. Omitted fields
+    retain URI settings. Credentials are excluded from repr and load reports.
     """
 
     uri: str = field(repr=False)
+    username: str | None = field(default=None, repr=False)
+    password: str | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        for value in (self.username, self.password):
+            if value is not None and not isinstance(value, str):
+                raise ValueError("MongoDB username and password must be strings or None")
 
 
 @dataclass(frozen=True)

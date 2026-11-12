@@ -269,3 +269,81 @@ def test_numeric_ids_do_not_depend_on_bson_width(writer):
     assert document_key(123) == document_key(Int64(123))
     with pytest.raises(LoadDataError, match="Duplicate"):
         load([{"_id": 123}, {"_id": Int64(123)}], mode="upsert")
+
+
+@pytest.mark.parametrize(
+    "credentials",
+    [{}, {"username": "u"}, {"password": ""}, {"username": "user@host", "password": "p@ss:/%"}],
+)
+def test_mongo_credentials_forwarded_without_encoding(monkeypatch, credentials):
+    from unittest.mock import MagicMock
+
+    from bondi.data._writers import MongoWriter
+
+    client = MagicMock()
+    monkeypatch.setattr("bondi.data._writers.MongoClient", client)
+    target = MongoConnection(
+        "mongodb://uri-user:uri-pass@localhost/?authSource=admin", **credentials
+    )
+    writer = MongoWriter(target)
+    client.assert_called_once_with(target.uri, timeoutMS=30000, **credentials)
+    assert repr(target) == "MongoConnection()"
+    writer.close()
+    client.return_value.close.assert_called_once()
+
+
+@pytest.mark.parametrize("field", ["username", "password"])
+def test_invalid_mongo_credential_type(field):
+    with pytest.raises(ValueError, match="strings or None"):
+        MongoConnection("mongodb://localhost", **{field: 123})
+
+
+@pytest.mark.parametrize("with_password", [False, True])
+def test_cli_mongo_password_env(tmp_path, monkeypatch, capsys, with_password):
+    import json
+    from unittest.mock import MagicMock
+
+    from bondi._cli import main
+    from bondi.data import LoadDataResult
+
+    config = {
+        "backend": "mongodb",
+        "uri": "mongodb://localhost/?authSource=admin",
+        "username": "user",
+    }
+    if with_password:
+        config["password_env"] = "BONDI_TEST_PASSWORD"
+    monkeypatch.setenv("BONDI_TEST_PASSWORD", "p@ss:/%")
+    path = tmp_path / "connection.json"
+    path.write_text(json.dumps(config))
+    loader = MagicMock(return_value=LoadDataResult("mongodb"))
+    monkeypatch.setattr("bondi.data._cli.load_data", loader)
+    assert main(["datasets", "load", "demo", "--connection", str(path), "--database", "test"]) == 0
+    target = loader.call_args.kwargs["target"]
+    assert target.username == "user"
+    assert target.password == ("p@ss:/%" if with_password else None)
+    assert "p@ss:/%" not in capsys.readouterr().out
+
+
+def test_cli_missing_mongo_password_env_fails_before_loading(tmp_path, monkeypatch, capsys):
+    import json
+    from unittest.mock import MagicMock
+
+    from bondi._cli import main
+
+    path = tmp_path / "connection.json"
+    path.write_text(
+        json.dumps(
+            {
+                "backend": "mongodb",
+                "uri": "mongodb://localhost",
+                "password_env": "BONDI_TEST_PASSWORD",
+            }
+        )
+    )
+    monkeypatch.delenv("BONDI_TEST_PASSWORD", raising=False)
+    loader = MagicMock()
+    monkeypatch.setattr("bondi.data._cli.load_data", loader)
+    assert main(["datasets", "load", "demo", "--connection", str(path), "--database", "test"]) == 1
+    loader.assert_not_called()
+    assert "password_env" in capsys.readouterr().err

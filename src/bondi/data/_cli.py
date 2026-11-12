@@ -51,7 +51,13 @@ def run(args):
         if not isinstance(config, dict) or not config.get("uri"):
             raise ValueError("Connection file requires a uri")
         if config.get("backend") == "mongodb":
-            target = MongoConnection(config["uri"])
+            password = None
+            if "password_env" in config:
+                variable = config["password_env"]
+                if not isinstance(variable, str) or variable not in os.environ:
+                    raise ValueError("MongoDB password_env must name a set environment variable")
+                password = os.environ[variable]
+            target = MongoConnection(config["uri"], config.get("username"), password)
         elif config.get("backend") == "couchbase":
             if not config.get("username") or config.get("password_env") not in os.environ:
                 raise ValueError("Couchbase connection requires username and a set password_env")

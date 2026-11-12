@@ -24,6 +24,23 @@ print(result.destinations)
 
 You can pass a BONDI `Deployment` as `target` instead.
 The loader opens and closes its own clients. It does not stop the database.
+For authenticated MongoDB deployments, pass credentials separately:
+
+```python
+import os
+
+connection = MongoConnection(
+    "mongodb://localhost:27017/?authSource=admin",
+    username="researcher",
+    password=os.environ["MONGO_PASSWORD"],
+)
+```
+
+These fields accept raw strings. Do not percent-encode them.
+Supplied fields override the corresponding URI credentials. Omitted fields preserve URI settings.
+Set `authSource` in the URI when the user belongs to another authentication database.
+Credentials do not appear in the connection repr or load reports.
+
 CSV columns stay strings. JSON files contain an array of documents or one document.
 JSONL contains one document per nonempty line. Parquet uses its declared column types.
 
@@ -200,6 +217,20 @@ bondi datasets load --manifest travel.json --deployment couchbase \
 
 For external systems, use `--connection connection.json` instead of `--deployment`.
 MongoDB configuration contains `backend: "mongodb"` and `uri`.
+It also accepts optional `username` and `password_env`:
+
+```json
+{
+  "backend": "mongodb",
+  "uri": "mongodb://localhost:27017/?authSource=admin",
+  "username": "researcher",
+  "password_env": "MONGO_PASSWORD"
+}
+```
+
+If `password_env` is supplied, that environment variable must exist.
+Without it, the CLI leaves the URI password unchanged.
+
 Couchbase configuration contains `backend: "couchbase"`, `uri`, `username` and `password_env`.
 The last field names the environment variable containing the password. Keep connection files out of version control.
 Use repeated `--split` arguments to select several splits.
