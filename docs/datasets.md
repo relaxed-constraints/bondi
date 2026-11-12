@@ -86,6 +86,10 @@ The source field stays in the document. The loader also sets `_id`.
 Documents without IDs need a stable namespace. Registered datasets provide one.
 Manifests declare one. Anonymous files and Python iterables need `namespace=`.
 Generated IDs hash the namespace, logical collection, original split, shard position and row position.
+Their format is `gen:` followed by the first 24 lowercase hexadecimal characters of the SHA-256 hash.
+For example: `gen:7f3a92c16b04e8d5a0912c77`. Incoming duplicate-ID checks still apply.
+This replaces the earlier `bondi-generated:` format. Recreate previously loaded datasets with explicit replacement when adopting the new format.
+Upsert does not remove documents with IDs from the earlier format.
 Absolute paths and destination addresses do not affect the ID.
 Reordering files or rows changes generated IDs. Identical rows remain separate documents.
 

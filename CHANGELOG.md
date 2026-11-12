@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Shorten generated dataset IDs to `gen:` plus 24 hexadecimal characters.
+  This changes generated IDs from the earlier unreleased format. Upsert retains
+  documents with old IDs, so use explicit replacement when migrating.
+
 - Fix dataset notebook cleanup to explicitly delete its demo data volume.
 
 - Add optional username and password fields to dataset MongoConnection.

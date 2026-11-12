@@ -347,3 +347,28 @@ def test_cli_missing_mongo_password_env_fails_before_loading(tmp_path, monkeypat
     assert main(["datasets", "load", "demo", "--connection", str(path), "--database", "test"]) == 1
     loader.assert_not_called()
     assert "password_env" in capsys.readouterr().err
+
+
+def test_generated_id_format_and_identity_inputs():
+    import hashlib
+    import json
+    import re
+
+    from bondi.data._values import generated_id
+
+    parts = ["example", "items", "train", 0, 7]
+    value = generated_id(*parts)
+    assert re.fullmatch(r"gen:[0-9a-f]{24}", value)
+    assert value == "gen:" + hashlib.sha256(json.dumps(parts).encode()).hexdigest()[:24]
+    assert value == generated_id(*parts)
+    for index, replacement in enumerate(["other", "users", "test", 1, 8]):
+        changed = parts.copy()
+        changed[index] = replacement
+        assert generated_id(*changed) != value
+
+
+def test_generated_id_collisions_are_rejected(writer, monkeypatch):
+    monkeypatch.setattr("bondi.data._loader.generated_id", lambda *args: "gen:" + "a" * 24)
+    with pytest.raises(LoadDataError, match="Duplicate incoming document ID") as error:
+        load([{"v": 1}, {"v": 2}], namespace="collision-test", mode="upsert", batch_size=1)
+    assert error.value.result.destinations == {"test/items": 1}

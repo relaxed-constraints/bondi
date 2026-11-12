@@ -101,4 +101,4 @@ def generated_id(namespace, collection, split, shard, row):
     if not namespace:
         raise ValueError("namespace is required when a source document has no ID")
     parts = [namespace, collection, split, shard, row]
-    return "bondi-generated:" + hashlib.sha256(json.dumps(parts).encode()).hexdigest()
+    return "gen:" + hashlib.sha256(json.dumps(parts).encode()).hexdigest()[:24]
