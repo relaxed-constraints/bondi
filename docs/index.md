@@ -15,12 +15,13 @@ the shared database components.
 | **Local deployments via CLI & API** | ✅ Supported | ✅ Supported |
 | **Native queries and workload persistence** | ✅ Find and aggregation |  ✅ SQL++ |
 | **Query and workload execution, explain and profiling** | ✅ Supported |  ✅ Supported; detailed profiling depends on server support (enterprise edition) |
+| **[Load generation](load-generation.md)** | ✅ Sustained load with sync and async executors | ✅ Same API |
 | **Summary parsing** | ✅ Supported |  ✅ Supported; some metrics unavailable |
 | **Schema inspection** |  ✅ Python documents from either backend or files |  ✅ Same parser |
 | **Sampling estimation** | ✅ Supported | ❌ Planned/deferred |
 | **Pattern-based workload generation** | 🟡 Flat find queries; no logical expressions or aggregation pipelines | ❌ Not implemented |
 
-BONDI [0.1.4](https://pypi.org/project/bondi/0.1.4/) is available under the MIT license.
+BONDI [0.1.10](https://pypi.org/project/bondi/0.1.10/) is available under the MIT license.
 
 ## Start here
 
