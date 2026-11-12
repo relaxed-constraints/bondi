@@ -65,7 +65,7 @@ nav = [
 [project.theme]
 variant = "modern"
 font = false
-features = ["content.code.copy", "navigation.tabs", "navigation.top", "search.highlight"]
+features = ["content.tabs.link", "content.code.copy", "navigation.tabs", "navigation.top", "search.highlight"]
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme)"
@@ -87,6 +87,9 @@ toggle.name = "Switch to system preference"
 [project.markdown_extensions."pymdownx.highlight"]
 
 [project.markdown_extensions."pymdownx.superfences"]
+
+[project.markdown_extensions."pymdownx.tabbed"]
+alternate_style = true
 
 [project.plugins.search]
 

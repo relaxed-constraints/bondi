@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add linked uv and pip tabs for package installation and editable checkouts.
+
 - Migrate the documentation to Zensical’s modern theme and native
   `zensical.toml` configuration. Follow the reader’s system colour preference
   by default, offer a light and dark mode toggle, and highlight search matches

@@ -6,22 +6,32 @@ or a source checkout for notebooks and local demo databases.
 
 ## Install the Python library
 
-In an existing uv project:
+Choose the base install for MongoDB support or include the Couchbase extra
+if you need to execute Couchbase queries.
 
-```sh
-# Install BONDI just with MongoDB support:
-uv add bondi
+=== "uv"
 
-# Include the optional Couchbase SDK when needed:
-uv add 'bondi[couchbase]'
-```
+    In an existing uv project:
 
-Or, in an activated Python virtual environment:
+    ```sh
+    # MongoDB support
+    uv add bondi
 
-```sh
-python -m pip install bondi
-python -m pip install 'bondi[couchbase]'
-```
+    # Include the optional Couchbase SDK
+    uv add 'bondi[couchbase]'
+    ```
+
+=== "pip"
+
+    In an activated Python virtual environment:
+
+    ```sh
+    # MongoDB support
+    python -m pip install bondi
+
+    # Include the optional Couchbase SDK
+    python -m pip install 'bondi[couchbase]'
+    ```
 
 PyMongo and its BSON codecs are installed automatically. Couchbase query descriptions
 and offline parsing work without the optional SDK; executing Couchbase queries needs it.
@@ -66,8 +76,18 @@ To work on current development code, clone the default branch without `--branch`
 then follow [Contributing](contributing.md). Use an editable checkout dependency
 only when you intentionally want local source changes in another project:
 
-```sh
-uv add --editable /path/to/bondi
-```
+=== "uv"
+
+    ```sh
+    uv add --editable /path/to/bondi
+    ```
+
+=== "pip"
+
+    In an activated Python virtual environment:
+
+    ```sh
+    python -m pip install --editable /path/to/bondi
+    ```
 
 See [Building the documentation](documentation.md) to preview the site locally.
