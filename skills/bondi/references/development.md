@@ -42,7 +42,7 @@ are not committed. Credentials belong in ignored local configuration.
 
 Maintain Google-style public docstrings as the API contract, guide pages for
 workflows, and explicit mkdocstrings entries under `docs/reference/`. Update
-`mkdocs.yml` navigation when adding pages. Keep runnable tutorials under
+`zensical.toml` navigation when adding pages. Keep runnable tutorials under
 `notebooks/` and research exploration in consumer repositories.
 
 Preview with `uv run --group docs zensical serve`; follow its printed local URL.

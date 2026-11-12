@@ -37,7 +37,7 @@ we want to document; new classes are not automatically added to navigation.
 
 ## 3. Configure the site
 
-`mkdocs.yml` defines navigation and enables mkdocstrings with the Python handler.
+`zensical.toml` defines navigation and enables mkdocstrings with the Python handler.
 `paths: [src]` tells the handler where our package lives, and
 `docstring_style: google` selects the docstring convention.
 The Python handler puts signatures in separate code blocks and links documented
@@ -76,7 +76,7 @@ later.
 ## Documentation theme
 
 The site uses Zensical’s modern theme.
-Theme settings live in `mkdocs.yml`. Top-level tabs separate onboarding, guides, tutorials, reference and development.
+Theme settings live in `zensical.toml`. Top-level tabs separate onboarding, guides, tutorials, reference and development.
 Code-copy buttons are enabled. `font: false` uses system fonts without fetching Google Fonts.
 
 After a dependency or theme change, restart the local server:
