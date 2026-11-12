@@ -1,10 +1,7 @@
 .md-typeset code:not(pre code) {
-  --md-code-fg-color: #17466a;
-  --md-code-bg-color: #e8f2fa;
-  color: var(--md-code-fg-color);
-}
-
-[data-md-color-scheme="slate"] .md-typeset code:not(pre code) {
-  --md-code-fg-color: #b8ddfa;
-  --md-code-bg-color: #21394c;
+  background-color: transparent;
+  color: inherit;
+  font-size: 0.8em;
+  font-weight: 700;
+  padding: 0;
 }

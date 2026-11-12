@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Improve inline code contrast in documentation prose and tables.
+- Style inline code in documentation prose and tables as compact, bold monospace.
 
 - Migrate the documentation to Zensical’s modern theme and show formatted API
   signatures in separate code blocks with links to documented types.
