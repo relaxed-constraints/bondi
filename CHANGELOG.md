@@ -4,6 +4,7 @@
 
 - Add a MongoDB load-generation notebook with a disposable demo database,
   selection policies, result summaries, streamed callbacks and cleanup.
+  Link the notebook from the Tutorials page.
 
 - Simplify the execution and load-generation guides and load API descriptions
   with shorter sentences, plain wording and definitions of phase terms.
