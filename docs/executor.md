@@ -58,6 +58,86 @@ errors in each result. With `continue_on_error=False`, scheduling stops after an
 in-flight operations finish and unstarted entries remain `None`. Programming errors
 and interruption propagate. A timeout is reported as `status == "timeout"`.
 
+## Backend timing and native options
+
+### MongoDB
+
+Elapsed milliseconds use a monotonic clock and represent client-observed duration,
+including decoding, transfer, full cursor consumption and cleanup. Successful
+operation timing excludes validation and scheduler waiting. Captured failure timing
+covers the delegated call, including its small validation overhead, and excludes
+scheduler waiting. It is not server processing time or total workload wall time.
+
+`timeout_seconds` must be positive and finite, or None. A PyMongo timeout context
+surrounds the operation and full cursor iteration, sharing one deadline across
+batches. None leaves client defaults in effect. Cleanup happens outside an expired
+operation deadline and can add time. A client timeout is not a hard interruption of
+arbitrary Python computation or proof the server stopped immediately.
+
+#### Native query options
+
+- `run(..., query_kwargs=...)` forwards native PyMongo find/aggregate keyword options.
+- `explain(..., query_kwargs=...)` supplies fields inside the native find/aggregate command.
+- `explain(..., command_kwargs=...)` supplies outer `Database.command` options.
+
+```python
+executor.run(query, query_kwargs={"hint": "stars_1"})
+executor.profile(
+    query,
+    verbosity="executionStats",
+    query_kwargs={"hint": "stars_1"},
+    command_kwargs={"maxTimeMS": 5000},
+)
+```
+
+Query fields and generated command structure cannot be overridden, nor can callers
+turn off command error checking. Options use native names: find uses `batch_size`,
+while aggregate uses `batchSize`. Explain inner options are server command fields,
+not cursor-specific Python arguments. Workload calls apply identical options to
+every entry; they do not translate options between query kinds. Unknown options
+are left to the driver/server. Native options can affect execution and semantics;
+the query fingerprint alone does not identify those options or the environment.
+
+The executor imposes no read-only guard; aggregation may write through `$out` or
+`$merge`. Database permissions determine access. These methods are not restricted
+to read-only queries merely because they are called run or explain.
+
+### Couchbase
+
+```python
+from bondi.workload import Workload, WorkloadEntry
+
+workload = Workload([WorkloadEntry(query), WorkloadEntry(query)])
+# Inside the executor context:
+results = executor.run_workload(workload)
+plans = executor.explain_workload(workload)
+profiles = executor.profile_workload(workload)
+```
+
+All methods share bounded concurrency, input ordering and failure policy. With
+`continue_on_error=False`, scheduling stops after observing an error while in-flight
+operations finish. Unstarted entries are `None`. With True, remaining entries are
+attempted unless enabled health checks identify availability/access failures. Expected SDK failures are stored in `.error`; single-query methods raise.
+Partial results are discarded. SDK argument errors, programming errors and caller
+cancellation propagate after workers are cleaned up. Timeout status recognizes
+both ambiguous and unambiguous SDK timeouts and local deadlines.
+
+`timeout_seconds` sets both an SDK query timeout and a local deadline through row
+consumption. None leaves the SDK timeout in effect. Inputs are not snapshotted;
+do not mutate them during operations.
+
+`query_kwargs` passes native `QueryOptions`, including `scan_consistency`, `read_only`,
+`adhoc` and `client_context_id`. SDK defaults apply unless overridden; in particular,
+`NOT_BOUNDED` may observe indexes before recent writes arrive. Use `REQUEST_PLUS`
+when fresh index contents matter, and account for that wait in measurements.
+Bindings, query context, metrics, profile, timeout and serializer are reserved.
+The nested SDK `raw` escape hatch is also reserved because it can bypass these
+controls. No read-only guard or extra retry policy is imposed by the toolkit.
+
+See the [official SDK query guide](https://docs.couchbase.com/python-sdk/current/howtos/sqlpp-queries-with-sdk.html)
+for native options. The implementation is tested with SDK 4.6.3 and both local
+Couchbase 7.6.2 editions.
+
 ## Per-query result callbacks
 
 All three workload methods (`run_workload`, `explain_workload`, `profile_workload`)
@@ -142,7 +222,7 @@ finished. Synchronous executors own a background event loop, allowing notebook u
 without `await`. Calls block the calling thread until complete.
 
 Use the public async executors only when integrating with other asynchronous code.
-Native options and connection ownership details are covered in the
+Connection ownership and method signatures are covered in the
 [MongoDB](reference/mongodb/executors.md) and [Couchbase](reference/couchbase/executors.md)
 references. Continue with [explain and profile](profiling.md) for diagnostic operations.
 

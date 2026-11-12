@@ -118,6 +118,11 @@ termination or caller cancellation. Treat callback arguments as read-only.
 
 ## Failures, health checks and drain expiry
 
+See [bounded health checks](executor.md#bounded-health-checks) for probe behavior
+and failure classification, and [backend timing and native options](executor.md#backend-timing-and-native-options)
+for driver deadlines and `query_kwargs`. These executor settings also apply to
+each query admitted by `generate_load()`.
+
 `continue_on_error` is inherited from the executor and defaults to False. An
 ordinary captured database error or query timeout stops admissions when False;
 True allows continued execution. Enabled health checks stop admissions on observed

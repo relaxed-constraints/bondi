@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Keep executor API pages focused on generated references; consolidate timing,
+  native options, callbacks and health-check explanations in the user guides.
+
 - Link selection policies directly from each executor’s `generate_load()` API
   parameter documentation. Document and link callback function type aliases
   from `on_result`, including the synchronous versus asynchronous distinction.
