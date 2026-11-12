@@ -41,9 +41,9 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.9"]
 docs = [
-    "mkdocs>=1.6,<2",
-    "mkdocs-material>=9.6,<10",
-    "mkdocstrings[python]>=0.28",
+    "ruff>=0.9",
+    "mkdocstrings-python>=2.0.10",
+    "zensical>=0.1.1,<0.2",
 ]
 
 [tool.hatch.build.targets.wheel]

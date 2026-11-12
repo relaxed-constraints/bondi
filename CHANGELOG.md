@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Migrate the documentation to Zensical’s modern theme and show formatted API
+  signatures in separate code blocks with links to documented types.
+
 - Show return annotations and describe return values throughout the API reference,
   with links to BONDI return types.
 

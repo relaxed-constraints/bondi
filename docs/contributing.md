@@ -26,7 +26,7 @@ uv run ruff format .
 uv run ruff check .
 uv run pytest
 uv sync --locked --group docs
-uv run --group docs mkdocs build --strict
+uv run --group docs zensical build --strict
 uv build
 ```
 
@@ -45,10 +45,10 @@ complete workflow exists; exploratory notebooks belong in research repositories.
 From the repository root, run:
 
 ```sh
-uv run --group docs mkdocs serve
+uv run --group docs zensical serve
 ```
 
-Open <http://127.0.0.1:8000/bondi/>. The preview reloads when you save changes to
+Open the preview URL printed in the terminal. The preview reloads when you save changes to
 Markdown or Python docstrings. Stop the server with Ctrl+C.
 
 See [Building the documentation](documentation.md#4-preview-locally) for more details.

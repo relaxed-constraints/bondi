@@ -5,7 +5,7 @@ repo_name: relaxed-constraints/bondi
 copyright: Copyright &copy; 2026 Relaxed Constraints
 site_description: A Python toolkit for document database research
 theme:
-  name: material
+  variant: modern
   font: false
   features:
     - content.code.copy
@@ -14,8 +14,6 @@ theme:
 markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
-watch:
-  - src
 nav:
   - Home: index.md
   - Getting started:
@@ -71,3 +69,6 @@ plugins:
           options:
             docstring_style: google
             show_signature_annotations: true
+            separate_signature: true
+            signature_crossrefs: true
+            line_length: 76

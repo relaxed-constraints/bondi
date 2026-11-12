@@ -40,9 +40,9 @@ we want to document; new classes are not automatically added to navigation.
 `mkdocs.yml` defines navigation and enables mkdocstrings with the Python handler.
 `paths: [src]` tells the handler where our package lives, and
 `docstring_style: google` selects the docstring convention.
-The `watch: [src]` setting makes source edits trigger a preview rebuild as well as
-Markdown edits. Documentation dependencies are in the `docs` dependency group,
-not the library's runtime dependencies.
+The Python handler puts signatures in separate code blocks and links documented
+types. Ruff formats long signatures. The `docs` dependency group supplies the
+site builder, Python handler, and formatter.
 
 ## 4. Preview locally
 
@@ -50,20 +50,20 @@ From the repository root:
 
 ```sh
 uv sync --locked --group docs
-uv run --group docs mkdocs serve
+uv run --group docs zensical serve
 ```
 
-Open <http://127.0.0.1:8000/bondi/>. Change a sentence in the class docstring and save it;
+Open the preview URL printed in the terminal. Change a sentence in the class docstring and save it;
 the preview rebuilds. Stop the server with Ctrl+C.
 
 ## 5. Verify before sharing
 
 ```sh
-uv run --group docs mkdocs build --strict
+uv run --group docs zensical build --strict
 uv run pytest
 ```
 
-MkDocs writes static HTML into the ignored `site/` directory. Strict mode fails
+Zensical writes static HTML into the ignored `site/` directory. Strict mode fails
 on documentation warnings, such as broken local links or unresolved API objects.
 It does not prove the examples are correct or execute ordinary Markdown code
 blocks. Pytest runs our contract tests and, with the configured `--doctest-modules`
@@ -75,14 +75,14 @@ later.
 
 ## Documentation theme
 
-The site uses Material for MkDocs, installed through the `docs` dependency group.
+The site uses Zensical’s modern theme.
 Theme settings live in `mkdocs.yml`. Top-level tabs separate onboarding, guides, tutorials, reference and development.
 Code-copy buttons are enabled. `font: false` uses system fonts without fetching Google Fonts.
 
 After a dependency or theme change, restart the local server:
 
 ```sh
-uv run --group docs mkdocs serve
+uv run --group docs zensical serve
 ```
 
 The theme affects documentation only; installing the toolkit does not install it.

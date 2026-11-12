@@ -19,7 +19,7 @@ uv sync --locked
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
-uv run --group docs mkdocs build --strict
+uv run --group docs zensical build --strict
 uv build
 ```
 
@@ -45,7 +45,7 @@ workflows, and explicit mkdocstrings entries under `docs/reference/`. Update
 `mkdocs.yml` navigation when adding pages. Keep runnable tutorials under
 `notebooks/` and research exploration in consumer repositories.
 
-Preview with `uv run --group docs mkdocs serve`; follow its printed local URL.
+Preview with `uv run --group docs zensical serve`; follow its printed local URL.
 A strict build checks documentation structure, not ordinary Markdown examples.
 Execute changed examples where feasible and report whether live examples ran.
 Update this skill when public behavior changes, especially CLI lifecycle semantics,

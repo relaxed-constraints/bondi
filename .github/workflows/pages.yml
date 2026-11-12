@@ -21,7 +21,7 @@ jobs:
           python-version: "3.11"
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - run: uv sync --locked --group docs
-      - run: uv run mkdocs build --strict
+      - run: uv run zensical build --strict
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
           path: site

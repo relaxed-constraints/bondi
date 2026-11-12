@@ -94,7 +94,7 @@ build the documentation without deploying it.
 
 ## CI and local integration tests
 
-CI runs offline tests on Python 3.11–3.14, Ruff, a strict MkDocs build, distribution
+CI runs offline tests on Python 3.11–3.14, Ruff, a strict Zensical build, distribution
 checks and wheel installation in a fresh environment. CI selects `-m "not live"`;
 no database containers run there.
 
