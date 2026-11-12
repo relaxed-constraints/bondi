@@ -67,7 +67,7 @@ nav = [
 [project.theme]
 variant = "modern"
 font = false
-features = ["content.tabs.link", "content.code.copy", "navigation.tabs", "navigation.top", "search.highlight"]
+features = ["content.action.copy", "content.tabs.link", "content.code.copy", "navigation.tabs", "navigation.top", "search.highlight"]
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme)"
@@ -104,3 +104,7 @@ show_signature_annotations = true
 separate_signature = true
 signature_crossrefs = true
 line_length = 76
+
+[project.plugins.llmstxt.sections]
+"Overview and guides" = ["*.md"]
+"API reference" = ["reference/**/*.md"]

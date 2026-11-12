@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Publish a documentation index for AI agents and per-page Markdown exports,
+  with a Copy as Markdown button on the HTML pages.
+
 ## 0.2.0 — 2026-11-13
 
 - Add `ByPattern` load selection with weighted, uniform or sequential pattern
