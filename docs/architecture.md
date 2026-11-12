@@ -41,6 +41,12 @@ probe timing. Enabled checks stop workload scheduling on availability/access
 failures while draining in-flight entries and preserving result callbacks.
 Database health is observed through native probes, without Docker dependencies.
 
+Sustained `generate_load()` uses the same executor error and health policies.
+A shared scheduler owns per-client selection streams and phase boundaries;
+`LoadResult` wraps individual execution outcomes or unresolved drain expiry.
+Retention is optional, callbacks provide backpressure, and experiments own metric
+interpretation, repetition, persistence and hard process watchdogs.
+
 ## Schema, estimation and generation
 
 `Schema` consumes Python dictionaries incrementally without database access. Retaining

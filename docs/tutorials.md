@@ -1,13 +1,13 @@
 # Tutorials
 
-These five notebooks introduce common BONDI workflows through runnable examples.
+These notebooks introduce common BONDI workflows through runnable examples.
 Each is self-contained; choose a topic below and run its cells from top to bottom.
 
 ## Run the notebooks
 
 Get the BONDI source checkout described in [Installation](installation.md), which
 includes the `notebooks/` directory. From the repository root, prepare the Python
-environment for all five notebooks:
+environment for all notebooks:
 
 === "uv"
 
@@ -83,6 +83,18 @@ and inspect returned documents and timings. Compare explain with profile, summar
 native diagnostics, handle deliberate query failures, and save and restore workloads.
 The examples also demonstrate sequential and concurrent execution without treating
 their timings as a controlled benchmark.
+
+## Generate MongoDB query load
+
+[Open `mongodb_load_generation.ipynb`](https://github.com/relaxed-constraints/bondi/blob/main/notebooks/mongodb_load_generation.ipynb)
+
+Run concurrent queries through warm-up, measurement and drain phases.
+Choose weighted, uniform or sequential selection. Inspect query outcomes and runtimes.
+Use callbacks to count results without retaining the result list.
+The notebook creates a disposable MongoDB deployment and removes it in the final cell.
+The small dataset demonstrates the API, not realistic database performance.
+
+See [Generating sustained load](load-generation.md) for the full guide.
 
 ## Estimate cardinality and selectivity
 

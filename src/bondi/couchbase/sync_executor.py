@@ -8,6 +8,7 @@ from bondi._sync import _SyncExecutor
 from bondi.couchbase.executor import AsyncCouchbaseExecutor
 from bondi.couchbase.query import CouchbaseQuery
 from bondi.execution import ExecutionResult
+from bondi.load import LoadResult, Selection, SyncLoadCallback
 from bondi.workload import Workload
 
 
@@ -102,6 +103,62 @@ class CouchbaseExecutor(_SyncExecutor):
         """
         return self._call(
             "profile", query, collect_results=collect_results, query_kwargs=query_kwargs
+        )
+
+    def generate_load(
+        self,
+        workload: Workload,
+        *,
+        selection: Selection,
+        measurement_seconds: float,
+        drain_timeout_seconds: float,
+        warmup_seconds: float = 0,
+        collect_results: bool = False,
+        return_load_results: bool = True,
+        on_result: SyncLoadCallback | None = None,
+        query_kwargs: Mapping[str, Any] | None = None,
+    ) -> list[LoadResult]:
+        """Run queries repeatedly, with callbacks on the calling thread.
+
+        Args:
+            workload: Nonempty workload for this executor's backend.
+            selection: Per-client [WeightedRandom][bondi.load.WeightedRandom],
+                [UniformRandom][bondi.load.UniformRandom] or
+                [Sequential][bondi.load.Sequential] policy.
+            measurement_seconds: Measurement duration in seconds. Must be positive and finite.
+            drain_timeout_seconds: Positive finite drain allowance; expiry produces
+                unresolved observations and requests cooperative cancellation.
+            warmup_seconds: Nonnegative finite warm-up duration, default zero.
+            collect_results: Retain returned database documents, default False.
+            return_load_results: Retain LoadResults in the returned list, default True.
+            on_result: [SyncLoadCallback][bondi.load.SyncLoadCallback] receiving
+                each LoadResult, including errors
+                and drain expiry. Must not return an awaitable or reenter the executor.
+            query_kwargs: Native options as accepted by run().
+
+        Inherits executor concurrency, query timeout, error policy and health checks.
+        Callbacks run one at a time, even when result retention is disabled.
+        Each client waits for its callback before starting another query.
+        LoadResult.duration excludes callback time. Cleanup and
+        callbacks may extend beyond drain expiry; no hard process deadline or
+        server-side termination guarantee is provided. Programming/callback errors
+        and caller interruption propagate after cleanup.
+
+        Returns:
+            LoadResults in callback-delivery order, or [] when retention is disabled.
+            See the async executor method for the complete scheduling contract.
+        """
+        return self._call_workload(
+            "generate_load",
+            workload,
+            selection=selection,
+            measurement_seconds=measurement_seconds,
+            drain_timeout_seconds=drain_timeout_seconds,
+            warmup_seconds=warmup_seconds,
+            collect_results=collect_results,
+            return_load_results=return_load_results,
+            on_result=on_result,
+            query_kwargs=query_kwargs,
         )
 
     def run_workload(

@@ -4,6 +4,26 @@
 
 - Add linked uv and pip tabs for installation, notebooks, and contributor workflows.
 
+- Add a MongoDB load-generation notebook with a disposable demo database,
+  selection policies, result summaries, streamed callbacks and cleanup.
+  Link the notebook from the Tutorials page.
+
+- Simplify the execution and load-generation guides and load API descriptions
+  with shorter sentences, plain wording and definitions of phase terms.
+
+- Keep executor API pages focused on generated references; consolidate timing,
+  native options, callbacks and health-check explanations in the user guides.
+
+- Link selection policies directly from each executor’s `generate_load()` API
+  parameter documentation. Document and link callback function type aliases
+  from `on_result`, including the synchronous versus asynchronous distinction.
+
+- Add sync/async executor `generate_load()` with per-client weighted random,
+  uniform random and sequential selection, shared warm-up/measurement boundaries,
+  cooperative draining, streamed callbacks and optional observation retention.
+  Add `LoadResult` with terminal stop reasons and derived duration; inherit executor
+  health/error policies and preserve unresolved drain-expiry observations.
+
 - Migrate the documentation to Zensical’s modern theme and native
   `zensical.toml` configuration. Follow the reader’s system colour preference
   by default, offer a light and dark mode toggle, and highlight search matches

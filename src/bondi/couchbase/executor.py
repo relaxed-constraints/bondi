@@ -19,8 +19,10 @@ from bondi._health import (
     _probe_timing,
     _validate_timeout,
 )
+from bondi._load import _generate_load
 from bondi.couchbase.query import CouchbaseQuery
 from bondi.execution import DatabaseUnavailableError, ExecutionResult
+from bondi.load import LoadCallback, LoadResult, Selection
 from bondi.workload import Workload
 
 if TYPE_CHECKING:
@@ -354,6 +356,96 @@ class AsyncCouchbaseExecutor:
             raw=raw,
             warnings=warnings,
             health_check_elapsed_ms=probe_ms,
+        )
+
+    async def generate_load(
+        self,
+        workload: Workload,
+        *,
+        selection: Selection,
+        measurement_seconds: float,
+        drain_timeout_seconds: float,
+        warmup_seconds: float = 0,
+        collect_results: bool = False,
+        return_load_results: bool = True,
+        on_result: LoadCallback | None = None,
+        query_kwargs: Mapping[str, Any] | None = None,
+    ) -> list[LoadResult]:
+        """Run queries repeatedly through warm-up, measurement and drain phases.
+
+        Args:
+            workload: Nonempty native workload for this executor's backend.
+            selection: [WeightedRandom][bondi.load.WeightedRandom],
+                [UniformRandom][bondi.load.UniformRandom] or
+                [Sequential][bondi.load.Sequential] policy. Each call creates fresh
+                selection streams for each client. Streams continue across phases.
+            measurement_seconds: Measurement duration in seconds. Must be positive and finite.
+            drain_timeout_seconds: Positive finite allowance after admissions stop.
+                Expiry requests cancellation of operations and emits unresolved
+                LoadResults, not an exception. Cleanup can exceed this allowance.
+            warmup_seconds: Nonnegative finite warm-up admission duration.
+            collect_results: Retain database documents inside ExecutionResult.
+            return_load_results: Retain observations for the returned list.
+                False returns [] without suppressing callbacks.
+            on_result: [LoadCallback][bondi.load.LoadCallback] receiving one
+                LoadResult per completed or drain-expired attempt, including warm-up.
+                The executor awaits async callbacks. Observation duration excludes
+                callback time. Each worker waits for its callback before starting
+                another query.
+            query_kwargs: Native options applied to every query, as for run().
+
+        Inherits concurrency, timeout_seconds, continue_on_error and enabled
+        health-check semantics from the executor. Handled failures can stop
+        admissions early while in-flight queries drain. Query timeouts may be
+        unset; use a finite timeout shorter than drain for predictable shutdown.
+        Programming/callback errors and caller cancellation propagate after worker
+        cleanup; callback delivery is not guaranteed on those exceptional paths.
+        Cancellation does not prove server-side termination. Do not mutate inputs
+        or reenter this executor from callbacks while generation is running.
+
+        Returns:
+            Observations in callback-delivery order, or [] when retention is off.
+            Drain-expired observations follow completed callbacks in attempt-ID
+            order. There are no placeholders for invocations never admitted.
+
+        Raises:
+            TypeError: Invalid argument types or callback.
+            ValueError: Invalid durations, selection weights or empty workload.
+        """
+        from couchbase.exceptions import (
+            AlreadyQueriedException,
+            CouchbaseException,
+            InvalidArgumentException,
+            InvalidValueException,
+        )
+
+        self._collect(collect_results)
+        options = _options(query_kwargs, _RESERVED)
+
+        async def operation(query):
+            _probe_timing.set((0.0, True))
+            start = perf_counter()
+            try:
+                return await self.run(query, collect_results=collect_results, query_kwargs=options)
+            except (InvalidArgumentException, InvalidValueException, AlreadyQueriedException):
+                raise
+            except (CouchbaseException, TimeoutError, DatabaseUnavailableError) as error:
+                return _failure_result(
+                    error,
+                    (perf_counter() - start) * 1000,
+                    self.health_check_timeout_seconds is not None,
+                )
+
+        return await _generate_load(
+            self,
+            workload,
+            operation,
+            selection=selection,
+            warmup_seconds=warmup_seconds,
+            measurement_seconds=measurement_seconds,
+            drain_timeout_seconds=drain_timeout_seconds,
+            return_load_results=return_load_results,
+            on_result=on_result,
         )
 
     async def run_workload(

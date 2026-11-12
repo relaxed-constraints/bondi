@@ -23,6 +23,7 @@ nav = [
         ] },
         { "Query execution" = [
             { "Running queries and workloads" = "executor.md" },
+            { "Generating sustained load" = "load-generation.md" },
             { "Explain and profile" = "profiling.md" },
             { "Query summaries" = "summaries.md" },
         ] },
@@ -36,6 +37,7 @@ nav = [
         { "Database deployment" = "reference/deployment.md" },
         { "Queries and workloads" = "reference/queries.md" },
         { "Results and summaries" = "reference/results.md" },
+        { "Load generation" = "reference/load.md" },
         { "Schema inspection" = "reference/schema.md" },
         { "Estimation interfaces" = "reference/estimation.md" },
         { "MongoDB" = [

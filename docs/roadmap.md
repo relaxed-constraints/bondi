@@ -4,6 +4,9 @@ This page tracks capabilities and open work, not a commitment to release dates.
 
 ## Available
 
+- Sustained closed-loop load generation with per-client selection, warm-up,
+  measurement, cooperative draining and streamed LoadResult observations.
+
 - Bounded executor health probes and opt-in preflight checks with availability fail-fast scheduling.
 
 - Offline MongoDB query statistics with versioned counts, structural depth/fan-out,
@@ -28,7 +31,7 @@ This page tracks capabilities and open work, not a commitment to release dates.
 - Couchbase sampling estimation and workload generation.
 - Executor sampling helpers and bounded schema value retention.
 - Schema merging.
-- Warmups and repetitions for experiment execution.
+- Experiment repetitions and orchestration remain in consumer projects.
 - Broader explain-layout support and backend-specific measurement interpretation.
 
 Research workflows can already combine these components in separate project

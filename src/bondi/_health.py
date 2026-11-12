@@ -10,6 +10,8 @@ from pymongo.errors import ConnectionFailure, NetworkTimeout, OperationFailure
 from bondi.execution import DatabaseUnavailableError
 
 # Each workload worker resets this before an entry; concurrent calls never share timing.
+_query_start_hook: ContextVar = ContextVar("query_start_hook", default=None)
+
 _probe_timing: ContextVar[tuple[float, bool]] = ContextVar("probe_timing", default=(0.0, True))
 
 
@@ -59,6 +61,8 @@ async def _bounded_probe(operation, timeout_seconds, errors, propagate_errors=()
 async def _preflight(executor):
     _probe_timing.set((0.0, True))
     if executor.health_check_timeout_seconds is None:
+        if hook := _query_start_hook.get():
+            hook()
         return 0.0
     start = perf_counter()
     success = False
@@ -68,6 +72,8 @@ async def _preflight(executor):
     finally:
         elapsed = (perf_counter() - start) * 1000
         _probe_timing.set((elapsed, success))
+    if hook := _query_start_hook.get():
+        hook()
     return elapsed
 
 
