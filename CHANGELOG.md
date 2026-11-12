@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Improve inline code contrast in documentation prose and tables.
+
 - Migrate the documentation to Zensical’s modern theme and show formatted API
   signatures in separate code blocks with links to documented types.
 
