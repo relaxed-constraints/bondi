@@ -1,0 +1,10 @@
+.md-typeset button[data-md-copy-url] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.md-typeset button[data-md-copy-url]::after {
+  content: attr(aria-label);
+  font-size: 0.75em;
+}
