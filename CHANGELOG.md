@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Add linked uv and pip tabs for package installation and editable checkouts.
+- Add linked uv and pip tabs for installation, notebooks, and contributor workflows.
 
 - Migrate the documentation to Zensical’s modern theme and native
   `zensical.toml` configuration. Follow the reader’s system colour preference

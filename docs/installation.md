@@ -47,25 +47,60 @@ Clone the matching release:
 ```sh
 git clone --branch v0.1.10 https://github.com/relaxed-constraints/bondi.git
 cd bondi
-uv sync --locked
-# If you want to execute Couchbase queries:
-uv sync --locked --extra couchbase
 ```
 
 Alternatively, download and extract a source archive from the
 [0.1.10 GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.1.10),
-then run `uv sync --locked` in the extracted folder. Git is not required for archives.
+and open a terminal in the extracted folder. Git is only needed for cloning.
 Both options provide `notebooks/` and demo data.
+
+From the source directory, set up an environment using either tool. In the pip
+examples, activate it with `.venv\Scripts\Activate.ps1` on Windows PowerShell
+in place of the `source` command.
+
+=== "uv"
+
+    ```sh
+    uv sync --locked
+    # For Couchbase notebooks, use:
+    uv sync --locked --extra couchbase
+    ```
+
+=== "pip"
+
+    ```sh
+    python -m venv .venv
+    source .venv/bin/activate
+    python -m pip install -e .
+    # For Couchbase notebooks, use:
+    python -m pip install -e ".[couchbase]"
+    ```
+
+The uv commands use the repository lockfile. The pip commands resolve dependencies
+from the checkout’s package metadata.
 Use the CLI or Python API in [Database deployment](deployment.md) to start a backend.
 Deployments start empty; load the data needed by your examples separately.
 
 ## Open the notebooks
 
-From the source checkout or extracted release:
+From the source directory, use the environment set up above. For pip, keep that
+virtual environment activated.
 
-```sh
-uv run --with jupyterlab --with ipykernel jupyter lab
-```
+=== "uv"
+
+    ```sh
+    uv run --with jupyterlab --with ipykernel jupyter lab
+    ```
+
+=== "pip"
+
+    ```sh
+    python -m pip install jupyterlab ipykernel
+    python -m jupyterlab
+    ```
+
+If you set up Couchbase support with uv, include `--extra couchbase` in the
+`uv run` command.
 
 Choose the Python kernel from this environment and open a notebook under `notebooks/`.
 

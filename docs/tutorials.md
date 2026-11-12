@@ -9,10 +9,23 @@ Get the BONDI source checkout described in [Installation](installation.md), whic
 includes the `notebooks/` directory. From the repository root, prepare the Python
 environment for all five notebooks:
 
-```sh
-uv sync --locked --extra couchbase
-uv pip install --python .venv/bin/python ipykernel
-```
+=== "uv"
+
+    ```sh
+    uv sync --locked --extra couchbase
+    uv pip install --python .venv ipykernel
+    ```
+
+=== "pip"
+
+    ```sh
+    python -m venv .venv
+    source .venv/bin/activate
+    python -m pip install -e ".[couchbase]" ipykernel
+    ```
+
+On Windows PowerShell, activate the pip environment with
+`.venv\Scripts\Activate.ps1` in place of the `source` command.
 
 Start Docker before running a database notebook. Its first code cell creates a
 named deployment and loads the demo data; its final cell removes the deployment,
@@ -35,11 +48,21 @@ for more on editing cells and selecting a kernel.
 
 ### JupyterLab alternative
 
-If you prefer a browser interface, run this from the repository root:
+If you prefer a browser interface, launch JupyterLab from the repository root.
+For pip, keep the virtual environment activated.
 
-```sh
-uv run --extra couchbase --with jupyterlab --with ipykernel jupyter lab
-```
+=== "uv"
+
+    ```sh
+    uv run --extra couchbase --with jupyterlab --with ipykernel jupyter lab
+    ```
+
+=== "pip"
+
+    ```sh
+    python -m pip install jupyterlab ipykernel
+    python -m jupyterlab
+    ```
 
 Open a notebook from `notebooks/` in the browser interface and run its cells in order.
 

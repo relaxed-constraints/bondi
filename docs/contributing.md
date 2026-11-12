@@ -2,14 +2,28 @@
 
 ## Setup
 
-Install uv, then run from the repository root:
+Run from the repository root. For pip, activate a virtual environment first
+using the steps on the [Installation page](installation.md#get-notebooks-and-demo-data).
+The pip setup upgrades pip to a version that supports dependency groups.
 
-```sh
-uv sync --locked
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-```
+=== "uv"
+
+    ```sh
+    uv sync --locked
+    uv run pytest
+    uv run ruff check .
+    uv run ruff format --check .
+    ```
+
+=== "pip"
+
+    ```sh
+    python -m pip install --upgrade pip
+    python -m pip install -e . --group dev
+    python -m pytest
+    ruff check .
+    ruff format --check .
+    ```
 
 Python 3.11 is the minimum supported version and the local development default.
 There are no sibling-repository dependencies or database prerequisites.
@@ -21,14 +35,27 @@ contract before adding a component. Document public behaviour with Google-style
 docstrings, including important constraints and examples. Add focused tests for
 behaviour rather than mirroring implementation details.
 
-```sh
-uv run ruff format .
-uv run ruff check .
-uv run pytest
-uv sync --locked --group docs
-uv run --group docs zensical build --strict
-uv build
-```
+=== "uv"
+
+    ```sh
+    uv run ruff format .
+    uv run ruff check .
+    uv run pytest
+    uv sync --locked --group docs
+    uv run --group docs zensical build --strict
+    uv build
+    ```
+
+=== "pip"
+
+    ```sh
+    ruff format .
+    ruff check .
+    python -m pytest
+    python -m pip install --group docs build
+    zensical build --strict
+    python -m build
+    ```
 
 Commit `uv.lock` when dependencies change. Generated files under `site/` and
 `dist/` stay outside version control. Keep credentials in local ignored files;
@@ -42,22 +69,16 @@ complete workflow exists; exploratory notebooks belong in research repositories.
 
 ### Serve the documentation locally
 
-From the repository root, run:
-
-```sh
-uv run --group docs zensical serve
-```
-
-Open the preview URL printed in the terminal. The preview reloads when you save changes to
-Markdown or Python docstrings. Stop the server with Ctrl+C.
-
-See [Building the documentation](documentation.md#4-preview-locally) for more details.
+Follow [Building the documentation](documentation.md#4-preview-locally) for uv
+and pip setup and preview commands.
 
 ## Test boundaries
 
 The offline suite checks query contracts, persistence, parsers and executor behavior
-at SDK boundaries. Run `uv run --extra couchbase pytest` to include Couchbase SDK
-tests; they are skipped without the optional dependency. Live backend tests require
+at SDK boundaries. To include the Couchbase SDK tests, run
+`uv run --extra couchbase pytest` or install the extra with
+`python -m pip install -e ".[couchbase]"` and run `python -m pytest` in the
+development environment. Live backend tests require
 explicit environment-variable opt-in. See [release validation](releases.md#ci-and-local-integration-tests) for the test commands.
 All live tests create and remove isolated BONDI deployments, prepare their own
 demo fixtures and use dedicated high-numbered ports.

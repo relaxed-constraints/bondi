@@ -98,19 +98,39 @@ CI runs offline tests on Python 3.11–3.14, Ruff, a strict Zensical build, dist
 checks and wheel installation in a fresh environment. CI selects `-m "not live"`;
 no database containers run there.
 
-All database-backed suites share one opt-in. Start Docker, then run:
+All database-backed suites share one opt-in. Start Docker, then run the tests.
+For pip, use the development environment from [Contributing](contributing.md#setup).
 
-```sh
-BONDI_LIVE=1 uv run --extra couchbase pytest -m live -v
-```
+=== "uv"
+
+    ```sh
+    BONDI_LIVE=1 uv run --extra couchbase pytest -m live -v
+    ```
+
+=== "pip"
+
+    ```sh
+    python -m pip install -e ".[couchbase]"
+    BONDI_LIVE=1 python -m pytest -m live -v
+    ```
 
 To select a smaller suite, pass its file instead:
 
-```sh
-BONDI_LIVE=1 uv run pytest tests/test_executor_mongodb.py -q
-BONDI_LIVE=1 uv run pytest tests/test_mongodb_conversion_live.py -q
-BONDI_LIVE=1 uv run --extra couchbase pytest tests/test_couchbase_executor_live.py -q
-```
+=== "uv"
+
+    ```sh
+    BONDI_LIVE=1 uv run pytest tests/test_executor_mongodb.py -q
+    BONDI_LIVE=1 uv run pytest tests/test_mongodb_conversion_live.py -q
+    BONDI_LIVE=1 uv run --extra couchbase pytest tests/test_couchbase_executor_live.py -q
+    ```
+
+=== "pip"
+
+    ```sh
+    BONDI_LIVE=1 python -m pytest tests/test_executor_mongodb.py -q
+    BONDI_LIVE=1 python -m pytest tests/test_mongodb_conversion_live.py -q
+    BONDI_LIVE=1 python -m pytest tests/test_couchbase_executor_live.py -q
+    ```
 
 Without `BONDI_LIVE=1`, all tests marked `live` are skipped before fixture setup.
 The older per-suite flags and externally supplied test-server URIs are no longer

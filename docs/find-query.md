@@ -203,9 +203,19 @@ not the number of operators originally written in the find projection.
 
 To run differential tests using an isolated BONDI-managed MongoDB (Docker required):
 
-```sh
-BONDI_LIVE=1 uv run pytest tests/test_mongodb_conversion_live.py
-```
+=== "uv"
+
+    ```sh
+    BONDI_LIVE=1 uv run pytest tests/test_mongodb_conversion_live.py
+    ```
+
+=== "pip"
+
+    ```sh
+    BONDI_LIVE=1 python -m pytest tests/test_mongodb_conversion_live.py
+    ```
+
+For pip, use the development environment from [Contributing](contributing.md).
 
 These tests provision their own deployment and temporary database, then remove
 them during teardown.

@@ -46,22 +46,41 @@ site builder, Python handler, and formatter.
 
 ## 4. Preview locally
 
-From the repository root:
+Run from the repository root. For pip, use the activated virtual environment from
+[Contributing](contributing.md#setup).
 
-```sh
-uv sync --locked --group docs
-uv run --group docs zensical serve
-```
+=== "uv"
+
+    ```sh
+    uv sync --locked --group docs
+    uv run --group docs zensical serve
+    ```
+
+=== "pip"
+
+    ```sh
+    python -m pip install --group docs
+    zensical serve
+    ```
 
 Open the preview URL printed in the terminal. Change a sentence in the class docstring and save it;
 the preview rebuilds. Stop the server with Ctrl+C.
 
 ## 5. Verify before sharing
 
-```sh
-uv run --group docs zensical build --strict
-uv run pytest
-```
+=== "uv"
+
+    ```sh
+    uv run --group docs zensical build --strict
+    uv run pytest
+    ```
+
+=== "pip"
+
+    ```sh
+    zensical build --strict
+    python -m pytest
+    ```
 
 Zensical writes static HTML into the ignored `site/` directory. Strict mode fails
 on documentation warnings, such as broken local links or unresolved API objects.
@@ -79,10 +98,6 @@ The site uses Zensical’s modern theme.
 Theme settings live in `zensical.toml`. Top-level tabs separate onboarding, guides, tutorials, reference and development.
 Code-copy buttons are enabled. `font: false` uses system fonts without fetching Google Fonts.
 
-After a dependency or theme change, restart the local server:
-
-```sh
-uv run --group docs zensical serve
-```
+After a dependency or theme change, [restart the preview server](#4-preview-locally).
 
 The theme affects documentation only; installing the toolkit does not install it.

@@ -413,7 +413,9 @@ bondi load-demo-data cb-demo --scope research --collection businesses
 ```
 
 The CLI uses the saved deployment's backend and connection details and reports the
-destination and document count. In a uv project, prefix these commands with `uv run`.
+destination and document count. Run these commands directly in an activated Python
+environment. In a uv project,
+prefix them with `uv run`.
 
 ### Repeated loads and indexes
 
