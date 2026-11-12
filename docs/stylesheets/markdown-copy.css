@@ -3,7 +3,9 @@
   align-items: center;
   gap: 0.4em;
   padding: 0.35em 0.65em;
-  border: 1px solid currentColor;
+  background-color: #fff;
+  border: 1px solid #999;
+  color: #333;
   border-radius: 0.25rem;
   font-size: 0.65rem;
   line-height: 1.3;
