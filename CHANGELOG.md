@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Use black inline code text on the default shaded background in the light theme.
+- Use slightly smaller text and tighter prose spacing in documentation pages.
 
 - Migrate the documentation to Zensical’s modern theme and show formatted API
   signatures in separate code blocks with links to documented types.

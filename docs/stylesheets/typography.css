@@ -6,3 +6,10 @@
 [data-md-color-scheme="slate"] .md-typeset code:not(pre code) {
   color: var(--md-code-fg-color);
 }
+
+@media screen {
+  .md-content__inner.md-typeset {
+    font-size: 0.7rem;
+    line-height: 1.7;
+  }
+}

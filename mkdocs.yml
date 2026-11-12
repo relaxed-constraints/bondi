@@ -15,7 +15,7 @@ markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
 extra_css:
-  - stylesheets/inline-code.css
+  - stylesheets/typography.css
 nav:
   - Home: index.md
   - Getting started:
