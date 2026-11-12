@@ -19,14 +19,11 @@ it is not a query translator or an experiment-tracking framework.
 
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
-and dependency constraints before using an API. This skill describes the 0.1.10
-API, including schema snapshots, deployment version selection and workload result
-callbacks. The API/CLI reference also covers unreleased MongoDB memory controls and executor health checks;
-check installed signatures before using them. For version selection, check that the installed deployment function
-accepts `version` or its CLI exposes `--version`. Online documentation follows
-published releases; it may be newer
-than the user's installation. For discrepancies, inspect installed signatures or
-matching tagged source instead of inventing compatibility or upgrading silently.
+and dependency constraints before using an API. This skill describes the 0.2.0 API.
+It includes sustained load generation, pattern selection, workload callbacks,
+MongoDB memory limits and executor health checks. Check installed signatures before
+using these features. Online documentation can be newer than the installed package.
+Inspect matching source when versions differ. Do not upgrade silently.
 An installed skill contains these references, not the BONDI checkout or notebooks.
 
 ## Teach while helping
@@ -60,8 +57,9 @@ consumer projects. Consult the current roadmap before assuming a capability exis
 
 ## Sustained load generation
 
-The source API adds executor `generate_load()` with `bondi.load` policies
-`WeightedRandom`, `UniformRandom` and `Sequential`. Check the installed release
+Version 0.2.0 adds executor `generate_load()` with `bondi.load` policies
+`WeightedRandom`, `UniformRandom`, `Sequential` and `ByPattern`.
+`ByPattern` selects a pattern ID, then an existing query instance within that pattern. Check the installed release
 before using it. It inherits executor concurrency/error/health options; selection
 and positive measurement/drain durations are required. Warm-up defaults to zero.
 `on_result` receives one `LoadResult`; `collect_results` retains database documents,

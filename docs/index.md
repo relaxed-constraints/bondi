@@ -21,7 +21,7 @@ the shared database components.
 | **[Sampling estimation](mongodb-estimation.md)** | ✅ Supported | ❌ Planned/deferred |
 | **[Pattern-based workload generation](workload-generation.md)** | 🟡 Flat find queries; no logical expressions or aggregation pipelines | ❌ Not implemented |
 
-BONDI [0.1.10](https://pypi.org/project/bondi/0.1.10/) is available under the MIT license.
+BONDI [0.2.0](https://pypi.org/project/bondi/0.2.0/) is available under the MIT license.
 
 ## Start here
 

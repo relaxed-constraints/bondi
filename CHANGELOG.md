@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0 — 2026-11-13
+
 - Add `ByPattern` load selection with weighted, uniform or sequential pattern
   selection and independent uniform or sequential instance streams.
   Include validation, documentation and a MongoDB notebook example that compares

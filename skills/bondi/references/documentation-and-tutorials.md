@@ -40,7 +40,7 @@ Notebooks are in GitHub source, not the installed wheel:
 - [Couchbase execution](https://github.com/relaxed-constraints/bondi/blob/main/notebooks/couchbase_demo.ipynb).
 
 These links show development source. For an older installed release, select its
-matching Git tag (for example, replace `main` with `v0.1.10`). Database notebooks
+matching Git tag (for example, replace `main` with `v0.2.0`). Database notebooks
 create named deployments and load demo data; their cleanup cells delete the
 deployment's data. Read setup and cleanup before running against existing state.
 Notebook timings illustrate the API, not controlled benchmark results.
