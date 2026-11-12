@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add sync/async executor `generate_load()` with per-client weighted random,
+  uniform random and sequential selection, shared warm-up/measurement boundaries,
+  cooperative draining, streamed callbacks and optional observation retention.
+  Add `LoadResult` with terminal stop reasons and derived duration; inherit executor
+  health/error policies and preserve unresolved drain-expiry observations.
+
 - Migrate the documentation to Zensical’s modern theme and native
   `zensical.toml` configuration. Follow the reader’s system colour preference
   by default, offer a light and dark mode toggle, and highlight search matches

@@ -57,3 +57,15 @@ APIs when the application needs them. Keep query forms native, workloads ordered
 and single-backend, and missing diagnostic metrics unknown rather than zero.
 Keep research algorithms, benchmark orchestration and experiment tracking in
 consumer projects. Consult the current roadmap before assuming a capability exists.
+
+## Sustained load generation
+
+The source API adds executor `generate_load()` with `bondi.load` policies
+`WeightedRandom`, `UniformRandom` and `Sequential`. Check the installed release
+before using it. It inherits executor concurrency/error/health options; selection
+and positive measurement/drain durations are required. Warm-up defaults to zero.
+`on_result` receives one `LoadResult`; `collect_results` retains database documents,
+while `return_load_results=False` streams observations without retaining their list.
+Drain expiry records unresolved results and requests cooperative cancellation;
+no hard process deadline or server-side cancellation guarantee is provided.
+See `docs/load-generation.md` in the source checkout.

@@ -241,3 +241,8 @@ and use its configured client timeouts. A short ping deadline does not bound clo
 
 Checkpointing, paired-backend pipeline aborts and rerun decisions remain consumer
 responsibilities. Check the returned results before scheduling another workload.
+
+## Sustained execution
+
+Use [`generate_load()`](load-generation.md) to repeatedly select workload entries
+under concurrent load with explicit warm-up, measurement and drain phases.

@@ -27,7 +27,7 @@ class _ResultCallbacks:
         self.lock = asyncio.Lock()
         self.failed = False
 
-    async def deliver(self, position, entry, result):
+    async def deliver(self, *args):
         if self.callback is None:
             return
         async with self.lock:
@@ -35,7 +35,7 @@ class _ResultCallbacks:
             if self.failed:
                 return
             try:
-                returned = self.callback(position, entry, result)
+                returned = self.callback(*args)
                 if inspect.isawaitable(returned):
                     await returned
             except (KeyboardInterrupt, SystemExit) as error:
