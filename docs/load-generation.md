@@ -48,6 +48,9 @@ Use `await executor.generate_load(...)` with an async executor. Async callbacks
 may return awaitables. Synchronous callbacks execute on the calling thread and
 must not return awaitables or reenter the same executor.
 
+Try the [MongoDB demo notebook](https://github.com/relaxed-constraints/bondi/blob/main/notebooks/mongodb_load_generation.ipynb)
+for a complete example with a disposable database, result summaries and streamed callbacks.
+
 ## Selection and reproducibility
 
 Policies live in `bondi.load`. Weights are not attached to workload entries.
