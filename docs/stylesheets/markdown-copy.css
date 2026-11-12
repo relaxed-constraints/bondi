@@ -13,7 +13,7 @@
 
 .md-typeset button[data-md-copy-url]::after {
   content: attr(aria-label);
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .md-typeset button[data-md-copy-url]:focus-visible {
