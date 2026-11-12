@@ -2,15 +2,13 @@
 
 ## Unreleased
 
-- Follow the system colour preference with a light and dark mode toggle, and
-  highlight matching terms when opening documentation search results.
+- Migrate the documentation to Zensical’s modern theme and native
+  `zensical.toml` configuration. Follow the reader’s system colour preference
+  by default, offer a light and dark mode toggle, and highlight search matches
+  on result pages.
 
-
-- Migrate the documentation to Zensical’s modern theme and show formatted API
-  signatures in separate code blocks with links to documented types.
-
-- Show return annotations and describe return values throughout the API reference,
-  with links to BONDI return types.
+- Show formatted API signatures in separate code blocks, with linked return
+  annotations and descriptions of what each value-returning callable returns.
 
 ## 0.1.10 — 2026-11-10
 
