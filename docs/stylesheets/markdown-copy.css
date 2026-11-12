@@ -1,0 +1,22 @@
+.md-typeset button[data-md-copy-url] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.35em 0.65em;
+  background-color: #fff;
+  border: 1px solid #999;
+  color: #333;
+  border-radius: 0.25rem;
+  font-size: 0.65rem;
+  line-height: 1.3;
+}
+
+.md-typeset button[data-md-copy-url]::after {
+  content: attr(aria-label);
+  font-weight: 400;
+}
+
+.md-typeset button[data-md-copy-url]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
