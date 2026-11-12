@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Follow the system colour preference with a light and dark mode toggle, and
+  highlight matching terms when opening documentation search results.
+
 
 - Migrate the documentation to Zensical’s modern theme and show formatted API
   signatures in separate code blocks with links to documented types.
