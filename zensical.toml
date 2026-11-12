@@ -5,7 +5,6 @@ repo_url = "https://github.com/relaxed-constraints/bondi"
 repo_name = "relaxed-constraints/bondi"
 copyright = "Copyright &copy; 2026 Relaxed Constraints"
 site_description = "A Python toolkit for document database research"
-extra_css = ["stylesheets/typography.css"]
 
 nav = [
     { "Home" = "index.md" },
