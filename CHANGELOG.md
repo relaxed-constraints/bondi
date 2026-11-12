@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix dataset notebook cleanup to explicitly delete its demo data volume.
+
 - Add optional username and password fields to dataset MongoConnection.
   MongoDB CLI connection files can read passwords through password_env.
 
