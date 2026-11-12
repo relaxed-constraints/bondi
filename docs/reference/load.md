@@ -40,3 +40,8 @@ ordinary functions, while async executors also accept `async def` functions.
     options:
       show_root_heading: true
       heading_level: 3
+
+::: bondi.load.ByPattern
+    options:
+      show_root_heading: true
+      heading_level: 2

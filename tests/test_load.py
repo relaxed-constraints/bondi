@@ -1,7 +1,7 @@
 """Load generation contracts with controlled async operations and driver boundaries."""
 
 import asyncio
-from itertools import islice
+from itertools import cycle, islice
 from threading import get_ident
 from unittest.mock import MagicMock
 
@@ -11,7 +11,7 @@ from pymongo.errors import OperationFailure
 from bondi._health import _preflight
 from bondi.couchbase import AsyncCouchbaseExecutor, CouchbaseExecutor, CouchbaseQuery
 from bondi.execution import DatabaseUnavailableError, ExecutionResult
-from bondi.load import LoadResult, Sequential, UniformRandom, WeightedRandom
+from bondi.load import ByPattern, LoadResult, Sequential, UniformRandom, WeightedRandom
 from bondi.mongodb import AsyncMongoExecutor, MongoCollectionRef, MongoExecutor, MongoFindQuery
 from bondi.workload import Workload, WorkloadEntry
 
@@ -464,5 +464,90 @@ def test_couchbase_actual_streaming_path():
             ex, work("couchbase"), measurement_seconds=0.01, drain_timeout_seconds=0.01
         )
         assert response.cleaned and results[0].stop_reason == "drain_timeout"
+
+    asyncio.run(scenario())
+
+
+def pattern_workload():
+    workload = work("mongodb", 5)
+    for entry, pattern_id in zip(workload, [7, 3, 7, 7, 3]):
+        entry.pattern_id = pattern_id
+    return workload
+
+
+def test_pattern_sequential_cursors_and_subset():
+    workload = pattern_workload()
+    policy = ByPattern(Sequential(), Sequential())
+    prepare = policy._prepare(workload)
+    expected = [1, 0, 4, 2, 1, 3, 4, 0]
+    assert list(islice(prepare(0), 8)) == expected
+    assert list(islice(prepare(1), 8)) == expected
+    ids = [7]
+    subset = ByPattern(Sequential(), Sequential(), ids)
+    ids.append(3)
+    assert list(islice(subset._prepare(workload)(0), 5)) == [0, 2, 3, 0, 2]
+
+
+def test_pattern_probabilities_and_reproducibility():
+    workload = pattern_workload()
+    policy = ByPattern(UniformRandom(42), UniformRandom(43))
+    prepare = policy._prepare(workload)
+    first = list(islice(prepare(0), 6000))
+    assert first == list(islice(policy._prepare(workload)(0), 6000))
+    assert first != list(islice(prepare(1), 6000))
+    # Equal pattern probability despite unequal instance counts.
+    assert 2700 < sum(workload[i].pattern_id == 3 for i in first) < 3300
+    assert all(850 < first.count(i) < 1150 for i in [0, 2, 3])
+    assert all(1300 < first.count(i) < 1700 for i in [1, 4])
+    weighted = ByPattern(WeightedRandom([0, 1], 42), pattern_ids=[7, 3])
+    assert set(islice(weighted._prepare(workload)(0), 100)) == {1, 4}
+
+
+def test_pattern_instance_stream_is_independent_of_other_patterns():
+    workload = pattern_workload()
+    combined = ByPattern(Sequential(), UniformRandom(18))._prepare(workload)(2)
+    isolated = ByPattern(Sequential(), UniformRandom(18), [7])._prepare(workload)(2)
+    observations = list(islice(combined, 200))
+    assert [i for i in observations if workload[i].pattern_id == 7] == list(islice(isolated, 100))
+
+
+@pytest.mark.parametrize("ids", [[], [True], [-1], [1.2], [3, 3]])
+def test_pattern_invalid_ids(ids):
+    with pytest.raises(ValueError):
+        ByPattern(Sequential(), pattern_ids=ids)
+
+
+def test_pattern_invalid_configuration():
+    with pytest.raises(TypeError):
+        ByPattern("uniform")
+    with pytest.raises(TypeError):
+        ByPattern(Sequential(), WeightedRandom([1], 0))
+    with pytest.raises(ValueError, match="every workload entry"):
+        ByPattern(Sequential())._prepare(work("mongodb"))
+    with pytest.raises(ValueError, match="at least one"):
+        ByPattern(Sequential(), pattern_ids=[99])._prepare(pattern_workload())
+    with pytest.raises(ValueError, match="weights must match"):
+        ByPattern(WeightedRandom([1], 0))._prepare(pattern_workload())(0)
+
+
+def test_pattern_load_results_and_validation(executor):
+    ex, workload = executor
+    for i, entry in enumerate(workload):
+        entry.pattern_id = [7, 3, 7][i]
+
+    async def scenario():
+        async def run(query, **kwargs):
+            await asyncio.sleep(0.001)
+            return ExecutionResult(1)
+
+        ex.run = run
+        results = await generate(ex, workload, selection=ByPattern(Sequential(), Sequential()))
+        assert results
+        for client in range(ex.concurrency):
+            positions = [r.workload_position for r in results if r.client_id == client]
+            assert positions == list(islice(cycle([1, 0, 1, 2]), len(positions)))
+        workload[0].pattern_id = None
+        with pytest.raises(ValueError, match="every workload entry"):
+            await generate(ex, workload, selection=ByPattern(Sequential()))
 
     asyncio.run(scenario())

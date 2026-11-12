@@ -4,7 +4,7 @@ import hashlib
 import math
 import random
 from collections.abc import Awaitable, Callable, Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import accumulate, cycle
 from typing import Literal
 
@@ -96,7 +96,70 @@ def _random_stream(rng, size, weights):
     return draw()
 
 
-Selection = WeightedRandom | UniformRandom | Sequential
+@dataclass(frozen=True)
+class ByPattern:
+    """Select a pattern, then select an existing query instance from that pattern.
+
+    Args:
+        patterns: Policy for selecting patterns. Weights follow pattern_ids order.
+        instances: UniformRandom or Sequential within each pattern. The default
+            is UniformRandom(seed=0). Each client and pattern has its own stream.
+        pattern_ids: Optional nonempty sequence of distinct nonnegative IDs.
+            Omit to use all IDs in ascending order. Explicit IDs select a subset.
+
+    Every workload entry must have a pattern_id. Requested IDs must exist.
+    Instance order follows workload order, including duplicates. Each call starts
+    fresh streams, which continue across warm-up and measurement.
+    This policy selects saved queries. It does not generate new query values.
+    """
+
+    patterns: WeightedRandom | UniformRandom | Sequential
+    instances: UniformRandom | Sequential = field(default_factory=lambda: UniformRandom(seed=0))
+    pattern_ids: Sequence[int] | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.patterns, (WeightedRandom, UniformRandom, Sequential)):
+            raise TypeError("patterns must be WeightedRandom, UniformRandom or Sequential")
+        if not isinstance(self.instances, (UniformRandom, Sequential)):
+            raise TypeError("instances must be UniformRandom or Sequential")
+        if self.pattern_ids is not None:
+            ids = tuple(self.pattern_ids)
+            if not ids or any(type(i) is not int or i < 0 for i in ids):
+                raise ValueError("pattern_ids must contain nonnegative integers")
+            if len(set(ids)) != len(ids):
+                raise ValueError("pattern_ids must be distinct")
+            object.__setattr__(self, "pattern_ids", ids)
+
+    def _prepare(self, workload):
+        groups = {}
+        for position, entry in enumerate(workload):
+            if entry.pattern_id is None:
+                raise ValueError("ByPattern requires a pattern_id on every workload entry")
+            groups.setdefault(entry.pattern_id, []).append(position)
+        ids = self.pattern_ids if self.pattern_ids is not None else tuple(sorted(groups))
+        if not ids or any(i not in groups for i in ids):
+            raise ValueError("every selected pattern must have at least one workload entry")
+
+        def stream(client):
+            patterns = self.patterns._stream(len(ids), client)
+            instances = {}
+            for pattern_id in ids:
+                # Domain separation avoids coupling pattern and instance draws.
+                key = f"bondi-load-pattern-v1:{client}:{pattern_id}"
+                token = int.from_bytes(hashlib.sha256(key.encode("ascii")).digest(), "big")
+                instances[pattern_id] = self.instances._stream(len(groups[pattern_id]), token)
+
+            def draw():
+                while True:
+                    pattern_id = ids[next(patterns)]
+                    yield groups[pattern_id][next(instances[pattern_id])]
+
+            return draw()
+
+        return stream
+
+
+Selection = WeightedRandom | UniformRandom | Sequential | ByPattern
 
 
 @dataclass

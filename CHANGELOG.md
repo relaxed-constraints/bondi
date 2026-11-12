@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add `ByPattern` load selection with weighted, uniform or sequential pattern
+  selection and independent uniform or sequential instance streams.
+  Include validation, documentation and a MongoDB notebook example.
+
 - Add linked uv and pip tabs for installation, notebooks, and contributor workflows.
 
 - Add a MongoDB load-generation notebook with a disposable demo database,

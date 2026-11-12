@@ -6,7 +6,7 @@ from time import perf_counter
 
 from bondi._callbacks import _CallbackAbort, _ResultCallbacks
 from bondi._health import _availability_error, _fatal_access_error, _query_start_hook
-from bondi.load import LoadResult, Sequential, UniformRandom, WeightedRandom
+from bondi.load import ByPattern, LoadResult, Sequential, UniformRandom, WeightedRandom
 from bondi.workload import Workload
 
 
@@ -40,8 +40,8 @@ async def _generate_load(
         raise ValueError("load generation requires a nonempty workload")
     for entry in workload:
         executor._validate_query(entry.query)
-    if not isinstance(selection, (WeightedRandom, UniformRandom, Sequential)):
-        raise TypeError("selection must be WeightedRandom, UniformRandom or Sequential")
+    if not isinstance(selection, (WeightedRandom, UniformRandom, Sequential, ByPattern)):
+        raise TypeError("selection must be WeightedRandom, UniformRandom, Sequential or ByPattern")
     _duration(warmup_seconds, "warmup_seconds", zero=True)
     _duration(measurement_seconds, "measurement_seconds")
     _duration(drain_timeout_seconds, "drain_timeout_seconds")
@@ -49,7 +49,12 @@ async def _generate_load(
         raise ValueError("combined phase duration must be finite")
     if type(return_load_results) is not bool:
         raise TypeError("return_load_results must be a boolean")
-    streams = [selection._stream(len(workload), i) for i in range(executor.concurrency)]
+    stream = (
+        selection._prepare(workload)
+        if isinstance(selection, ByPattern)
+        else lambda client: selection._stream(len(workload), client)
+    )
+    streams = [stream(i) for i in range(executor.concurrency)]
     callbacks = _ResultCallbacks(on_result)
     returned = []
     pending = {}

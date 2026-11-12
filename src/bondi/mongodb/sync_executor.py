@@ -129,8 +129,8 @@ class MongoExecutor(_SyncExecutor):
         Args:
             workload: Nonempty workload for this executor's backend.
             selection: Per-client [WeightedRandom][bondi.load.WeightedRandom],
-                [UniformRandom][bondi.load.UniformRandom] or
-                [Sequential][bondi.load.Sequential] policy.
+                [UniformRandom][bondi.load.UniformRandom],
+                [Sequential][bondi.load.Sequential] or [ByPattern][bondi.load.ByPattern] policy.
             measurement_seconds: Measurement duration in seconds. Must be positive and finite.
             drain_timeout_seconds: Positive finite drain allowance; expiry produces
                 unresolved observations and requests cooperative cancellation.

@@ -4,6 +4,8 @@ This page tracks capabilities and open work, not a commitment to release dates.
 
 ## Available
 
+- Pattern-based load selection over saved workload instances with `ByPattern`.
+
 - Sustained closed-loop load generation with per-client selection, warm-up,
   measurement, cooperative draining and streamed LoadResult observations.
 

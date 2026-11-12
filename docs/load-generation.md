@@ -78,6 +78,45 @@ measurement: different warm-up progress can change the measurement query mix.
 Each admitted attempt consumes one selection even if it fails. There is no
 scheduler retry. Choose different seeds for different repetitions.
 
+## Select patterns before query instances
+
+`ByPattern` first selects a pattern ID, then a query from that pattern.
+This gives patterns equal probability even when they contain different numbers of queries:
+
+```python
+from bondi.load import ByPattern, Sequential, UniformRandom
+
+selection = ByPattern(
+    patterns=UniformRandom(seed=42),
+    instances=UniformRandom(seed=43),
+)
+```
+
+Pass this policy as `selection` to `generate_load()`.
+Every workload entry must have a `pattern_id`. The MongoDB workload generator already assigns these IDs.
+The policy selects existing queries. It does not generate new values during the run.
+
+Without `pattern_ids`, patterns follow ascending ID order. Use an explicit list to select a subset or specify another order:
+
+```python
+selection = ByPattern(
+    pattern_ids=[0, 3, 7],
+    patterns=WeightedRandom(weights=[5, 2, 1], seed=42),
+    instances=Sequential(),
+)
+```
+
+The weights correspond to IDs 0, 3 and 7. Each requested ID must have at least one query.
+Missing IDs, duplicate IDs and entries without IDs raise errors before execution.
+Instance policies support `UniformRandom` and `Sequential`. The default is `UniformRandom(seed=0)`.
+Sequential instances follow workload order within each pattern. Duplicate entries remain separate choices.
+
+Each client has its own pattern stream and separate instance streams for each pattern.
+Streams continue across warm-up and measurement. A new call starts fresh streams.
+Instance seeds include the client ID and pattern ID, so visits to other patterns do not advance that instance stream.
+The same reproducibility limits as ordinary selection apply.
+Use `workload[result.workload_position].pattern_id` to group observations by pattern.
+
 ## Phases and observations
 
 Before the run, BONDI checks the arguments and every query in the workload.

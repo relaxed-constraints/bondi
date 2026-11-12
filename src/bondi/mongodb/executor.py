@@ -351,9 +351,10 @@ class AsyncMongoExecutor:
         Args:
             workload: Nonempty native workload for this executor's backend.
             selection: [WeightedRandom][bondi.load.WeightedRandom],
-                [UniformRandom][bondi.load.UniformRandom] or
-                [Sequential][bondi.load.Sequential] policy. Each call creates fresh
-                selection streams for each client. Streams continue across phases.
+                [UniformRandom][bondi.load.UniformRandom],
+                [Sequential][bondi.load.Sequential] or [ByPattern][bondi.load.ByPattern] policy.
+                Each call creates fresh selection streams for each client.
+                Streams continue across phases.
             measurement_seconds: Measurement duration in seconds. Must be positive and finite.
             drain_timeout_seconds: Positive finite allowance after admissions stop.
                 Expiry requests cancellation of operations and emits unresolved
