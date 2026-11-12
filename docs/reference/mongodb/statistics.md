@@ -49,16 +49,13 @@ conjunction rules, expression boundaries and empty nested pipelines.
     options:
       show_root_heading: true
       heading_level: 2
-      show_signature_annotations: true
 
 ::: bondi.mongodb.MongoQueryStatistics
     options:
       show_root_heading: true
       heading_level: 2
-      show_signature_annotations: true
 
 ::: bondi.mongodb.MongoStageStatistics
     options:
       show_root_heading: true
       heading_level: 2
-      show_signature_annotations: true

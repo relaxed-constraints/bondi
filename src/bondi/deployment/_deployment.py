@@ -190,7 +190,11 @@ class Deployment:
         return "running"
 
     def logs(self, *, tail: int = 50) -> str:
-        """Return recent database logs to help diagnose startup failures."""
+        """Return recent database logs to help diagnose startup failures.
+
+        Returns:
+            Recent database container logs as plain text.
+        """
         if type(tail) is not int or tail < 1:
             raise ValueError("tail must be a positive integer")
         return self._run("logs", "--no-color", "--tail", str(tail), self.backend)
@@ -251,6 +255,9 @@ class Deployment:
 def get_deployment(name: str) -> Deployment:
     """Load a saved deployment by name without contacting Docker.
 
+    Returns:
+        The handle reconstructed from the saved configuration.
+
     Raises:
         FileNotFoundError: No configuration exists for this name.
         ValueError: Configuration is incompatible or malformed.
@@ -274,7 +281,11 @@ def get_deployment(name: str) -> Deployment:
 
 
 def list_deployments() -> list[Deployment]:
-    """List saved deployment handles (including stopped/removed containers)."""
+    """List saved deployment handles (including stopped/removed containers).
+
+    Returns:
+        Saved handles in name order, including deployments without a running container.
+    """
     root = _directory("mongodb").parent
     return [get_deployment(path.parent.name) for path in sorted(root.glob("*/deployment.json"))]
 

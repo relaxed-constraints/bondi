@@ -70,3 +70,4 @@ plugins:
           paths: [src]
           options:
             docstring_style: google
+            show_signature_annotations: true

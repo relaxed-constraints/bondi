@@ -10,8 +10,14 @@ There are two complementary sources of documentation:
 ## 1. Write the contract beside the code
 
 Open `src/bondi/mongodb/collection.py`. The class docstring contains a summary,
-behavioural details, and Google-style `Args`, `Raises`, and `Examples` sections.
-The constructor signature comes from the dataclass fields and their type hints.
+behavioural details, and Google-style sections. The constructor signature comes
+from the dataclass fields and their type hints. The `from_namespace` factory
+documents its inputs, output, and errors in `Args`, `Returns`, and `Raises`.
+
+For methods and functions that return a value, use a return annotation and a
+short `Returns` description that explains what the caller receives. The
+reference displays annotations and links documented BONDI types automatically.
+When an annotation is `Self`, link to the concrete class in the description.
 
 The docstring is the source of truth for the API contract; avoid maintaining a
 second copy of its parameter descriptions in Markdown.

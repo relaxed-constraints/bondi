@@ -239,6 +239,9 @@ class Schema:
 
         Accepts generators and empty iterables. Each document is validated before
         accumulation; input dictionaries and lists are not modified or retained.
+
+        Returns:
+            The accumulated observations with the selected value retention mode.
         """
         schema = cls(values=values)
         schema.update(documents)
@@ -280,7 +283,11 @@ class Schema:
         )
 
     def __getitem__(self, path: str | Path) -> FieldSchema:
-        """Look up an exact path; raise KeyError if absent. Arrays require explicit []."""
+        """Look up an exact path; raise KeyError if absent. Arrays require explicit [].
+
+        Returns:
+            The field schema at the requested path.
+        """
         return self._flat[_path(path)]
 
     def update(self, documents: Iterable[dict]) -> None:
@@ -320,6 +327,9 @@ class Schema:
         Rebuild parent links, paths and flat indexes from the saved tree. Unknown
         versions, malformed records and inconsistent counts are rejected. See
         the schema persistence guide for scalar fidelity and format details.
+
+        Returns:
+            The restored [`Schema`][bondi.schema.Schema], ready for further updates.
 
         Raises:
             ValueError: The artifact is malformed or uses an unsupported format.

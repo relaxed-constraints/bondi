@@ -41,6 +41,9 @@ class CouchbaseExecutor(_SyncExecutor):
 
         Accepts the same connection options as the async executor.
         Close explicitly or use a with block.
+
+        Returns:
+            A [`CouchbaseExecutor`][bondi.couchbase.CouchbaseExecutor] that owns its connection.
         """
 
         async def connect():
@@ -68,13 +71,21 @@ class CouchbaseExecutor(_SyncExecutor):
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> ExecutionResult:
-        """Synchronously run; options match AsyncCouchbaseExecutor.run."""
+        """Synchronously run; options match AsyncCouchbaseExecutor.run.
+
+        Returns:
+            Query metrics, the row count, and documents if requested.
+        """
         return self._call("run", query, collect_results=collect_results, query_kwargs=query_kwargs)
 
     def explain(
         self, query: CouchbaseQuery, *, query_kwargs: Mapping[str, Any] | None = None
     ) -> ExecutionResult:
-        """Synchronously explain; options match AsyncCouchbaseExecutor.explain."""
+        """Synchronously explain; options match AsyncCouchbaseExecutor.explain.
+
+        Returns:
+            The native SQL++ execution plan in `raw`.
+        """
         return self._call("explain", query, query_kwargs=query_kwargs)
 
     def profile(
@@ -84,7 +95,11 @@ class CouchbaseExecutor(_SyncExecutor):
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> ExecutionResult:
-        """Synchronously profile; options match AsyncCouchbaseExecutor.profile."""
+        """Synchronously profile; options match AsyncCouchbaseExecutor.profile.
+
+        Returns:
+            Query metrics, available timing diagnostics, and documents if requested.
+        """
         return self._call(
             "profile", query, collect_results=collect_results, query_kwargs=query_kwargs
         )
@@ -102,6 +117,9 @@ class CouchbaseExecutor(_SyncExecutor):
         on_result(position, entry, result) must be a regular callable returning None.
         Other options and failure behavior match AsyncCouchbaseExecutor.run_workload.
         Do not reenter this executor from a callback.
+
+        Returns:
+            Execution outcomes in workload order, with `None` for unstarted entries.
         """
         return self._call_workload(
             "run_workload",
@@ -123,6 +141,9 @@ class CouchbaseExecutor(_SyncExecutor):
         on_result(position, entry, result) must be a regular callable returning None.
         Other options and failure behavior match AsyncCouchbaseExecutor.explain_workload.
         Do not reenter this executor from a callback.
+
+        Returns:
+            Explain outcomes in workload order, with `None` for unstarted entries.
         """
         return self._call_workload(
             "explain_workload", workload, query_kwargs=query_kwargs, on_result=on_result
@@ -141,6 +162,9 @@ class CouchbaseExecutor(_SyncExecutor):
         on_result(position, entry, result) must be a regular callable returning None.
         Other options and failure behavior match AsyncCouchbaseExecutor.profile_workload.
         Do not reenter this executor from a callback.
+
+        Returns:
+            Profile outcomes in workload order, with `None` for unstarted entries.
         """
         return self._call_workload(
             "profile_workload",

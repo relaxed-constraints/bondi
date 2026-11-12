@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Show return annotations and describe return values throughout the API reference,
+  with links to BONDI return types.
+
 ## 0.1.10 — 2026-11-10
 
 - Add bounded sync/async executor ping and optional health_check_timeout_seconds

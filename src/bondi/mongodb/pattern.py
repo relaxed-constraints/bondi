@@ -161,6 +161,9 @@ class MongoQueryPattern:
         Sort/projection pairs become lists; target and predicate templates become
         dictionaries. Patterns contain type labels and fixed bool/string operands,
         not sampled BSON values, so ordinary JSON is sufficient.
+
+        Returns:
+            An independent, JSON-compatible version-1 pattern envelope.
         """
         return {
             "format_version": 1,
@@ -180,6 +183,10 @@ class MongoQueryPattern:
         All fields are required; unknown fields, kinds and versions are rejected.
         Raises TypeError for incorrect container types and ValueError for invalid
         contents. Nested objects and immutable tuples are reconstructed.
+
+        Returns:
+            The validated [`MongoQueryPattern`][bondi.mongodb.MongoQueryPattern] restored from the
+            envelope.
         """
 
         def fields(obj, expected, name):
@@ -234,14 +241,22 @@ class MongoQueryPattern:
         )
 
     def to_json(self) -> str:
-        """Serialize the versioned envelope as compact JSON."""
+        """Serialize the versioned envelope as compact JSON.
+
+        Returns:
+            The versioned pattern envelope as compact JSON.
+        """
         return json.dumps(
             self.to_dict(), ensure_ascii=False, allow_nan=False, separators=(",", ":")
         )
 
     @classmethod
     def from_json(cls, text: str) -> Self:
-        """Restore JSON, rejecting duplicate keys, nonfinite numbers and invalid envelopes."""
+        """Restore JSON, rejecting duplicate keys, nonfinite numbers and invalid envelopes.
+
+        Returns:
+            The validated [`MongoQueryPattern`][bondi.mongodb.MongoQueryPattern] restored from JSON.
+        """
         if not isinstance(text, str):
             raise TypeError("text must be a string")
 
@@ -268,6 +283,9 @@ class MongoQueryPattern:
         Predicates follow canonical field order; sort precedence is preserved.
         Unset options and skip=0 are omitted. This is a human-readable summary,
         not an executable query or persistence format; repr retains the dataclass view.
+
+        Returns:
+            A display string with the target, typed predicates, and query options.
         """
         predicates = []
         for predicate in self.predicates:
@@ -291,7 +309,12 @@ class MongoQueryPattern:
 
     @classmethod
     def from_query(cls, query: MongoFindQuery) -> Self:
-        """Extract a shape from a supported native find query, including after JSONL loading."""
+        """Extract a shape from a supported native find query, including after JSONL loading.
+
+        Returns:
+            The [`MongoQueryPattern`][bondi.mongodb.MongoQueryPattern] describing the supported find
+            query shape.
+        """
         if not isinstance(query, MongoFindQuery):
             raise TypeError("Expected MongoFindQuery")
         query.validate()
@@ -328,7 +351,11 @@ class MongoQueryPattern:
         )
 
     def matches(self, query: MongoFindQuery) -> bool:
-        """Whether the query has this shape; unsupported shapes return False."""
+        """Whether the query has this shape; unsupported shapes return False.
+
+        Returns:
+            `True` if the query has this shape. Unsupported shapes return `False`.
+        """
         try:
             return self == self.from_query(query)
         except (ValueError, TypeError):

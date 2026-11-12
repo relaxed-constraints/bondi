@@ -116,6 +116,10 @@ class AsyncMongoSampleEstimator:
 
         Adjustment warnings are UserWarning. Failed sample creation attempts
         cleanup even when cleanup_on_exit=False. Database errors propagate.
+
+        Returns:
+            This [`AsyncMongoSampleEstimator`][bondi.mongodb.AsyncMongoSampleEstimator] after
+            preparation.
         """
         self._check_open()
         if self._prepared:
@@ -175,6 +179,9 @@ class AsyncMongoSampleEstimator:
         Returns sample matches and actual evaluated sample size. Fresh samples
         use a facet so numerator and denominator describe the same draw. Source
         mutation can invalidate the recorded population; no snapshot is promised.
+
+        Returns:
+            The estimated population matches and the sample counts used to derive them.
         """
         self._check_open()
         if not self._prepared:
@@ -306,12 +313,20 @@ class MongoSampleEstimator:
         return self._executor._submit(invoke, cancel_on_interrupt=method != "close")
 
     def prepare(self) -> Self:
-        """Prepare explicitly; entering a with block also prepares."""
+        """Prepare explicitly; entering a with block also prepares.
+
+        Returns:
+            This [`MongoSampleEstimator`][bondi.mongodb.MongoSampleEstimator] after preparation.
+        """
         self._call("prepare")
         return self
 
     def estimate(self, query: MongoFindQuery) -> CardinalityEstimate:
-        """Estimate filter cardinality using the borrowed executor's loop."""
+        """Estimate filter cardinality using the borrowed executor's loop.
+
+        Returns:
+            The estimated population matches and the sample counts used to derive them.
+        """
         return self._call("estimate", query)
 
     def drop_sample(self) -> None:

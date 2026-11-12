@@ -93,6 +93,9 @@ class MongoAggregateQuery:
         rejected. $regex operator documents stay dictionaries; native Regex values
         use $regularExpression. Serialization does not modify the query.
 
+        Returns:
+            The native query and its metadata in a versioned JSON envelope.
+
         Raises:
             TypeError: Structural validation or BSON-aware encoding fails.
             ValueError: Invalid structure or an ambiguous Extended JSON document.
@@ -117,6 +120,10 @@ class MongoAggregateQuery:
         Allows whitespace and envelope-field reordering. Rejects unknown versions,
         wrong query kinds, missing/extra fields and duplicate JSON keys at any depth.
 
+        Returns:
+            The validated [`MongoAggregateQuery`][bondi.mongodb.MongoAggregateQuery] restored from
+            the envelope.
+
         Raises:
             TypeError: Input or decoded query fields have incorrect types.
             ValueError: Invalid JSON, envelope, pipeline structure or noncanonical payload.
@@ -132,5 +139,8 @@ class MongoAggregateQuery:
         Includes version, kind, target and pipeline; preserves stage and document
         order. Recomputed on every call. Does not identify semantic equivalence or
         deployment state. Raises the same errors as to_json.
+
+        Returns:
+            The hexadecimal SHA-256 digest of the UTF-8 JSON representation.
         """
         return hashlib.sha256(self.to_json().encode("utf-8")).hexdigest()

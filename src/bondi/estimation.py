@@ -30,7 +30,11 @@ class CardinalityEstimator(Protocol[QueryT]):
     """Synchronous estimation; concrete implementations define supported queries."""
 
     def estimate(self, query: QueryT) -> CardinalityEstimate:
-        """Estimate cardinality in the implementation's configured population."""
+        """Estimate cardinality in the implementation's configured population.
+
+        Returns:
+            The estimated match count and population information.
+        """
         ...
 
 
@@ -38,5 +42,9 @@ class AsyncCardinalityEstimator(Protocol[QueryT]):
     """Async estimation for implementations requiring asynchronous I/O."""
 
     async def estimate(self, query: QueryT) -> CardinalityEstimate:
-        """Estimate cardinality in the implementation's configured population."""
+        """Estimate cardinality in the implementation's configured population.
+
+        Returns:
+            The estimated match count and population information.
+        """
         ...

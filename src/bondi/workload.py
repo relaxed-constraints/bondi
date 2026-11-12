@@ -228,6 +228,9 @@ class Workload:
         newline is optional. Loaded entries and queries are independent objects,
         even when duplicate entries originally shared a query reference.
 
+        Returns:
+            The [`Workload`][bondi.workload.Workload] restored in file order.
+
         Raises:
             ValueError: A line has invalid encoding, JSON, metadata or native query data.
             OSError: The file cannot be read.
@@ -280,5 +283,9 @@ class Workload:
     def __getitem__(self, index: slice) -> list[WorkloadEntry]: ...
 
     def __getitem__(self, index: int | slice) -> WorkloadEntry | list[WorkloadEntry]:
-        """Return an entry reference; slicing returns a shallow list of references."""
+        """Return an entry reference; slicing returns a shallow list of references.
+
+        Returns:
+            The original entry for an integer index, or a shallow list of entries for a slice.
+        """
         return self.entries[index]

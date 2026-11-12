@@ -27,9 +27,17 @@ class Query(Protocol):
         ...
 
     def to_json(self) -> str:
-        """Return a validated, versioned native query representation."""
+        """Return a validated, versioned native query representation.
+
+        Returns:
+            The query serialized in its backend-specific JSON envelope.
+        """
         ...
 
     def fingerprint(self) -> str:
-        """Identify the current serialized representation, not semantic equivalence."""
+        """Identify the current serialized representation, not semantic equivalence.
+
+        Returns:
+            A stable identifier for the serialized query representation.
+        """
         ...

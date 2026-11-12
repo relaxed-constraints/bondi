@@ -38,6 +38,9 @@ class MongoExecutor(_SyncExecutor):
 
         Accepts the same connection options as the async executor.
         Close explicitly or use a with block.
+
+        Returns:
+            A [`MongoExecutor`][bondi.mongodb.MongoExecutor] that owns its connection.
         """
 
         async def connect():
@@ -63,7 +66,11 @@ class MongoExecutor(_SyncExecutor):
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> ExecutionResult:
-        """Synchronously run; options match AsyncMongoExecutor.run."""
+        """Synchronously run; options match AsyncMongoExecutor.run.
+
+        Returns:
+            The row count, elapsed time, and documents if requested.
+        """
         return self._call("run", query, collect_results=collect_results, query_kwargs=query_kwargs)
 
     def explain(
@@ -73,7 +80,11 @@ class MongoExecutor(_SyncExecutor):
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> ExecutionResult:
-        """Synchronously explain; options match AsyncMongoExecutor.explain."""
+        """Synchronously explain; options match AsyncMongoExecutor.explain.
+
+        Returns:
+            The native planning-only explain response in `raw`.
+        """
         return self._call(
             "explain", query, query_kwargs=query_kwargs, command_kwargs=command_kwargs
         )
@@ -86,7 +97,11 @@ class MongoExecutor(_SyncExecutor):
         query_kwargs: Mapping[str, Any] | None = None,
         command_kwargs: Mapping[str, Any] | None = None,
     ) -> ExecutionResult:
-        """Synchronously profile; options match AsyncMongoExecutor.profile."""
+        """Synchronously profile; options match AsyncMongoExecutor.profile.
+
+        Returns:
+            The instrumented explain response in `raw`.
+        """
         return self._call(
             "profile",
             query,
@@ -108,6 +123,9 @@ class MongoExecutor(_SyncExecutor):
         on_result(position, entry, result) must be a regular callable returning None.
         Other options and failure behavior match AsyncMongoExecutor.run_workload.
         Do not reenter this executor from a callback.
+
+        Returns:
+            Execution outcomes in workload order, with `None` for unstarted entries.
         """
         return self._call_workload(
             "run_workload",
@@ -130,6 +148,9 @@ class MongoExecutor(_SyncExecutor):
         on_result(position, entry, result) must be a regular callable returning None.
         Other options and failure behavior match AsyncMongoExecutor.explain_workload.
         Do not reenter this executor from a callback.
+
+        Returns:
+            Explain outcomes in workload order, with `None` for unstarted entries.
         """
         return self._call_workload(
             "explain_workload",
@@ -153,6 +174,9 @@ class MongoExecutor(_SyncExecutor):
         on_result(position, entry, result) must be a regular callable returning None.
         Other options and failure behavior match AsyncMongoExecutor.profile_workload.
         Do not reenter this executor from a callback.
+
+        Returns:
+            Profile outcomes in workload order, with `None` for unstarted entries.
         """
         return self._call_workload(
             "profile_workload",

@@ -158,6 +158,10 @@ class AsyncCouchbaseExecutor:
         ClusterOptions; authentication comes from username/password. On readiness
         failure or cancellation the newly connected cluster is closed. Connection
         setup is outside per-query timing and uses SDK connection timeout settings.
+
+        Returns:
+            An [`AsyncCouchbaseExecutor`][bondi.couchbase.AsyncCouchbaseExecutor] that owns its
+            connection.
         """
         executor = cls(
             None,
@@ -263,6 +267,9 @@ class AsyncCouchbaseExecutor:
         query_kwargs accepts native QueryOptions such as scan_consistency or
         read_only. Bindings, context, timeout, metrics, profile, raw and serializer
         are reserved. SDK consistency defaults apply unless explicitly overridden.
+
+        Returns:
+            Query metrics, the row count, and documents if requested.
         """
         return await self._execute(query, "run", collect_results, query_kwargs)
 
@@ -274,6 +281,9 @@ class AsyncCouchbaseExecutor:
         Supply the original SQL++ statement, without an EXPLAIN prefix. No execution
         statistics are collected for that statement. row_count/documents remain None;
         EXPLAIN request metrics are not measurements of the underlying query.
+
+        Returns:
+            The native SQL++ execution plan in `raw`.
         """
         return await self._execute(query, "explain", False, query_kwargs)
 
@@ -289,6 +299,9 @@ class AsyncCouchbaseExecutor:
         Unlike MongoDB profiling, Couchbase can also return the actual query rows.
         When executionTimings is absent, retain basic metrics and add a warning.
         No extra EXPLAIN request or automatic summary parsing is performed.
+
+        Returns:
+            Query metrics, available timing diagnostics, and documents if requested.
         """
         return await self._execute(query, "profile", collect_results, query_kwargs)
 
@@ -370,6 +383,9 @@ class AsyncCouchbaseExecutor:
         read-only. Callback time is excluded from result timing/query deadlines.
         Callback failures propagate after cancelling and draining remaining workers;
         pending deliveries are not guaranteed after abort or caller cancellation.
+
+        Returns:
+            Execution outcomes in workload order, with `None` for unstarted entries.
         """
         self._collect(collect_results)
         options = _options(query_kwargs, _RESERVED)
@@ -386,7 +402,11 @@ class AsyncCouchbaseExecutor:
         on_result: _ResultCallback | None = None,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Explain entries with run_workload's scheduling, failure and callback policy."""
+        """Explain entries with run_workload's scheduling, failure and callback policy.
+
+        Returns:
+            Explain outcomes in workload order, with `None` for unstarted entries.
+        """
         options = _options(query_kwargs, _RESERVED)
         return await self._workload(
             workload,
@@ -402,7 +422,11 @@ class AsyncCouchbaseExecutor:
         collect_results: bool = False,
         query_kwargs: Mapping[str, Any] | None = None,
     ) -> list[ExecutionResult | None]:
-        """Profile entries with run_workload's scheduling, failure and callback policy."""
+        """Profile entries with run_workload's scheduling, failure and callback policy.
+
+        Returns:
+            Profile outcomes in workload order, with `None` for unstarted entries.
+        """
         self._collect(collect_results)
         options = _options(query_kwargs, _RESERVED)
         return await self._workload(

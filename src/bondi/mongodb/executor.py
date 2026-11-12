@@ -126,6 +126,9 @@ class AsyncMongoExecutor:
 
         Validates executor options before allocating the client. Use async with
         or await close() for cleanup. Creating the executor does not ping MongoDB.
+
+        Returns:
+            An [`AsyncMongoExecutor`][bondi.mongodb.AsyncMongoExecutor] that owns its connection.
         """
         options = _options(client_kwargs, {"host"}, "client_kwargs")
         executor = cls(
@@ -205,6 +208,9 @@ class AsyncMongoExecutor:
         override represented query fields. Operation exceptions propagate directly.
         Timing excludes validation and scheduling, includes consumption and cursor
         cleanup. Failed partial results are discarded. Cursors close on all exits.
+
+        Returns:
+            The row count, elapsed time, and documents if requested.
         """
         self._validate_query(query)
         if type(collect_results) is not bool:
@@ -265,6 +271,9 @@ class AsyncMongoExecutor:
         command options go in query_kwargs; outer command options (e.g. maxTimeMS)
         go in command_kwargs. Reserved fields cannot override the operation mode.
         Parsing is explicit. Driver/server exceptions propagate.
+
+        Returns:
+            The native planning-only explain response in `raw`.
         """
         return await self._explain_command(query, "queryPlanner", query_kwargs, command_kwargs)
 
@@ -283,6 +292,9 @@ class AsyncMongoExecutor:
         no query documents or row_count; use summarize(raw) explicitly for
         server counts. elapsed_ms measures this diagnostic request, not ordinary run
         latency. Options and exception handling follow explain().
+
+        Returns:
+            The instrumented explain response in `raw`.
         """
         self._profile_verbosity(verbosity)
         return await self._explain_command(query, verbosity, query_kwargs, command_kwargs)
@@ -347,6 +359,9 @@ class AsyncMongoExecutor:
         read-only. Callback time is excluded from result timing/query deadlines.
         Callback failures propagate after cancelling and draining remaining workers;
         pending deliveries are not guaranteed after abort or caller cancellation.
+
+        Returns:
+            Execution outcomes in workload order, with `None` for unstarted entries.
         """
         if type(collect_results) is not bool:
             raise TypeError("collect_results must be a boolean")
@@ -368,6 +383,9 @@ class AsyncMongoExecutor:
         """Collect planning-only explains with run_workload's scheduling/error and callback policy.
 
         Validate all query types and reserved options before issuing operations.
+
+        Returns:
+            Explain outcomes in workload order, with `None` for unstarted entries.
         """
         inner = _options(query_kwargs, _QUERY_FIELDS, "query_kwargs")
         outer = _options(command_kwargs, _COMMAND_FIELDS, "command_kwargs")
@@ -390,6 +408,9 @@ class AsyncMongoExecutor:
 
         Validate verbosity, query types and reserved options before issuing operations.
         Results contain raw diagnostics, without automatic parsing or query documents.
+
+        Returns:
+            Profile outcomes in workload order, with `None` for unstarted entries.
         """
         self._profile_verbosity(verbosity)
         inner = _options(query_kwargs, _QUERY_FIELDS, "query_kwargs")

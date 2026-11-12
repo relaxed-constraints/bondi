@@ -344,6 +344,10 @@ class MongoWorkloadGenerator:
         exists/type literals are fixed. Duplicate full instances are allowed.
         Output is shuffled. No partial workload is returned; errors expose stats.
         Estimator errors propagate. The estimator owns its operation timeout.
+
+        Returns:
+            The shuffled workload, or a pair containing the workload and
+            the list of patterns indexed by pattern ID if `return_patterns=True`.
         """
         self._last_stats = {}
         for name, value in [

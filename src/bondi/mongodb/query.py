@@ -172,6 +172,9 @@ class MongoFindQuery:
         integers may load as bson.Int64. These preserve the serialized BSON value,
         not necessarily its original Python representation.
 
+        Returns:
+            The native query and its metadata in a versioned JSON envelope.
+
         Raises:
             TypeError: Structural validation or BSON-aware JSON encoding fails.
             ValueError: Validation fails or a document is ambiguous with an Extended
@@ -205,6 +208,10 @@ class MongoFindQuery:
         Whitespace and envelope field order may differ. BSON payloads must use
         Canonical Extended JSON. Unknown, missing and duplicate envelope fields
         are rejected; duplicate document keys are also rejected at any depth.
+
+        Returns:
+            The validated [`MongoFindQuery`][bondi.mongodb.MongoFindQuery] restored from the
+            envelope.
 
         Raises:
             TypeError: Input is not a string or a decoded field has an incorrect type.
@@ -246,5 +253,8 @@ class MongoFindQuery:
         target and all query options; preserves document order. Identifies the
         serialized representation, not semantic equivalence or deployment state.
         Raises the same errors as to_json.
+
+        Returns:
+            The hexadecimal SHA-256 digest of the UTF-8 JSON representation.
         """
         return hashlib.sha256(self.to_json().encode("utf-8")).hexdigest()

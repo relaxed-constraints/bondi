@@ -58,7 +58,7 @@ class MongoCollectionRef:
             namespace: Database and collection names separated by a dot.
 
         Returns:
-            A collection reference with the parsed names.
+            A [`MongoCollectionRef`][bondi.mongodb.MongoCollectionRef] with the parsed names.
 
         Raises:
             TypeError: The namespace is not a string.

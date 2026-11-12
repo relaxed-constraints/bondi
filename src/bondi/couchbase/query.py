@@ -112,6 +112,9 @@ class CouchbaseQuery:
         Includes defaults; preserves exact statement/context text, array order
         and parameter dictionary insertion order. Does not use BSON Extended JSON.
         Raises the same validation errors as validate().
+
+        Returns:
+            The native query and its metadata in a versioned JSON envelope.
         """
         self.validate()
         return json.dumps(
@@ -135,6 +138,10 @@ class CouchbaseQuery:
         Rejects missing/extra fields, unknown versions or kinds, duplicate JSON
         keys, and nonfinite numeric values. Envelope order and formatting may vary;
         the exact statement string is retained.
+
+        Returns:
+            The validated [`CouchbaseQuery`][bondi.couchbase.CouchbaseQuery] restored from the
+            envelope.
 
         Raises:
             TypeError: Input or decoded fields have incorrect types.
@@ -183,5 +190,8 @@ class CouchbaseQuery:
         and comments inside SQL++ affect the digest, as does parameter dictionary
         order. No semantic normalization or deployment identity is implied.
         Recomputed on each call; raises the same errors as to_json().
+
+        Returns:
+            The hexadecimal SHA-256 digest of the UTF-8 JSON representation.
         """
         return hashlib.sha256(self.to_json().encode("utf-8")).hexdigest()
