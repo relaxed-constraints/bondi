@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Style inline code in documentation prose and tables as unshaded, bold monospace.
+- Use black inline code text on the default shaded background in the light theme.
 
 - Migrate the documentation to Zensical’s modern theme and show formatted API
   signatures in separate code blocks with links to documented types.

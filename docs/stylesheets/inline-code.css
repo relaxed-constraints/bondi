@@ -1,6 +1,8 @@
-.md-typeset code:not(pre code) {
-  background-color: transparent;
-  color: inherit;
-  font-weight: 700;
-  padding: 0;
+.md-typeset code:not(pre code),
+.md-typeset a code:not(pre code) {
+  color: #000;
+}
+
+[data-md-color-scheme="slate"] .md-typeset code:not(pre code) {
+  color: var(--md-code-fg-color);
 }
