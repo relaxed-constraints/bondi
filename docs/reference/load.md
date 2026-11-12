@@ -24,3 +24,19 @@ executor references.
     options:
       show_root_heading: true
       heading_level: 2
+
+## Callback function types
+
+Pass your own function as `on_result`; these aliases describe its signature.
+Both receive one [LoadResult][bondi.load.LoadResult]. Synchronous executors accept
+ordinary functions, while async executors also accept `async def` functions.
+
+::: bondi.load.SyncLoadCallback
+    options:
+      show_root_heading: true
+      heading_level: 3
+
+::: bondi.load.LoadCallback
+    options:
+      show_root_heading: true
+      heading_level: 3

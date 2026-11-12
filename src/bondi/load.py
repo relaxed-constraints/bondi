@@ -142,4 +142,13 @@ class LoadResult:
 
 
 LoadCallback = Callable[[LoadResult], None | Awaitable[None]]
+"""Function type accepted by async executors: receives a LoadResult and returns
+None or an awaitable of None. Async executors await asynchronous callbacks.
+This is a type alias, not a class to instantiate.
+"""
+
 SyncLoadCallback = Callable[[LoadResult], None]
+"""Function type accepted by synchronous executors: receives a LoadResult and
+returns None. Callbacks run on the calling thread and must not return awaitables.
+This is a type alias, not a class to instantiate.
+"""

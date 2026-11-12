@@ -137,7 +137,8 @@ class MongoExecutor(_SyncExecutor):
             warmup_seconds: Nonnegative finite warm-up duration, default zero.
             collect_results: Retain returned database documents, default False.
             return_load_results: Retain LoadResults in the returned list, default True.
-            on_result: Ordinary callback receiving each LoadResult, including errors
+            on_result: [SyncLoadCallback][bondi.load.SyncLoadCallback] receiving
+                each LoadResult, including errors
                 and drain expiry. Must not return an awaitable or reenter the executor.
             query_kwargs: Native options as accepted by run().
 

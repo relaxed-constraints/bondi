@@ -362,7 +362,8 @@ class AsyncMongoExecutor:
             collect_results: Retain database documents inside ExecutionResult.
             return_load_results: Retain observations for the returned list.
                 False returns [] without suppressing callbacks.
-            on_result: Serialized callback receiving one LoadResult per completed
+            on_result: [LoadCallback][bondi.load.LoadCallback] receiving one
+                LoadResult per completed
                 or drain-expired invocation, including warm-up. Async callbacks
                 are awaited. Callback time is excluded from observation duration;
                 workers wait for delivery before submitting another query.

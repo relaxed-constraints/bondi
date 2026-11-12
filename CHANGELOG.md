@@ -3,7 +3,8 @@
 ## Unreleased
 
 - Link selection policies directly from each executor’s `generate_load()` API
-  parameter documentation.
+  parameter documentation. Document and link callback function type aliases
+  from `on_result`, including the synchronous versus asynchronous distinction.
 
 - Add sync/async executor `generate_load()` with per-client weighted random,
   uniform random and sequential selection, shared warm-up/measurement boundaries,
