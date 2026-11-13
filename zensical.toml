@@ -58,6 +58,7 @@ nav = [
     ] },
     { "Projects" = "projects.md" },
     { "Development" = [
+        { "Changelog" = "changelog.md" },
         { "Contributing" = "contributing.md" },
         { "Architecture and design" = "architecture.md" },
         { "Building the documentation" = "documentation.md" },

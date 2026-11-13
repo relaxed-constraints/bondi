@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show this changelog under Development in the documentation, using the same source file.
+
 - **Breaking:** Move demo loading to `bondi.data.load_demo_data()` and
   `bondi dataset load-demo`. Remove the deployment method, command and
   DemoDataResult type. Use explicit collection references and LoadDataResult.
