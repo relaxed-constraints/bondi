@@ -60,7 +60,7 @@ def test_couchbase_lifecycle(tmp_path, monkeypatch, edition, live_ports):
         db.stop()
         assert db.status() == "stopped"
         db.start(timeout=180)
-        db.remove()
+        db.remove(keep_data=True)
         assert db.status() == "removed"
         db.start(timeout=180)
         with CouchbaseExecutor.from_uri(
@@ -74,5 +74,5 @@ def test_couchbase_lifecycle(tmp_path, monkeypatch, edition, live_ports):
             assert result.documents == [42]
     finally:
         if list_deployments():
-            get_deployment("cb-test").remove(delete_data=True)
+            get_deployment("cb-test").remove()
     assert list_deployments() == []

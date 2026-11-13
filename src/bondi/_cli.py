@@ -255,7 +255,7 @@ def _run(args):
                     if answer.strip().lower() not in {"y", "yes"}:
                         message("Removal cancelled; nothing was changed.")
                         return 1
-                db.remove(delete_data=not args.keep_data, timeout=args.timeout)
+                db.remove(keep_data=args.keep_data, timeout=args.timeout)
                 detail = "data retained" if args.keep_data else "data and configuration deleted"
                 message(f"{db.name}: removed ({detail})")
             elif args.command == "start":

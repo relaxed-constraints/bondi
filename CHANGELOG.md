@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Breaking:** `Deployment.remove()` now deletes data and saved configuration
+  by default. Use `remove(keep_data=True)` to retain them. Remove the
+  `delete_data` argument without a compatibility alias. Align the API with
+  CLI removal (issue #9).
+
 - Show removed deployments in dim grey. Add `(data retained)` only when the
   Compose data volume exists. Show unhealthy deployments in red.
 

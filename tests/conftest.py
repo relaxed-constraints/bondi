@@ -81,7 +81,7 @@ def deployment_pool(registry, live_ports):
                         kv_port=kv,
                     )
             # Register teardown before loading data/indexes, including setup failures.
-            cleanup.callback(db.remove, delete_data=True)
+            cleanup.callback(db.remove, keep_data=False)
             if backend == "mongodb":
                 db.load_demo_data()
             else:

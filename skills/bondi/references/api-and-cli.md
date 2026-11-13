@@ -32,8 +32,8 @@ lifecycle methods; loading a handle does not start the database.
 
 Closing an executor does not stop Docker. CLI `bondi remove NAME` deletes data
 and configuration by default, with confirmation; `--keep-data` preserves them.
-In contrast, Python `deployment.remove()` retains data unless
-`delete_data=True`. Match cleanup to the user's intended data ownership.
+Python `deployment.remove()` also deletes data and configuration by default.
+Use `keep_data=True` to retain them. Match cleanup to the user's intended data ownership.
 Use the managed API/CLI rather than legacy repository Compose scripts.
 
 [Deployment guide](https://relaxed-constraints.github.io/bondi/deployment/)

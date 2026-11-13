@@ -1,5 +1,8 @@
 # Database deployment
 
+`Deployment.remove(*, keep_data=False, timeout=120)` deletes data by default.
+Set `keep_data=True` to retain the volume and configuration for a later start.
+
 For command names, options and output behaviour, see the
 [CLI guide](../deployment.md#deploy-via-command-line).
 The CLI adds retained-volume information to `removed`; `Deployment.status()`

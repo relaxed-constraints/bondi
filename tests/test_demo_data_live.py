@@ -70,4 +70,4 @@ def test_load_repeat_cli_and_preserve_other_data(tmp_path, monkeypatch, backend,
         assert main(["load-demo-data", db.name]) == 1
     finally:
         if db is not None:
-            db.remove(delete_data=True)
+            db.remove()

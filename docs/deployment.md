@@ -202,9 +202,9 @@ readiness. A different requested port is rejected.
 ### Data ownership and removal
 
 ```python
-database.remove()  # Remove container/network; retain volume.
+database.remove(keep_data=True)  # Remove container/network; retain volume.
 database.start()  # Recreate using the retained data.
-database.remove(delete_data=True)  # Permanently delete volume and configuration.
+database.remove()  # Permanently delete volume and configuration.
 ```
 
 After deleting data, discard the handle; a new `deploy_mongodb()` creates a fresh

@@ -21,15 +21,23 @@ def test_mongo_lifecycle_and_persistence(tmp_path, monkeypatch, live_ports):
         db.stop()
         assert db.status() == "stopped"
         db.start()
-        db.remove()
+        db.remove(keep_data=True)
         assert db.status() == "removed"
         db = deploy_mongodb("lifecycle-test", port=port)
         with MongoClient(db.uri, serverSelectionTimeoutMS=5000) as client:
             assert client.demo.records.find_one({"_id": "retained"}) is not None
         assert db.logs()
+        db.remove()
+        assert list_deployments() == []
+        assert not db._data_volume_exists()
+        db = deploy_mongodb("lifecycle-test", port=port)
+        with MongoClient(db.uri, serverSelectionTimeoutMS=5000) as client:
+            assert client.demo.records.count_documents({}) == 0
+        result = db.load_demo_data()
+        assert result.document_count == 8
     finally:
         if list_deployments():
-            get_deployment("lifecycle-test").remove(delete_data=True)
+            get_deployment("lifecycle-test").remove()
     assert list_deployments() == []
 
 
@@ -62,7 +70,7 @@ def test_cli_lifecycle(tmp_path, monkeypatch, live_ports):
         assert "No saved deployments" in cli("list").stdout
     finally:
         if list_deployments():
-            get_deployment("cli-test").remove(delete_data=True)
+            get_deployment("cli-test").remove()
 
 
 def test_failed_new_setup_rolls_back_real_resources(tmp_path, monkeypatch, live_ports):
@@ -108,7 +116,7 @@ def test_failed_new_setup_rolls_back_real_resources(tmp_path, monkeypatch, live_
             assert db.status() == "running"
     finally:
         for db in list_deployments():
-            db.remove(delete_data=True)
+            db.remove()
 
 
 def test_mongo_memory_limits(tmp_path, monkeypatch, live_ports):
@@ -139,4 +147,4 @@ def test_mongo_memory_limits(tmp_path, monkeypatch, live_ports):
                 assert status["wiredTiger"]["cache"]["maximum bytes configured"] == 256 * 1024**2
     finally:
         for db in list_deployments():
-            db.remove(delete_data=True)
+            db.remove()

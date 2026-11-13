@@ -67,7 +67,7 @@ def test_pool_reuses_owned_deployment_and_restores_registry(tmp_path, monkeypatc
         db.remove.assert_not_called()
     assert calls == [("live-mongodb", {"port": 27117}, str(tmp_path))]
     db.load_demo_data.assert_called_once_with()
-    db.remove.assert_called_once_with(delete_data=True)
+    db.remove.assert_called_once_with(keep_data=False)
 
 
 def test_failed_demo_setup_still_removes_owned_deployment(tmp_path, monkeypatch):
@@ -80,7 +80,7 @@ def test_failed_demo_setup_still_removes_owned_deployment(tmp_path, monkeypatch)
     with pytest.raises(RuntimeError, match="load failed"):
         with conftest.deployment_pool(tmp_path, ports) as get:
             get("mongodb")
-    db.remove.assert_called_once_with(delete_data=True)
+    db.remove.assert_called_once_with(keep_data=False)
 
 
 def test_pool_requires_opt_in_even_when_requested_directly(tmp_path, monkeypatch):

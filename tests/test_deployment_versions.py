@@ -52,7 +52,7 @@ def test_defaults_and_explicit_selection(docker, backend):
     assert deploy("selected", version=version, **kwargs) == db
     db.stop()
     get_deployment("selected").start()
-    db.remove()  # Retain data; recreation must also preserve the version.
+    db.remove(keep_data=True)  # Retain data; recreation must also preserve the version.
     get_deployment("selected").start()
     assert snapshot(db) == before
 

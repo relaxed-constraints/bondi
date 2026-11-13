@@ -257,18 +257,22 @@ class Deployment:
             create_primary_index=create_primary_index,
         )
 
-    def remove(self, *, delete_data: bool = False, timeout: float = 120) -> None:
-        """Remove the container/network, retaining data by default.
+    def remove(self, *, keep_data: bool = False, timeout: float = 120) -> None:
+        """Remove the container, network, data volume and saved configuration.
 
-        With delete_data=False, configuration is retained so start() recreates
-        the container using the same volume. With True, also delete the volume
-        and saved configuration. Existing handles must then be discarded.
+        Args:
+            keep_data: Retain the data volume and saved configuration when True.
+                Then start() can recreate the container with the retained data.
+            timeout: Maximum seconds for the Docker operation.
+
+        After default removal, discard this handle. Deploy again to create a
+        fresh database. This method does not ask for confirmation.
         """
-        if type(delete_data) is not bool:
-            raise ValueError("delete_data must be a boolean")
-        args = ("down", "--volumes") if delete_data else ("down",)
+        if type(keep_data) is not bool:
+            raise ValueError("keep_data must be a boolean")
+        args = ("down",) if keep_data else ("down", "--volumes")
         self._run(*args, timeout=timeout)
-        if delete_data:
+        if not keep_data:
             shutil.rmtree(self._path)
 
 
@@ -548,7 +552,7 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
         deployment.start(timeout=timeout)
     except BaseException as startup_error:
         try:
-            deployment.remove(delete_data=True)
+            deployment.remove()
         except BaseException as cleanup_error:
             raise RuntimeError(
                 f"Startup failed for {name!r}: {startup_error}. "

@@ -60,11 +60,11 @@ def test_invalid_timeout(compose, timeout):
 def test_remove_retains_data_and_configuration(compose):
     db = deploy_mongodb()
     db.stop()
-    db.remove()
+    db.remove(keep_data=True)
     assert compose.call_args.args[0][-1] == "down"
     assert get_deployment("mongodb") == db
     db.start()
-    db.remove(delete_data=True)
+    db.remove()
     assert compose.call_args.args[0][-2:] == ["down", "--volumes"]
     assert list_deployments() == []
     with pytest.raises(RuntimeError, match="deleted"):
@@ -109,7 +109,7 @@ def test_failed_delete_keeps_configuration(compose):
     db = deploy_mongodb()
     compose.side_effect = subprocess.CalledProcessError(1, "docker", stderr="unavailable")
     with pytest.raises(RuntimeError):
-        db.remove(delete_data=True)
+        db.remove()
     assert get_deployment("mongodb") == db
 
 
@@ -201,3 +201,12 @@ def test_retained_volume_check_failure_is_not_absence(compose):
     compose.side_effect = subprocess.CalledProcessError(1, ["docker"])
     with pytest.raises(RuntimeError, match="Could not check"):
         db._data_volume_exists()
+
+
+@pytest.mark.parametrize("keep_data", [None, 0, 1, "yes"])
+def test_remove_requires_boolean(compose, keep_data):
+    db = deploy_mongodb()
+    compose.reset_mock()
+    with pytest.raises(ValueError, match="keep_data must be a boolean"):
+        db.remove(keep_data=keep_data)
+    compose.assert_not_called()

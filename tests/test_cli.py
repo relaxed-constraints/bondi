@@ -58,7 +58,7 @@ def test_lifecycle(db, command):
 def test_removal_is_explicit(db, delete, capsys):
     with patch("bondi._cli.get_deployment", return_value=db):
         assert main(["remove", "demo", "-y"] + ([] if delete else ["--keep-data"])) == 0
-    db.remove.assert_called_once_with(delete_data=delete, timeout=120)
+    db.remove.assert_called_once_with(keep_data=not delete, timeout=120)
     assert ("deleted" if delete else "retained") in capsys.readouterr().out
 
 
@@ -128,7 +128,7 @@ def test_removal_confirmation_accepts(db, answer):
     ):
         assert main(["remove", "demo"]) == 0
     assert "permanently delete" in prompt.call_args.args[0]
-    db.remove.assert_called_once_with(delete_data=True, timeout=120)
+    db.remove.assert_called_once_with(keep_data=False, timeout=120)
 
 
 @pytest.mark.parametrize("answer", ["", "n", "no", "anything"])
@@ -158,7 +158,7 @@ def test_keep_data_prompt(db):
     ):
         assert main(["remove", "demo", "--keep-data"]) == 0
     assert "keeping its data" in prompt.call_args.args[0]
-    db.remove.assert_called_once_with(delete_data=False, timeout=120)
+    db.remove.assert_called_once_with(keep_data=True, timeout=120)
 
 
 def test_click_couchbase_options_and_secret(db, monkeypatch):

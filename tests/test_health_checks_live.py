@@ -77,4 +77,4 @@ def test_healthy_and_stopped_probe(tmp_path, monkeypatch, live_ports, backend):
             asyncio.run(borrowed())
     finally:
         for db in list_deployments():
-            db.remove(delete_data=True)
+            db.remove()
