@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Reorganize the deployment guide around CLI and Python examples. Simplify
+  lifecycle, version, memory and troubleshooting instructions.
+
 - Add live Couchbase round-trip tests for native Python/BSON values and Extended
   JSON documents and files, including nested dates, ObjectIds and decimals.
 

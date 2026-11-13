@@ -1,260 +1,441 @@
 # Local database deployments
 
-BONDI can create and manage named local MongoDB and Couchbase instances using Docker Compose.
-Install and start Docker with Compose v2 first. 
+BONDI creates named MongoDB and Couchbase deployments with Docker Compose.
+You can use either the command-line interface (CLI) or the Python API.
+Both methods create the same kind of deployment and share its saved settings.
 
-## MongoDB memory limits
+Start Docker with Compose v2 before you continue.
+Python and Docker must run on the same machine.
+Remote Docker contexts are not supported.
+You can run BONDI on a remote server if Docker also runs there.
 
-Configure container and WiredTiger cache limits independently for a new deployment:
+Each deployment has its own container, Compose project and data volume.
+Choose a unique name and unused ports for each deployment.
 
-```python
-from bondi.deployment import deploy_mongodb
+## Deploy via command line
 
-db = deploy_mongodb(
-    "mongo-limited",
-    port=27019,
-    memory_limit_mb=1024,
-    wiredtiger_cache_size_gb=0.25,
-)
-```
+Use `bondi` in an activated Python environment.
+In a uv project, use `uv run bondi`.
+You can also use `python -m bondi`.
+
+Create a MongoDB deployment:
 
 ```sh
-bondi deploy mongodb --name mongo-limited --port 27019 \
-  --memory-limit-mb 1024 --wiredtiger-cache-size-gb 0.25
-bondi status mongo-limited
+bondi deploy mongodb --name mongo-demo
 ```
 
-`memory_limit_mb` is a positive integer in MiB. The cache option accepts finite
-integers or floats from 0.25 through 10000 in GiB (MongoDB names its option
-`--wiredTigerCacheSizeGB`). Booleans are rejected. An explicitly configured cache
-must be smaller than an explicitly configured container cap for a new deployment.
-This is only a basic compatibility check: queries, other server components and
-filesystem caching need additional memory. BONDI does not choose a headroom
-percentage or change Docker Desktop's VM memory allocation.
+Choose a different port or database version:
 
-Both options default to `None`: new deployments have no explicit container cap
-and use MongoDB's automatic cache sizing. Existing deployments reuse their
-existing settings. Explicitly different valid memory options emit `UserWarning`
-(visible on CLI stderr) and are ignored; the deployment starts with existing
-settings. For example: `memory_limit_mb: requested 2048 MiB, existing 1024 MiB.
-Existing settings unchanged; the requested value is ignored.`
-Omitted or matching options do not warn. Invalid individual values still fail
-validation; incompatible pairs are rejected only for new deployments because
-existing deployments ignore requested changes. Port and image conflicts still
-raise errors, and Couchbase's memory conflict behavior is unchanged.
+```sh
+bondi deploy mongodb --name mongo-other --port 27019 --version 8.0.16
+```
 
-Both values persist in `deployment.json` and are exposed on `Deployment` as
-`memory_limit_mb` and `wiredtiger_cache_size_gb`. Stop/start retains them.
-`bondi status NAME` reports saved settings, not observed resource usage.
-Legacy MongoDB metadata without these fields loads them as `None`, displayed
-as “not explicitly saved.” This does not prove that a manually maintained
-Compose file has no limits.
+Create a Couchbase deployment with a bucket named `research`:
 
-Existing Compose files, including manual overrides, are never rewritten or
-used to infer metadata. Passing options does not adopt a manual override,
-even if it matches the requested value. This API provides new-deployment
-configuration and safe reuse, not resource reconfiguration or automatic adoption.
-Use a new name and free port for a separately configured deployment; do not
-delete an existing database to apply these settings.
+```sh
+bondi deploy couchbase --name cb-demo --bucket research
+```
 
-## Database versions
+Choose another Couchbase edition and separate ports:
 
-Select an explicit numeric `major.minor.patch` version when creating a deployment:
+```sh
+bondi deploy couchbase --name cb-other --edition enterprise \
+  --management-port 9091 --query-port 9093 --kv-port 11211
+```
+
+Use Enterprise only if your license permits it.
+BONDI does not provide an Enterprise license.
+
+Deployment commands wait until the database is ready.
+They print connection details when startup succeeds.
+Use `bondi deploy mongodb --help` or `bondi deploy couchbase --help` to see all options.
+
+## Deploy via Python API
+
+The API returns a `Deployment` object with connection details and lifecycle methods.
 
 ```python
 from bondi.deployment import deploy_mongodb, deploy_couchbase
 
+mongo = deploy_mongodb(name="mongo-demo")
+print(mongo.uri)
+
+couchbase = deploy_couchbase(name="cb-demo", bucket="research")
+print(couchbase.uri)
+print(couchbase.console_url)
+```
+
+These are alternatives to the CLI examples above.
+Matching requests reuse the same saved deployments.
+
+Pass options as keyword arguments:
+
+```python
+mongo_other = deploy_mongodb(
+    name="mongo-other",
+    port=27019,
+    version="8.0.16",
+    timeout=300,
+)
+
+cb_other = deploy_couchbase(
+    name="cb-other",
+    edition="enterprise",
+    management_port=9091,
+    query_port=9093,
+    kv_port=11211,
+)
+```
+
+Use the returned details to create an executor:
+
+```python
+from bondi.mongodb import MongoExecutor
+
+with MongoExecutor.from_uri(mongo.uri) as executor:
+    # Run queries here.
+    pass
+```
+
+For Couchbase executors, install `bondi[couchbase]`:
+
+```python
+from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
+
+with CouchbaseExecutor.from_uri(
+    couchbase.uri,
+    username=couchbase.username,
+    password=couchbase.password,
+) as executor:
+    result = executor.run(CouchbaseQuery("SELECT RAW 1"), collect_results=True)
+    print(result.documents)  # [1]
+```
+
+Deployment itself does not require the optional Couchbase SDK.
+See the [execution guide](executor.md) for queries, explain and profiling.
+
+## Inspect, stop and restart
+
+Use the saved deployment name for lifecycle commands:
+
+```sh
+bondi list
+bondi status mongo-demo
+bondi logs mongo-demo --tail 20
+bondi stop mongo-demo
+bondi start mongo-demo
+```
+
+The Python API provides the same operations:
+
+```python
+from bondi.deployment import get_deployment, list_deployments
+
+database = get_deployment("mongo-demo")
+print(database.uri)
+print(database.image)
+print(database.status())
+print(database.logs(tail=20))
+
+database.stop()
+database.start()
+
+for item in list_deployments():
+    print(item.name, item.status())
+```
+
+`get_deployment()` reads saved configuration. It does not contact Docker or start the database.
+`stop()` retains the container and data.
+`start()` reuses saved settings and waits for readiness.
+Closing an executor does not stop Docker.
+Scripts and Python blocks do not remove deployments when they end.
+
+| Status | Meaning |
+|---|---|
+| `running` | The container and required readiness checks pass |
+| `starting` | The container runs, but readiness checks do not yet pass |
+| `unhealthy` | Docker reports repeated health-check failures while the container runs |
+| `stopped` | The container exists but does not run |
+| `removed` | No container exists, but saved configuration remains |
+
+Docker access errors raise an error. They do not appear as `stopped`.
+For removed containers, the CLI checks whether the data volume still exists.
+It shows `removed (data retained)` when that volume exists.
+This checks volume presence, not data integrity.
+A failed volume check reports an error.
+
+The CLI shows running deployments in green and unhealthy deployments in red.
+Starting and stopped deployments use yellow.
+Removed deployments use dim grey.
+Redirected output has no automatic colour. Raw logs keep their original text.
+
+## Data ownership and removal
+
+**Removal deletes data and saved configuration by default.**
+
+The CLI asks for confirmation:
+
+```sh
+bondi remove mongo-demo
+```
+
+Use `--keep-data` to retain the data volume and configuration:
+
+```sh
+bondi remove mongo-demo --keep-data
+bondi start mongo-demo
+```
+
+Use `-y` or `--yes` to skip confirmation in either removal mode.
+Cancellation returns exit code 1.
+
+Python removal does not ask for confirmation:
+
+```python
+database.remove(keep_data=True)  # Retain data and configuration.
+database.start()  # Recreate the container with that data.
+database.remove()  # Delete data and configuration.
+```
+
+After default removal, discard the old Python handle.
+Deploy again to create a fresh database.
+Retained configurations remain in `list_deployments()` even when their containers are absent.
+
+Configuration lives in `~/.bondi/deployments`.
+Set `BONDI_DEPLOYMENT_DIR` before using the API to choose another location.
+Keep this path stable because it contributes to each Compose project identity.
+Data lives in Docker named volumes, outside this directory.
+
+Use BONDI lifecycle commands to manage deployments.
+Do not delete the configuration directory as a substitute for removal.
+Edit saved files only for the explicit memory-resizing procedure below.
+Do not manage the same deployment concurrently from multiple processes.
+
+## MongoDB deployments
+
+The default deployment name is `mongodb` and the default port is `27017`.
+New deployments use `mongo:8.0.16` unless you select another version.
+MongoDB binds to `127.0.0.1` and runs without authentication for local research.
+BONDI checks readiness with a MongoDB ping inside the container.
+
+Repeated deployment requests reuse matching settings.
+Conflicting ports or images raise an error.
+Memory settings have separate reuse rules, described below.
+Managed deployments do not adopt older repository-level Compose containers.
+
+After deployment, the CLI prints a `mongosh` command and installation links for
+[MongoDB Shell](https://www.mongodb.com/docs/mongodb-shell/install/) and
+[Database Tools](https://www.mongodb.com/docs/database-tools/installation/).
+The tools include `mongoimport`, `mongoexport`, `mongodump` and `mongorestore`.
+They are optional host tools. BONDI does not need them to deploy MongoDB.
+
+## Couchbase deployments
+
+The default name is `couchbase`. Community is the default edition.
+New deployments use version `7.6.2` unless you select another version.
+They enable the Data, Query and Index services.
+
+Startup waits for management access, cluster initialization, a healthy bucket and a successful SQL++ query.
+It creates an empty `demo` bucket with a 256 MiB quota and no replicas.
+The bucket contains its default scope and collection.
+Deployment does not insert sample data or create indexes.
+Use `bucket="research"` or `--bucket research` to select another bucket at creation.
+
+### Ports and credentials
+
+Couchbase needs three distinct localhost ports:
+
+| Service | Python option | CLI option | Default |
+|---|---|---|---|
+| Management console | `management_port` | `--management-port` | 8091 |
+| Query | `query_port` | `--query-port` | 8093 |
+| Key-value | `kv_port` | `--kv-port` | 11210 |
+
+There is no Couchbase `--port` option.
+`uri` uses the key-value port. `console_url` uses the management port.
+BONDI configures alternate addresses so host SDKs can reach mapped query and key-value ports.
+
+Default credentials are `Administrator` / `bondi-local`.
+Pass `username` and `password` in Python to choose other credentials.
+The CLI can read a password from an existing environment variable:
+
+```sh
+bondi deploy couchbase --name private-demo --password-env MY_CB_PASSWORD
+```
+
+The CLI prints the default password for local demos.
+For custom passwords, it prints the environment variable name instead.
+A deployment object's representation excludes passwords.
+However, `deployment.json` stores credentials in plaintext.
+BONDI creates it with owner-only permissions on POSIX systems.
+Keep this directory and its backups private.
+These deployments are for local research, not production security.
+
+Deployment names must be unique across backends.
+For example, `demo` cannot name both a MongoDB deployment and a Couchbase deployment.
+Conflicting ports, edition, bucket or credentials cause an error.
+Error messages do not reveal credential values.
+Stop/start and container recreation preserve existing data and credentials.
+
+For implementation details, see Couchbase's
+[cluster initialization](https://docs.couchbase.com/server/7.6/rest-api/rest-cluster-intro.html)
+and [alternate addresses](https://docs.couchbase.com/server/7.6/rest-api/rest-set-up-alternate-address.html) documentation.
+
+## Load data
+
+Deployments start empty.
+Use the [dataset loading guide](datasets.md) to load files, Python documents or Hugging Face datasets.
+
+### Demo data
+
+BONDI also bundles eight fictional businesses from `dev/business.json`.
+This helper needs no checkout, download or specific working directory.
+Its Couchbase implementation does not require the optional SDK.
+
+```sh
+bondi load-demo-data mongo-demo
+bondi load-demo-data cb-demo --create-primary-index
+```
+
+```python
+mongo = get_deployment("mongo-demo")
+result = mongo.load_demo_data()
+print(result.document_count)  # 8
+
+couchbase = get_deployment("cb-demo")
+result = couchbase.load_demo_data(create_primary_index=True)
+print(result.database, result.scope, result.collection)
+```
+
+MongoDB defaults to `demo.business`.
+Couchbase uses its saved bucket, scope `_default` and collection `business`.
+The helper creates missing collections and Couchbase scopes.
+It does not start a stopped deployment.
+
+Choose another destination when needed:
+
+```python
+mongo.load_demo_data(database="research", collection="businesses")
+couchbase.load_demo_data(scope="research", collection="businesses")
+```
+
+```sh
+bondi load-demo-data mongo-demo --database research --collection businesses
+bondi load-demo-data cb-demo --scope research --collection businesses
+```
+
+Destination names allow 1–63 letters, digits, underscores or hyphens.
+Names must not start with a hyphen.
+`database` applies only to MongoDB.
+`scope` and `create_primary_index` apply only to Couchbase.
+Options for the wrong backend raise an error.
+
+The helper uses `business_id` as MongoDB's `_id` or Couchbase's document key.
+It replaces documents with those IDs and preserves unrelated documents.
+Repeated loads create no duplicates.
+`document_count` includes replacements, not only new documents.
+A failed load can leave partial writes. Retrying this helper is safe.
+Do not run loads and lifecycle operations concurrently.
+
+Couchbase creates no primary index unless you request one.
+Use `create_primary_index=True` or `--create-primary-index` for SQL++ demo queries.
+You can repeat this option safely.
+Omit it when an experiment manages its own indexes.
+MongoDB adds no indexes beyond the collection's normal `_id` index.
+
+## Database versions
+
+Use a numeric `major.minor.patch` version:
+
+```python
 mongo = deploy_mongodb("example-mongo", version="8.0.16")
 cb = deploy_couchbase("example-cb", version="7.6.12", edition="enterprise")
 print(mongo.image)  # mongo:8.0.16
 print(cb.image)  # couchbase:enterprise-7.6.12
 ```
 
-Equivalent CLI commands:
-
 ```sh
 bondi deploy mongodb --name example-mongo --version 8.0.16
 bondi deploy couchbase --name example-cb --version 7.6.12 --edition enterprise
 ```
 
-For **new** deployments, omitting the version selects MongoDB 8.0.16 or Couchbase
-7.6.2. Couchbase edition remains a separate option (default community).
-Versions must be strings with three numeric components; aliases such as `latest`,
-partial versions, tag suffixes and arbitrary image references are rejected before
-Docker is contacted. A valid version string does not guarantee an available image
-or compatibility with BONDI's initialization. Docker resolves the tag at startup;
-failures include the image and Docker diagnostic, such as a missing manifest or
-unsupported platform. BONDI does not discover available versions.
+For new names, omission selects MongoDB 8.0.16 or Couchbase 7.6.2.
+For saved names, omission reuses the saved image.
+An explicit version must match that image exactly.
+Otherwise, BONDI rejects the request before contacting Docker or changing files.
+Other settings must also match, subject to the MongoDB memory rules below.
 
-For **existing** names, `version=None` (or no `--version`) reuses the saved image.
-An explicit version must produce exactly the saved image, otherwise the call fails
-before contacting Docker or changing files. Even explicitly requesting the default
-version conflicts with a deployment saved at another version. Other settings still
-need to match, including Couchbase edition and memory limit.
+BONDI rejects aliases such as `latest`, partial versions, suffixes and arbitrary image references.
+A valid version string does not guarantee an available image or compatible initialization.
+Docker resolves the tag at startup.
+BONDI reports Docker errors, such as missing images or unsupported platforms.
+It does not discover available versions.
 
-The image in `deployment.json` stores the selected version. No new metadata field
-or migration is needed: older configurations, including custom images saved during
-manual maintenance, remain usable when version is omitted. Saved Compose assets
-are preserved across reuse, stop/start and removal with data retained. The image
-metadata describes the saved configuration, not an inspection of the running server.
+The saved `image` field records the selected image.
+It is not a measurement of the running server.
+Older configurations and custom saved images remain usable when you omit the version.
+Reuse, stop/start and removal with retained data preserve saved Compose files.
 
-This API does not upgrade or downgrade an existing deployment or migrate its data.
-Use a new name and free ports for a different version. Use `get_deployment(name).start()`
-or `bondi start NAME` to reuse all saved settings.
+Deployment does not upgrade databases, downgrade databases or migrate data.
+Use a new name and free ports for a different version.
+Use `bondi start NAME` or `get_deployment(NAME).start()` to reuse all saved settings.
 
-## MongoDB deployments
+## MongoDB memory limits
 
-New MongoDB deployments default to the pinned `mongo:8.0.16` image and binds only to `127.0.0.1`.
-This is an unauthenticated local research database. Python and Docker must be on
-the same machine; remote Docker contexts are not supported. A script running on
-a remote host can use this API with Docker on that host. Readiness is verified
-inside the container with a MongoDB ping via its health check.
-
-### Deploy via Python API
+For a new deployment, you can set the container cap and WiredTiger cache separately:
 
 ```python
-from bondi.deployment import deploy_mongodb
-from bondi.mongodb import MongoExecutor
-
-# Create/start and wait until MongoDB is healthy.
-database = deploy_mongodb(name="demo", port=27019)
-
-with MongoExecutor.from_uri(database.uri) as executor:
-    # Use executor.run(), explain(), profile(), etc.
-    pass
-
-print(database.status())  # "running"
-database.stop()  # Retain data and container.
-database.start()  # Wait for readiness again.
+db = deploy_mongodb(
+    "mongo-limited",
+    port=27020,
+    memory_limit_mb=1024,
+    wiredtiger_cache_size_gb=0.25,
+)
 ```
-
-The default name is `mongodb` and the default port is `27017`. Choose another
-port if an existing MongoDB already uses it. Each named deployment has an isolated
-Compose project and data volume. These deployments do not adopt or modify the
-older repository-level BONDI Compose containers.
-
-### Deploy via command line
-
-The CLI uses Click for commands and Rich for terminal output. Both are included
-with BONDI. Lists use tables, and status messages use colour in a terminal.
-Redirected output has no automatic colour. Raw database logs remain unchanged.
-Removed containers appear in dim grey. The CLI adds `(data retained)` when the
-Compose data volume still exists. This confirms volume presence, not data integrity.
-A failed volume check reports an error instead of assuming that data is absent.
-Unhealthy containers appear in red. This means Docker's health check has failed
-repeatedly while the container is still running. MongoDB checks an admin ping.
-Couchbase checks whether its management HTTP endpoint responds, not query execution.
-Errors go to stderr. Operations exit with code 0 on success, 1 on failure,
-2 for invalid command syntax, or 130 on interruption.
-
-The `bondi` command calls the same deployment API. In a uv project, use
-`uv run bondi`; in an activated Python environment, use `bondi` directly.
-`python -m bondi` is also supported.
 
 ```sh
-bondi deploy mongodb --name demo   # deploy database with name `demo` 
-bondi status demo                  # check status
-bondi list                         # show all deployments
-bondi logs demo --tail 20          # show recent logs
-bondi stop demo                    # stop the deployment
-bondi start demo                   # start the deployment
-bondi remove demo --keep-data      # remove deployment but keep data
-bondi remove demo                  # with confirmation for deletion of data/configuration
-bondi remove demo -y               # skip confirmation (for automation)
+bondi deploy mongodb --name mongo-limited --port 27020 \
+  --memory-limit-mb 1024 --wiredtiger-cache-size-gb 0.25
+bondi status mongo-limited
 ```
 
-`bondi deploy mongodb` defaults to name `mongodb` and port `27017`. Lifecycle
-commands require the deployment name. Use `--timeout 300` on deploy/start/stop/remove
-to increase the operation deadline. Use `bondi --help` or `bondi <command> --help` to
-inspect command options.
+| Option | Meaning | Accepted values |
+|---|---|---|
+| `memory_limit_mb` | Container memory cap in MiB | Positive integer |
+| `wiredtiger_cache_size_gb` | WiredTiger cache in GiB | Finite number from 0.25 to 10000 |
 
-Removal deletes data and saved configuration by default and asks `[y/N]`.
-Use `--keep-data` to retain the volume and configuration, and `-y` / `--yes` to
-skip confirmation for either mode. Cancellation returns exit code 1.
+Booleans are not valid values.
+MongoDB names its cache option `--wiredTigerCacheSizeGB`.
+An explicit cache must be smaller than an explicit container cap for a new deployment.
+This check does not guarantee enough spare memory.
+Queries, other server components and filesystem caching also need memory.
+BONDI does not select a spare-memory percentage or change Docker Desktop's memory allocation.
 
-After MongoDB deployment, the CLI prints a `mongosh` connection command and links
-for installing [MongoDB Shell](https://www.mongodb.com/docs/mongodb-shell/install/)
-and [Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
-(`mongoimport`, `mongoexport`, `mongodump`, `mongorestore`). These tools are optional
-on the host; BONDI deploys the database through Docker without installing them.
+Both options default to `None`.
+A new deployment then has no explicit container cap and uses automatic MongoDB cache sizing.
+For an existing deployment, `None` retains its saved setting.
 
+For different valid memory values on an existing deployment, BONDI warns and ignores the requested changes.
+Omitted or matching values produce no warning.
+Invalid individual values still fail validation.
+BONDI checks whether the cache fits the cap only for new deployments.
+Port and image conflicts still raise errors.
 
-### Reopen and inspect
+Both values persist in `deployment.json` and appear on the `Deployment` object.
+Stop/start retains them.
+`bondi status` reports saved settings, not current resource use.
+Older metadata without these fields reports `None`, shown as “not explicitly saved”.
+A manually edited Compose file can still contain limits.
 
-```python
-from bondi.deployment import get_deployment, list_deployments
+BONDI does not rewrite existing Compose files or infer settings from manual edits.
+Passing a matching option does not adopt a manual override.
+Use a new name and free port for a deployment with different memory settings.
+Do not delete an existing database merely to apply these options.
 
-# Loading a handle does not contact Docker or start the database.
-database = get_deployment("demo")
-print(database.uri)
-print(database.image)
-print(database.logs(tail=20))
+## Container memory
 
-for item in list_deployments():
-    print(item.name, item.status())
-```
-
-Status is `running`, `starting`, `unhealthy`, `stopped`, or `removed`. Docker
-connection failures raise an error rather than appearing as a stopped database.
-Repeated `deploy_mongodb()` calls reuse matching configuration and wait for
-readiness. A different requested port is rejected. 
-
-### Data ownership and removal
-
-```python
-database.remove(keep_data=True)  # Remove container/network; retain volume.
-database.start()  # Recreate using the retained data.
-database.remove()  # Permanently delete volume and configuration.
-```
-
-After deleting data, discard the handle; a new `deploy_mongodb()` creates a fresh
-deployment. Retained configurations still appear in `list_deployments()` with
-status `removed` when no container exists. There is no automatic cleanup when a
-Python block or script ends. Closing an executor closes its connections, not Docker.
-
-Configuration lives in `~/.bondi/deployments`. Set `BONDI_DEPLOYMENT_DIR` before
-calling these functions to choose another directory. Keep it stable: the state
-path contributes to project identity. Data lives in Docker named volumes, not in
-this directory. Do not delete the state directory to manage deployments; only edit saved files
-for the explicit memory-resizing procedure below.
-Serialize lifecycle calls for a given deployment; concurrent management of the
-same name is not supported.
-
-### Startup and troubleshooting
-
-Startup defaults to a 120-second deadline, including an initial Docker image pull.
-Use `deploy_mongodb(..., timeout=300)` on a slower connection. Before creating a 
-deployment, BONDI checks whether it can bind the requested
-localhost port. An occupied port fails without creating metadata or Docker resources.
-This is an advisory check: Docker can still encounter a port race afterwards.
-
-If a **new** deployment fails during startup (including timeout or Ctrl-C), BONDI
-attempts to remove its container, network, volume and metadata. You can then retry
-the same name with another port. The startup error is preserved in the diagnostic.
-If cleanup fails too, metadata is retained and the error gives a cleanup command;
-restore Docker access and run `bondi remove NAME`.
-
-Failed starts of **existing** deployments never trigger automatic deletion. Their
-data and configuration are retained. For a mismatched saved port, inspect the
-existing deployment and either use another name or explicitly remove the old one
-only when its data is disposable.
-
-A forced process kill or machine crash cannot guarantee cleanup; inspect saved
-deployments with `bondi list` before retrying.
-
-## Couchbase Deployments
-
-For Couchbase deployments, ensure that the `bondi[couchbase]` variant is installed.
-
-Community is the default; Enterprise is available explicitly for users entitled
-to use it. This API does not grant an Enterprise license. Both default to pinned 7.6.2
-images with Data, Query and Index services and a default 4 GiB container memory limit.
-Allow Docker sufficient memory, especially when running several databases.
-
-### Container memory
-
-Set `memory_limit_mb` in Python or `--memory-limit-mb` in the CLI to a positive
-integer number of MiB. For example, a new 16 GiB deployment:
+Couchbase defaults to a 4096 MiB container cap.
+Set another cap when you create it:
 
 ```python
 database = deploy_couchbase(name="cb-large", memory_limit_mb=16384)
@@ -265,181 +446,74 @@ print(database.memory_limit_mb)  # 16384
 bondi deploy couchbase --name cb-large --memory-limit-mb 16384
 ```
 
-These are alternative ways to create the same deployment. This limit controls the
-container, not Couchbase's Data/Index Service or bucket quotas. Initialization still
-uses its small demo allocations. Configure experiment-specific quotas separately,
-and leave room within the container for Query and other service overhead. An
-8192 MiB Data quota plus a 1024 MiB Index quota cannot fit in the default 4096 MiB
-container. Increasing Docker Desktop's VM allocation alone does not raise the
-container limit; Docker also needs enough memory for other running databases.
+These are alternative ways to create the same deployment.
+The value must be a positive integer in MiB.
+It limits the container, not individual Couchbase service or bucket quotas.
+Initialization still uses small demo allocations.
 
-The limit is saved and conflicting deploy requests fail before contacting Docker.
-Repeat the same limit when calling `deploy_couchbase`, or use `bondi start NAME` /
-`get_deployment(NAME).start()` to reuse saved settings. Metadata created before
-this option is interpreted as 4096 MiB; existing Compose files, including manual
-overrides, are preserved. The handle reports the saved setting, not live Docker usage.
+Configure experiment-specific quotas separately.
+Leave room for Query and other services.
+For example, 8192 MiB for Data plus 1024 MiB for Index exceeds a 4096 MiB container cap.
+Docker also needs enough memory for other running databases.
+Increasing Docker Desktop's allocation alone does not change the container cap.
 
-To raise an **existing** deployment's limit while retaining data:
+Conflicting Couchbase memory requests fail before contacting Docker.
+Repeat the saved limit when calling `deploy_couchbase`.
+Alternatively, use `bondi start NAME` or `get_deployment(NAME).start()`.
+Older metadata without a memory field uses 4096 MiB.
+Saved Compose files, including manual overrides, remain unchanged.
+The handle reports saved settings, not current Docker usage.
 
-1. Stop it with `bondi stop NAME` and serialize all management operations.
-2. Back up `deployment.json` and `compose.json` in
-   `~/.bondi/deployments/NAME` (or your `BONDI_DEPLOYMENT_DIR`). Keep the backup
-   private because metadata contains credentials.
-3. Set the top-level `"memory_limit_mb": 16384` in `deployment.json` and
-   `"mem_limit": "16384m"` under `services.couchbase` in `compose.json`.
-   Preserve the project identity, volume configuration and all other fields.
-4. Run `bondi start NAME --timeout 300`. Compose recreates the container with
-   the same named data volume; BONDI waits for readiness. Reload any Python handle.
+### Resize an existing Couchbase deployment
 
-This is an explicit configuration migration, not a deployment reset. Do not use
-`bondi remove NAME` to resize: its default deletes data. If startup fails, the
-existing deployment's configuration and data remain available for recovery.
+This procedure retains data. It changes saved configuration directly.
 
-### Deployment via Python API
+1. Stop the deployment with `bondi stop NAME`.
+2. Ensure no other process manages this deployment during the change.
+3. Copy `deployment.json` and `compose.json` from `~/.bondi/deployments/NAME` to a private backup location.
+   Use your `BONDI_DEPLOYMENT_DIR` instead if configured. These files can contain credentials.
+4. Set `"memory_limit_mb": 16384` at the top level of `deployment.json`.
+5. Set `"mem_limit": "16384m"` under `services.couchbase` in `compose.json`.
+   Preserve the project identity, volumes and all other fields.
+6. Run `bondi start NAME --timeout 300`.
+7. Reload any existing Python deployment handle.
 
-```python
-from bondi.deployment import deploy_couchbase
-from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
+Compose recreates the container with the same named volume.
+BONDI waits for readiness.
+Do not use `bondi remove NAME` to resize because its default deletes data.
+If startup fails, the saved deployment's configuration and data remain available for recovery.
 
-database = deploy_couchbase(name="cb-demo")
-print(database.console_url)  # http://127.0.0.1:8091/
+## Startup and troubleshooting
 
-with CouchbaseExecutor.from_uri(
-    database.uri, username=database.username, password=database.password
-) as executor:
-    result = executor.run(CouchbaseQuery("SELECT RAW 1"), collect_results=True)
-    print(result.documents)  # [1]
-```
+Default startup deadlines are 120 seconds for MongoDB and 300 seconds for Couchbase.
+These include the initial image download.
+Use `timeout=300` in Python or `--timeout 300` in the CLI to allow more time.
+Start, stop and remove also accept a timeout.
 
-Startup waits for management, cluster initialization, a healthy
-bucket, and a successful SQL++ query. It creates an empty `demo` bucket (256 MiB,
-no replicas), with its default scope and collection. It does **not** insert sample
-data or create indexes. Create appropriate indexes before querying stored data.
-Pass `bucket="research"` to choose another bucket at creation.
+Before creating a deployment, BONDI checks whether the requested localhost ports are free.
+An occupied port fails before BONDI creates saved configuration or Docker resources.
+Another process can still take a port after this check.
 
-The local console credentials default to **Administrator / bondi-local**.
-Use a custom `username`/`password` in Python, or supply a password through an
-existing environment variable in the CLI. 
+If a new deployment fails during startup, BONDI attempts to remove all its new resources.
+This includes failures from a timeout or Ctrl-C.
+The diagnostic retains the startup error.
+You can retry with another port after successful cleanup.
 
-### Deployment via CLI
+If cleanup also fails, BONDI retains configuration and provides a cleanup command.
+Restore Docker access before running `bondi remove NAME`.
+A failed start of an existing deployment never causes automatic data deletion.
+Inspect saved settings before choosing another name or removing disposable data.
 
-The CLI displays the default local password after deployment. Custom passwords
-are identified by their environment variable rather than printed, and passwords
-are excluded from the deployment object's `repr`. They are stored in plaintext in
-`deployment.json`, created with owner-only permissions on POSIX systems. Keep
-this state directory private. This is local research infrastructure, not a
-production security setup.
+A forced process kill or machine crash can prevent cleanup.
+Check `bondi list` before retrying.
 
-```sh
-bondi deploy couchbase
-bondi status couchbase
-bondi logs couchbase
-bondi stop couchbase
-bondi start couchbase
-bondi remove couchbase --keep-data -y
-bondi remove couchbase -y
-```
+CLI errors go to stderr:
 
-After Couchbase deployment, it prints the console URL, username, password source,
-and bucket. 
+| Exit code | Meaning |
+|---|---|
+| 0 | Success |
+| 1 | Operation failed or user cancelled removal |
+| 2 | Invalid command syntax |
+| 130 | Interrupted |
 
-
-### Alternate ports and editions
-
-Couchbase needs three **distinct** localhost ports. To coexist with another instance:
-
-```sh
-bondi deploy couchbase --name cb-other \
-  --management-port 9091 --query-port 9093 --kv-port 11211 \
-  --edition enterprise --timeout 300
-
-# If MY_CB_PASSWORD is set in your environment:
-bondi deploy couchbase --name private-demo --password-env MY_CB_PASSWORD
-```
-
-Python equivalents are `management_port`, `query_port`, `kv_port`, and `edition`.
-There is no ambiguous Couchbase `--port` option. The returned `uri` uses the KV
-port and external network mapping; `console_url` uses the management port.
-BONDI configures alternate addresses so SDKs on the host can reach the mapped
-query/KV ports. Python and Docker must run on the same machine.
-
-Names are shared across backends: `demo` cannot refer to both MongoDB and Couchbase.
-Repeating deployment with conflicting ports, edition, bucket or credentials raises
-an error without revealing credential values. Use `get_deployment(name).start()`
-or `bondi start NAME` to reuse saved settings. Retained volumes survive stop/start
-and container removal/recreation; initialization does not reset existing data or
-credentials. New-start failures roll back resources just as for MongoDB.
-
-Implementation references: [cluster initialization](https://docs.couchbase.com/server/7.6/rest-api/rest-cluster-intro.html)
-and [alternate addresses](https://docs.couchbase.com/server/7.6/rest-api/rest-set-up-alternate-address.html).
-
-
-## Demo data
-
-Managed deployments start empty. Load the eight fictional businesses used by the
-guides and notebooks with `load_demo_data()` or `bondi load-demo-data`. The dataset
-from `dev/business.json` is bundled with BONDI, so loading needs no source checkout,
-network download, or particular working directory. Couchbase loading does not
-require the optional Python SDK.
-
-### Python API
-
-```python
-from bondi.deployment import get_deployment
-
-mongo = get_deployment("mongo-demo")  # An existing, running MongoDB deployment.
-result = mongo.load_demo_data()  # demo.business
-print(result.document_count)  # 8
-
-couchbase = get_deployment("cb-demo")  # An existing, running Couchbase deployment.
-result = couchbase.load_demo_data(create_primary_index=True)
-print(result.database, result.scope, result.collection)  # demo _default business
-```
-
-You can also call the method directly on the handle returned by `deploy_mongodb()`
-or `deploy_couchbase()`. Loading does not start a stopped deployment: call `start()`
-or `bondi start NAME` first.
-
-Optional destinations:
-
-```python
-mongo.load_demo_data(database="research", collection="businesses")
-couchbase.load_demo_data(scope="research", collection="businesses")
-```
-
-MongoDB defaults to database `demo` and collection `business`. Couchbase uses the
-bucket saved in the deployment configuration, scope `_default`, and collection
-`business`. Missing collections and Couchbase scopes are created automatically.
-Destination names accept 1–63 letters, digits, underscores or hyphens and must not
-start with a hyphen. The `database` option is MongoDB-only; `scope` and
-`create_primary_index` are Couchbase-only. Inappropriate options raise an error.
-
-### Command line
-
-```sh
-bondi load-demo-data mongo-demo
-bondi load-demo-data cb-demo --create-primary-index
-
-bondi load-demo-data mongo-demo --database research --collection businesses
-bondi load-demo-data cb-demo --scope research --collection businesses
-```
-
-The CLI uses the saved deployment's backend and connection details and reports the
-destination and document count. Run these commands directly in an activated Python
-environment. In a uv project,
-prefix them with `uv run`.
-
-### Repeated loads and indexes
-
-Loading **upserts** the eight documents using `business_id` as MongoDB's `_id` or
-Couchbase's document key. Repeated loads create no duplicates. Documents with the
-same demo IDs are replaced; unrelated documents are preserved. The returned
-`DemoDataResult.document_count` counts documents loaded, including replacements,
-rather than newly inserted documents. A failed load may leave partial writes;
-retrying is safe. Serialize loads and deployment lifecycle operations.
-
-Couchbase does not create a primary index by default. Use
-`create_primary_index=True` or `--create-primary-index` to enable the SQL++ demo
-queries. The option is safe to repeat. Leave it off when managing indexes yourself
-for an experiment. MongoDB loading creates no additional indexes beyond the
-collection's normal `_id` index.
+For method signatures, see the [deployment API reference](reference/deployment.md).
