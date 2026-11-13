@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Show removed deployments in dim grey. Add `(data retained)` only when the
+  Compose data volume exists. Show unhealthy deployments in red.
+
 - Migrate the CLI to Click and Rich, included in the core dependencies.
   Preserve command names, options, defaults, removal confirmation and JSON output.
   Add styled tables for datasets and deployments, and coloured status messages.

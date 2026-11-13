@@ -138,6 +138,12 @@ older repository-level BONDI Compose containers.
 The CLI uses Click for commands and Rich for terminal output. Both are included
 with BONDI. Lists use tables, and status messages use colour in a terminal.
 Redirected output has no automatic colour. Raw database logs remain unchanged.
+Removed containers appear in dim grey. The CLI adds `(data retained)` when the
+Compose data volume still exists. This confirms volume presence, not data integrity.
+A failed volume check reports an error instead of assuming that data is absent.
+Unhealthy containers appear in red. This means Docker's health check has failed
+repeatedly while the container is still running. MongoDB checks an admin ping.
+Couchbase checks whether its management HTTP endpoint responds, not query execution.
 Errors go to stderr. Operations exit with code 0 on success, 1 on failure,
 2 for invalid command syntax, or 130 on interruption.
 

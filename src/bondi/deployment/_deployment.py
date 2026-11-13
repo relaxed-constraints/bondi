@@ -189,6 +189,26 @@ class Deployment:
                 return "starting"
         return "running"
 
+    def _data_volume_exists(self) -> bool:
+        """Check for the Compose-managed data volume, including after removal."""
+        command = [
+            "docker",
+            "volume",
+            "ls",
+            "--quiet",
+            "--filter",
+            f"label=com.docker.compose.project={self._project}",
+            "--filter",
+            f"label=com.docker.compose.volume={self.backend}-data",
+        ]
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=10)
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise RuntimeError(
+                "Could not check the retained data volume. Check Docker is available."
+            ) from exc
+        return bool(result.stdout.strip())
+
     def logs(self, *, tail: int = 50) -> str:
         """Return recent database logs to help diagnose startup failures.
 

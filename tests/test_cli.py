@@ -373,3 +373,44 @@ def test_command_help(args):
     result = CliRunner().invoke(cli, [*args, "--help"])
     assert result.exit_code == 0
     assert "Usage:" in result.output
+
+
+@pytest.mark.parametrize("command", ["list", "status"])
+@pytest.mark.parametrize("retained", [True, False])
+def test_removed_volume_label(db, command, retained, capsys):
+    db.status.return_value = "removed"
+    db._data_volume_exists.return_value = retained
+    with (
+        patch("bondi._cli.list_deployments", return_value=[db]),
+        patch("bondi._cli.get_deployment", return_value=db),
+    ):
+        assert main([command] + (["demo"] if command == "status" else [])) == 0
+    output = capsys.readouterr().out
+    assert "removed" in output
+    assert ("data retained" in output) == retained
+    db._data_volume_exists.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "state,code",
+    [
+        ("unhealthy", "31"),
+        ("removed", "2;90"),
+        ("removed (data retained)", "2;90"),
+    ],
+)
+def test_status_colours(state, code):
+    from io import StringIO
+
+    from rich.console import Console
+
+    from bondi import _terminal
+
+    output = StringIO()
+    terminal = Console(
+        file=output, force_terminal=True, color_system="standard", no_color=False, width=120
+    )
+    with patch("bondi._terminal.console", return_value=terminal):
+        _terminal.status("demo", state, "uri")
+        _terminal.table("Deployments", ["Status"], [[state]])
+    assert output.getvalue().count(f"\x1b[{code}m{state}") == 2

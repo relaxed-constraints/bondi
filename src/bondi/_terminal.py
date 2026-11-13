@@ -14,6 +14,12 @@ def message(value, *, error=False):
     console(stderr=error).print(Text(str(value), style="red" if error else ""))
 
 
+def _status_style(state):
+    if str(state).startswith("removed"):
+        return "dim bright_black"
+    return {"running": "green", "unhealthy": "red"}.get(state, "yellow")
+
+
 def table(title, columns, rows):
     view = Table(
         title=title,
@@ -31,7 +37,7 @@ def table(title, columns, rows):
         for column, value in zip(columns, row, strict=True):
             style = "bold" if column in {"Name", "Dataset"} else ""
             if column == "Status":
-                style = "green" if value == "running" else "yellow"
+                style = _status_style(value)
             cells.append(Text(str(value), style=style))
         view.add_row(*cells)
     console().print(view)
@@ -41,6 +47,6 @@ def status(name, state, uri):
     line = Text()
     line.append(str(name), style="bold")
     line.append(": ")
-    line.append(str(state), style="green" if state == "running" else "yellow")
+    line.append(str(state), style=_status_style(state))
     line.append(f" — {uri}", style="dim")
     console().print(line)

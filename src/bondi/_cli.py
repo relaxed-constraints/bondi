@@ -136,6 +136,13 @@ def list_saved():
     return _run(SimpleNamespace(command="list"))
 
 
+def _display_status(db):
+    state = db.status()
+    if state == "removed" and db._data_volume_exists():
+        return "removed (data retained)"
+    return state
+
+
 def _run(args):
     try:
         if args.command == "datasets":
@@ -196,7 +203,7 @@ def _run(args):
                 table(
                     "Saved deployments",
                     ("Name", "Status", "URI"),
-                    [(db.name, db.status(), db.uri) for db in deployments],
+                    [(db.name, _display_status(db), db.uri) for db in deployments],
                 )
         else:
             db = get_deployment(args.name)
@@ -214,7 +221,7 @@ def _run(args):
                     f"{db.name}: loaded {result.document_count} demo documents into {destination}"
                 )
             elif args.command == "status":
-                status_line(db.name, db.status(), db.uri)
+                status_line(db.name, _display_status(db), db.uri)
                 memory = (
                     "not explicitly saved"
                     if db.memory_limit_mb is None

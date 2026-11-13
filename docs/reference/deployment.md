@@ -2,6 +2,8 @@
 
 For command names, options and output behaviour, see the
 [CLI guide](../deployment.md#deploy-via-command-line).
+The CLI adds retained-volume information to `removed`; `Deployment.status()`
+continues to return the plain status string.
 Use `bondi --help` or `bondi COMMAND --help` for the command reference.
 
 Both deployment functions accept `version: str | None = None`. Explicit numeric

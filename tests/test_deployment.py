@@ -183,3 +183,21 @@ def test_configuration_write_failure_is_cleaned(compose, tmp_path):
             deploy_mongodb()
     compose.assert_not_called()
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("output,expected", [("", False), ("project_mongodb-data\n", True)])
+def test_retained_volume_check(compose, output, expected):
+    db = deploy_mongodb("volume-check")
+    compose.return_value.stdout = output
+    assert db._data_volume_exists() is expected
+    command = compose.call_args.args[0]
+    assert command[:4] == ["docker", "volume", "ls", "--quiet"]
+    assert f"label=com.docker.compose.project={db._project}" in command
+    assert "label=com.docker.compose.volume=mongodb-data" in command
+
+
+def test_retained_volume_check_failure_is_not_absence(compose):
+    db = deploy_mongodb("volume-check")
+    compose.side_effect = subprocess.CalledProcessError(1, ["docker"])
+    with pytest.raises(RuntimeError, match="Could not check"):
+        db._data_volume_exists()
