@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Rewrite the dataset guide with simple file and Hub examples first, followed
+  by connections, IDs, replacement, type conversion and progress reporting.
+
 - Reorganize the deployment guide around CLI and Python examples. Simplify
   lifecycle, version, memory and troubleshooting instructions.
 

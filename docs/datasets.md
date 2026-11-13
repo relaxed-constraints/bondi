@@ -1,20 +1,34 @@
-# Load datasets
+# Loading datasets
 
-Choose one source and one exact collection reference.
+BONDI loads data from local files and Hugging Face into MongoDB and Couchbase deployments.
+You can use the CLI or Python API.
+You can also load Python dictionaries directly.
 
-| Function | Source | Destination |
-|---|---|---|
-| `load_file` | CSV, JSON, JSONL or Parquet | One collection |
-| `load_documents` | Iterable of dictionaries | One collection |
-| `load_hf_dataset` | One HF configuration | One collection |
-| `load_hf_repository` | All HF configurations | One collection per configuration |
-
-All readers are included in `pip install bondi`. In this repository, use `uv sync`.
-CSV and JSONL use standard-library readers. JSON arrays use ijson, Parquet uses
-PyArrow, and Hub sources use Hugging Face libraries.
-See the [API reference](reference/data.md).
+Start your database before loading data.
+See [Database deployment](deployment.md) if you need to create one.
+A plain BONDI installation includes file readers and Hugging Face support.
+Couchbase loading also requires `bondi[couchbase]`.
 
 ## Load a file
+
+This example loads `dev/business.json` from the BONDI checkout into `demo.business`.
+It uses the running deployment named `notebook-datasets`.
+
+### Command line
+
+Run this command from the repository root:
+
+```sh
+bondi datasets load-file dev/business.json \
+  --deployment notebook-datasets \
+  --database demo --collection business \
+  --id-field business_id
+```
+
+The database is `demo` and the collection is `business`.
+The `id-field` option uses each document's `business_id` as its ID.
+
+### Python API
 
 ```python
 from bondi.data import load_file
@@ -22,45 +36,67 @@ from bondi.deployment import get_deployment
 from bondi.mongodb import MongoCollectionRef
 
 deployment = get_deployment("notebook-datasets")
+business = MongoCollectionRef("demo", "business")
+
 result = load_file(
     "dev/business.json",
     target=deployment,
-    collection=MongoCollectionRef("demo", "business"),
+    collection=business,
     id_field="business_id",
 )
+print(result.destinations)  # {"demo.business": 8}
 ```
 
-Results use dotted destination labels: `database.collection` for MongoDB and
-`bucket.scope.collection` for Couchbase. For example, `result.destinations`
-contains `{"demo.business": 8}` for this file.
+`target` selects the server connection.
+`collection` gives the exact destination.
+`get_deployment()` reads saved settings but does not start a stopped database.
 
-The destination is exactly `demo.business`. The extension selects the reader.
-JSON arrays are streamed; a single JSON object is one document. CSV values remain
-strings. Parquet uses its declared types. JSONL preserves missing fields.
-Duplicate JSON keys are rejected.
+The same function accepts CSV, JSON, JSONL and Parquet files.
+The filename extension selects the reader.
+To load several files, call `load_file` once for each destination.
 
-```bash
-bondi datasets load-file dev/business.json --deployment notebook-datasets --database demo --collection business --id-field business_id
-```
+| Format | How BONDI reads it |
+|---|---|
+| CSV | Values remain strings |
+| JSON | An array supplies documents. A single object supplies one document |
+| JSONL | Each nonempty line supplies one document. Missing fields remain absent |
+| Parquet | Values use the file's declared types |
 
-Load multiple files with multiple calls. There are no packages, manifests or suffix rules.
+BONDI streams JSON arrays and rejects duplicate JSON keys.
 
-## Load documents
+## Load Python documents
+
+Use `load_documents` when the data is already in Python:
 
 ```python
 from bondi.data import load_documents
 
-load_documents(
+result = load_documents(
     [{"_id": "a", "name": "Harbour Cafe"}, {"_id": "b", "name": "Garden Books"}],
     target=deployment,
     collection=MongoCollectionRef("demo", "shops"),
 )
+print(result.destinations)
 ```
 
-Generators and Hugging Face Dataset objects also work. Select a split yourself
-before passing data from a DatasetDict.
+The loader preserves existing `_id` values.
+Generators and Hugging Face Dataset objects also work.
+For a DatasetDict, select a split before passing its documents to this function.
 
-## Load one Hugging Face dataset
+## Load a Hugging Face dataset
+
+A Hugging Face repository can contain several datasets, called configurations or subsets.
+Use `dataset` to select one.
+
+This example loads Adult into `demo.adult`.
+It combines all available splits by default:
+
+```sh
+bondi datasets load-hf origami-ml/jsynth-data \
+  --dataset adult \
+  --deployment notebook-datasets \
+  --database demo --collection adult
+```
 
 ```python
 from bondi.data import load_hf_dataset
@@ -68,32 +104,83 @@ from bondi.data import load_hf_dataset
 result = load_hf_dataset(
     "origami-ml/jsynth-data",
     dataset="adult",
-    split="train",
     target=deployment,
     collection=MongoCollectionRef("demo", "adult"),
 )
+print(result.destinations)
 ```
 
-`dataset` is the HF configuration (subset). Omit it only for a single-config repo.
-The collection name never changes. Omit `split` to combine all splits, pass a
-string for one, or a list for several. Splits load in sorted order.
-No split column is added. Duplicate explicit IDs fail instead of being deduplicated.
+You can omit `dataset` only when the repository has one configuration.
+The collection name stays exactly as specified.
 
-```bash
-bondi datasets load-hf origami-ml/jsynth-data --dataset adult --split train --deployment notebook-datasets --database demo --collection adult
+### Select splits
+
+To load only the training split, add `--split train`:
+
+```sh
+bondi datasets load-hf origami-ml/jsynth-data \
+  --dataset adult --split train \
+  --deployment notebook-datasets \
+  --database demo --collection adult_train
 ```
 
-Repeat `--split` to select several; omit it to combine all.
-Use `revision="COMMIT"` or `--revision COMMIT` for repeatable sources.
-The result records the resolved commit. HF streaming readers can normalize rows to
-a shared schema, including filling missing fields with nulls. Load original JSONL
-files when field presence must be preserved.
+In Python, pass `split="train"`.
+To select several splits, repeat `--split` or pass a list:
 
-`bondi datasets list` shows suggested configurations. `--json` returns metadata.
-`bondi datasets info adult` shows its source and pinned revision.
-These suggestions are not source aliases accepted by loading functions.
+```python
+result = load_hf_dataset(
+    "origami-ml/jsynth-data",
+    dataset="adult",
+    split=["train", "test"],
+    target=deployment,
+    collection=MongoCollectionRef("demo", "adult_selected"),
+)
+```
 
-## Load a repository
+Selected splits load into one collection in sorted split order.
+The loader does not add a split field or a collection suffix.
+It does not remove duplicate rows.
+Duplicate explicit document IDs cause an error.
+
+### Dataset versions
+
+You do not need to find a commit hash before loading.
+By default, BONDI uses the repository's current `main` revision.
+It records the resolved commit in `result.sources`.
+
+For a repeatable source, supply `revision` in Python or `--revision` in the CLI.
+You can use a branch, tag or commit.
+A commit identifies the exact source version.
+
+### Find suggested datasets
+
+```sh
+bondi datasets list
+bondi datasets info adult
+```
+
+The list shows suggested Hub configurations.
+The info command shows the repository, configuration and a pinned revision.
+Use those source details with `load-hf`.
+The suggestion name itself is not a source alias.
+Add `--json` to the list command for machine-readable metadata.
+
+Hugging Face readers can adjust documents to a shared schema.
+For example, they can fill missing fields with nulls.
+Load original JSONL files when missing fields must remain absent.
+
+## Load a Hugging Face repository
+
+Use `load_hf_repository` to load every configuration into a collection with the same name.
+For example, configurations named `users` and `posts` become `forum.users` and `forum.posts`.
+
+The following examples use a placeholder repository, `our-org/forum-data`.
+Replace it with your repository ID:
+
+```sh
+bondi datasets load-hf-repository our-org/forum-data \
+  --deployment notebook-datasets --database forum
+```
 
 ```python
 from bondi.data import load_hf_repository
@@ -103,95 +190,227 @@ results = load_hf_repository(
     target=deployment,
     database="forum",
 )
+for dataset_name, result in results.items():
+    print(dataset_name, result.destinations)
 ```
 
-Configurations named `users` and `posts` become collections with those exact names.
-There is no renaming option. This convention may not fit every HF repository.
+Collection names come directly from configuration names.
+To choose other names, call `load_hf_dataset` separately for each configuration.
 
-```bash
-bondi datasets load-hf-repository our-org/forum-data --deployment notebook-datasets --database forum
-```
+BONDI resolves one revision for the whole repository.
+It checks collection names and split selections before writing.
+Configurations then load sequentially in sorted name order.
 
-One revision is resolved for all configurations. Names and split selections are
-checked before writes. Configurations load sequentially in sorted order.
-An optional split selection applies to every configuration; a missing split fails
-before writes. Success returns a dictionary of results keyed by configuration.
-On failure, earlier writes remain. `LoadDataError.result` includes completed
-collections and the failed collection. Progress callbacks report the current
-collection only. This is not a transaction.
+By default, each collection combines all splits from its configuration.
+An explicit split selection applies to every configuration.
+A missing split causes an error before any writes.
 
-## Couchbase and external connections
+This operation is not a transaction.
+If a later collection fails, earlier writes remain.
+See [Progress and failures](#progress-and-failures) for result details.
+
+## Load into Couchbase
+
+The source functions work with either backend.
+For Couchbase, identify the bucket, scope and collection:
 
 ```python
 from bondi.couchbase import CouchbaseCollectionRef
 
+couchbase = get_deployment("cb-demo")
+result = load_file(
+    "dev/business.json",
+    target=couchbase,
+    collection=CouchbaseCollectionRef("demo", "_default", "business"),
+    id_field="business_id",
+)
+print(result.destinations)  # {"demo._default.business": 8}
+```
+
+```sh
+bondi datasets load-file dev/business.json \
+  --deployment cb-demo \
+  --bucket demo --scope _default --collection business \
+  --id-field business_id
+```
+
+Use a collection reference that matches the target backend.
+For repository loading, supply `bucket` and `scope` instead of `database`.
+
+BONDI creates missing scopes and collections.
+Creating a bucket also requires a memory quota of at least 100 MiB.
+For example, pass `bucket_memory_mb=256` or `--bucket-memory-mb 256`.
+Existing bucket quotas stay unchanged.
+Loading uses range scans and requires Couchbase Server 7.6 or later.
+
+## Load into an external database
+
+You do not need a BONDI-managed deployment.
+Pass an explicit connection as `target`:
+
+```python
+from bondi.data import MongoConnection
+
+target = MongoConnection(
+    "mongodb://localhost/?authSource=admin",
+    username="researcher",
+    password=password,
+)
 load_file(
     "dev/business.json",
-    target=couchbase_deployment,
-    collection=CouchbaseCollectionRef("demo", "_default", "business"),
+    target=target,
+    collection=MongoCollectionRef("demo", "business"),
     id_field="business_id",
 )
 ```
 
-CLI destinations use `--bucket demo --scope _default --collection business`.
-References must match the target backend. Repository loading takes `bucket` and
-`scope` instead of `database`. Missing scopes and collections are created.
-A missing bucket requires `bucket_memory_mb=256` or `--bucket-memory-mb 256`
-(at least 100 MiB). Existing quotas stay unchanged. Range scans require Server 7.6+.
+Supply the `password` variable from your own credential source.
+MongoDB username and password are optional.
+Explicit credentials override the corresponding values in the URI.
+
+For Couchbase, use `CouchbaseConnection`:
 
 ```python
-from bondi.data import MongoConnection, CouchbaseConnection
+from bondi.data import CouchbaseConnection
 
-mongo = MongoConnection("mongodb://localhost/", username="researcher", password=password)
-couchbase = CouchbaseConnection(
-    "couchbase://localhost", username="Administrator", password=password
+target = CouchbaseConnection(
+    "couchbase://localhost",
+    username="Administrator",
+    password=password,
 )
 ```
 
-These connection objects can replace a deployment as `target`.
-MongoDB credentials are optional and override corresponding URI credentials.
-Representations and reports omit credentials.
+Connection representations and load reports omit credentials.
 
-CLI commands accept `--deployment NAME` or `--connection connection.json`:
+### CLI connection files
+
+Use `--connection connection.json` instead of `--deployment NAME`.
+A MongoDB connection file can contain:
 
 ```json
-{"backend": "mongodb", "uri": "mongodb://localhost/?authSource=admin",
- "username": "researcher", "password_env": "MONGO_PASSWORD"}
+{
+  "backend": "mongodb",
+  "uri": "mongodb://localhost/?authSource=admin",
+  "username": "researcher",
+  "password_env": "MONGO_PASSWORD"
+}
 ```
 
-For Couchbase, set backend `couchbase` and supply its URI, username and password_env.
+Set `MONGO_PASSWORD` in the environment before running the command.
+For Couchbase, use backend `couchbase` with its URI, username and `password_env`.
 
-## IDs and write modes
+## Document IDs
 
-Preserve `_id` or select an `id_field`. Local sources without either require a
-`namespace` for generated IDs. HF sources use repository and configuration identity.
-Generated IDs use `gen:` plus 24 hexadecimal characters, based on namespace,
-logical collection, original split and row position. Row reordering changes IDs.
-HF IDs stay stable when loading a split alone or with others at the same contents.
-Couchbase uses a separate type-aware physical document key.
+BONDI needs an ID for each document.
+It uses the following rules:
+
+1. If you supply `id_field`, BONDI uses that field as `_id`.
+2. Otherwise, it preserves an existing `_id`.
+3. If neither exists, it generates an ID from the source namespace and row position.
+
+For local files and Python documents, supply a namespace when IDs are missing:
+
+```python
+load_documents(
+    [{"city": "Sydney"}, {"city": "Melbourne"}],
+    target=deployment,
+    collection=MongoCollectionRef("demo", "cities"),
+    namespace="my-cities",
+)
+```
+
+The namespace is a stable label for your source.
+It is not a database or collection name.
+Hugging Face sources use their repository and configuration identity by default.
+
+Generated IDs start with `gen:` and contain 24 hexadecimal characters.
+They depend on the namespace, logical collection, original split and row position.
+Changing row order changes generated IDs.
+For unchanged Hub data, loading a split alone or with other splits preserves its generated IDs.
+
+Couchbase uses a separate physical document key that distinguishes ID types.
+The converted `_id` also remains in the stored document.
+
+## Load into an existing collection
+
+The default mode is `create`:
 
 | Mode | Behaviour |
 |---|---|
-| `create` (default) | Require empty or absent collection |
-| `replace` | Clear selected collection, preserving indexes |
-| `upsert` | Replace matching IDs, insert new IDs, retain other documents |
+| `create` | Require an empty or absent collection |
+| `replace` | Clear the selected collection, preserve its indexes, then load |
+| `upsert` | Replace matching IDs, insert new IDs and retain other documents |
 
-Replacement explicitly permits deletion. No ownership metadata is stored.
-Duplicate incoming IDs fail in every mode. Repository mode applies per collection.
+Use `mode="replace"` in Python or `--mode replace` in the CLI to reload a collection.
+Selecting replacement explicitly permits deleting its existing documents.
+BONDI does not store ownership metadata.
+Duplicate incoming IDs fail in every mode.
 
-## Types and progress
+For repository loading, the mode applies to each selected collection.
+It does not clear unrelated collections in the database.
+Create indexes separately through the database APIs.
 
-`json_mode="extended"` decodes Extended JSON through `loads_query_json`.
-MongoDB retains BSON values. Couchbase stores dates as UTC ISO strings and
-ObjectIds as strings. Couchbase decimals require `decimal_mode="string"`.
-Naive datetimes require `naive_datetimes="utc"`. Nonfinite numbers fail.
-Couchbase integers must fit its safe JSON range.
-Explicit JSON dates without offsets are interpreted as UTC.
+## Type conversion
 
-`batch_size` bounds buffering; writes are acknowledged individually.
-A synchronous `on_progress` callback receives an independent `LoadDataResult`
-after each batch and must return None.
-Failures have no rollback or retry. `LoadDataError.result` reports acknowledged
-writes and uncertain write outcomes. Do not modify sources or write concurrently.
-Create indexes separately through database APIs.
-CLI loads return plain JSON; errors go to stderr.
+Plain JSON is the default.
+Use `json_mode="extended"` or `--json-mode extended` to decode Extended JSON wrappers.
+BONDI uses `loads_query_json` for this conversion.
+
+| Value | MongoDB | Couchbase |
+|---|---|---|
+| BSON values | Retain supported BSON types | Convert supported types to JSON |
+| Datetime | Store a BSON date | Store a UTC ISO string |
+| ObjectId | Retain ObjectId | Store a string |
+| Decimal | Store Decimal128 | Require `decimal_mode="string"` |
+
+A naive datetime has no timezone.
+Use `naive_datetimes="utc"` to interpret native naive datetimes as UTC.
+Otherwise, they cause an error.
+Explicit JSON dates without offsets use UTC.
+
+Nonfinite numbers cause an error.
+Couchbase integers must fit the exact JSON integer range, from `-(2**53 - 1)` to `2**53 - 1`.
+
+## Progress and failures
+
+Every load returns a `LoadDataResult`.
+Its `destinations` field counts acknowledged writes using dotted names:
+
+- MongoDB: `database.collection`.
+- Couchbase: `bucket.scope.collection`.
+
+The result also records source details, original split counts and type conversions.
+
+Use `on_progress` to report progress during a Python load:
+
+```python
+def report_progress(result):
+    print(result.destinations)
+
+
+result = load_file(
+    "dev/business.json",
+    target=deployment,
+    collection=business,
+    id_field="business_id",
+    mode="replace",
+    batch_size=1000,
+    on_progress=report_progress,
+)
+```
+
+`batch_size` limits buffered documents.
+The writer waits for acknowledgement of each document separately.
+After each batch, the callback receives an independent result snapshot.
+The callback must be synchronous and return `None`.
+
+Loads do not roll back or retry automatically.
+`LoadDataError.result` records acknowledged writes and any uncertain write outcome.
+For repository loading, it includes completed collections and the failed collection.
+Repository progress callbacks describe only the current collection.
+
+Do not modify source files or write to the target concurrently during loading.
+CLI load commands return plain JSON.
+Errors go to stderr.
+
+See the [dataset API reference](reference/data.md) for signatures and return types.
