@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Allow deployment ports to be reused after shutdown when only TCP TIME_WAIT
+  connections remain. Continue to reject ports with active listeners.
+
 - Wait for healthy Couchbase nodes and a successful query before creating a missing
   bucket. Use the existing startup deadline. Add repeated Community 8.0.0 restart
   checks for the first-bucket directory conflict.
