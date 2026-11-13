@@ -50,7 +50,8 @@ class LoadDataResult:
     writes whose outcome is unknown. Collection changes are not atomic.
     Attributes:
         backend: Destination backend.
-        destinations: Counts by destination collection.
+        destinations: Counts keyed by database.collection for MongoDB or
+            bucket.scope.collection for Couchbase.
         source_counts: Counts by logical collection and original split.
         conversions: Counts of converted values by type.
         sources: Source revisions and file identities.

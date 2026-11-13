@@ -86,7 +86,7 @@ def test_ids_and_partial_results(writer):
     result = []
     with pytest.raises(LoadDataError, match="Duplicate") as error:
         load([{"_id": "a"}, {"_id": "a"}], mode="upsert", batch_size=1, on_progress=result.append)
-    assert error.value.result.destinations["test/items"] == 1
+    assert error.value.result.destinations["test.items"] == 1
     assert len(result) == 1
     with pytest.raises(LoadDataError) as error:
         load([{"_id": "b", "fail": True}], mode="upsert")
@@ -112,7 +112,7 @@ def test_formats(tmp_path, writer):
     paths[1].write_text('[{"_id":"a","x":1}]')
     pq.write_table(pa.Table.from_pylist([{"_id": "a", "x": 1}]), paths[2])
     for path in paths:
-        assert load(path, mode="replace").destinations["test/items"] == 1
+        assert load(path, mode="replace").destinations["test.items"] == 1
 
 
 def test_couchbase_conversion():
@@ -165,7 +165,7 @@ def test_progress_failure_keeps_partial_counts(writer):
 
     with pytest.raises(LoadDataError) as error:
         load([{"_id": "a"}, {"_id": "b"}], batch_size=1, on_progress=callback)
-    assert error.value.result.destinations == {"test/items": 1}
+    assert error.value.result.destinations == {"test.items": 1}
     assert not error.value.result.uncertain_writes
 
 
@@ -174,7 +174,7 @@ def test_huggingface_objects(writer):
 
     data = datasets.Dataset.from_list([{"_id": "a"}], split="train")
     result = load(data)
-    assert result.destinations == {"test/items": 1}
+    assert result.destinations == {"test.items": 1}
 
 
 def test_numeric_ids_do_not_depend_on_bson_width(writer):
@@ -315,7 +315,7 @@ def test_generated_id_collisions_are_rejected(writer, monkeypatch):
     monkeypatch.setattr("bondi.data._loader.generated_id", lambda *args: "gen:" + "a" * 24)
     with pytest.raises(LoadDataError, match="Duplicate incoming document ID") as error:
         load([{"v": 1}, {"v": 2}], namespace="collision-test", mode="upsert", batch_size=1)
-    assert error.value.result.destinations == {"test/items": 1}
+    assert error.value.result.destinations == {"test.items": 1}
 
 
 def test_cli_list_readable_and_json(capsys):
@@ -418,7 +418,7 @@ def test_hf_combines_splits_into_exact_destination(writer, hub):
         target=MongoConnection("x"),
         collection=MongoCollectionRef("test", "chosen"),
     )
-    assert result.destinations == {"test/chosen": 2}
+    assert result.destinations == {"test.chosen": 2}
     assert result.source_counts == {"users:test": 1, "users:train": 1}
     assert all(source["revision"] == "fixed-commit" for source in result.sources)
     assert {row[1] for row in hub[1]} == {"fixed-commit"}
@@ -457,14 +457,14 @@ def test_hf_repository_names_revision_and_partial_failure(writer, hub):
 
     result = load_hf_repository("org/forum", target=MongoConnection("x"), database="db")
     assert list(result) == ["posts", "users"]
-    assert result["users"].destinations == {"db/users": 2}
+    assert result["users"].destinations == {"db.users": 2}
     assert len(hub[2]) == 1
     assert {call[1] for call in hub[1]} == {"fixed-commit"}
     hub[0]["users"]["train"] = [{"fail": True}]
     with pytest.raises(LoadDataError) as error:
         load_hf_repository("org/forum", target=MongoConnection("x"), database="db", mode="replace")
-    assert error.value.result.destinations["db/posts"] == 2
-    assert error.value.result.destinations["db/users"] == 1
+    assert error.value.result.destinations["db.posts"] == 2
+    assert error.value.result.destinations["db.users"] == 1
     assert error.value.result.uncertain_writes
 
 
@@ -487,7 +487,7 @@ def test_hf_single_config_and_invalid_repository_names(writer, hub):
     hub[0].pop("posts")
     assert load_hf_dataset(
         "org/forum", target=MongoConnection("x"), collection=MongoCollectionRef("db", "c")
-    ).destinations == {"db/c": 2}
+    ).destinations == {"db.c": 2}
     hub[0]["bad/name"] = hub[0]["users"]
     before = dict(writer.data)
     with pytest.raises(ValueError, match="Destination names"):
@@ -535,10 +535,10 @@ def test_cli_hf_dispatch(writer, hub, monkeypatch, capsys, command):
     assert main(args) == 0
     payload = json.loads(capsys.readouterr().out)
     if command == "load-hf":
-        assert payload["destinations"] == {"demo/exact": 1}
+        assert payload["destinations"] == {"demo.exact": 1}
     else:
         assert set(payload) == {"users", "posts"}
-        assert payload["users"]["destinations"] == {"demo/users": 2}
+        assert payload["users"]["destinations"] == {"demo.users": 2}
 
 
 def test_cli_couchbase_ref_and_options(monkeypatch, capsys):
@@ -629,3 +629,25 @@ def test_extended_wrappers_do_not_relax_native_datetime_policy(writer):
     )
     row = next(iter(writer.data[("test", None, "items")].values()))
     assert row["native"] == row["wrapper"]
+
+
+def test_couchbase_destination_labels_in_progress_and_errors(writer, monkeypatch):
+    from bondi.couchbase import CouchbaseCollectionRef
+    from bondi.data import CouchbaseConnection
+
+    class FakeCouchbaseWriter(writer):
+        def prepare(self, dest, mode, quota=None):
+            super().prepare(dest, mode)
+
+    monkeypatch.setattr("bondi.data._loader.CouchbaseWriter", FakeCouchbaseWriter)
+    progress = []
+    with pytest.raises(LoadDataError) as error:
+        load_documents(
+            [{"_id": "a"}, {"_id": "b", "fail": True}],
+            target=CouchbaseConnection("couchbase://unused", "user", "password"),
+            collection=CouchbaseCollectionRef("bucket", "scope", "items"),
+            batch_size=1,
+            on_progress=progress.append,
+        )
+    assert progress[0].destinations == {"bucket.scope.items": 1}
+    assert error.value.result.destinations == {"bucket.scope.items": 1}

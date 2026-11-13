@@ -30,6 +30,10 @@ result = load_file(
 )
 ```
 
+Results use dotted destination labels: `database.collection` for MongoDB and
+`bucket.scope.collection` for Couchbase. For example, `result.destinations`
+contains `{"demo.business": 8}` for this file.
+
 The destination is exactly `demo.business`. The extension selects the reader.
 JSON arrays are streamed; a single JSON object is one document. CSV values remain
 strings. Parquet uses its declared types. JSONL preserves missing fields.

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Use dotted destination labels in load results: `database.collection` for MongoDB
+  and `bucket.scope.collection` for Couchbase.
+
 - Include CSV, JSON, JSONL, Parquet and Hugging Face loading in a plain BONDI
   installation. Move dataset reader dependencies into core and remove the data extra.
 

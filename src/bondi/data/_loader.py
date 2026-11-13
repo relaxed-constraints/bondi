@@ -304,7 +304,7 @@ def _load(
             raise ValueError("create requires absent or empty collections")
         args = {"quota": bucket_memory_mb} if backend == "couchbase" else {}
         writer.prepare(dest, mode, **args)
-        result.destinations["/".join(x for x in dest if x)] = 0
+        result.destinations[".".join(x for x in dest if x)] = 0
         with tempfile.TemporaryDirectory(prefix="bondi-load-") as temporary:
             seen = sqlite3.connect(Path(temporary) / "ids.sqlite")
             try:
@@ -313,7 +313,7 @@ def _load(
                 )
                 for plan in plans:
                     dest = plan["destination"]
-                    destination = "/".join(x for x in dest if x)
+                    destination = ".".join(x for x in dest if x)
                     origin = f"{plan['logical']}:{plan['split'] or 'unsplit'}"
                     batch = []
 

@@ -22,7 +22,8 @@ def test_loader_live(backend, live_deployments):
     )
     # Fixture cleanup removes the entire isolated deployment.
     result = load_documents([{"_id": "a", "v": 1}], target=deployment, collection=ref)
-    assert sum(result.destinations.values()) == 1
+    expected = f"{unique}.items" if backend == "mongodb" else f"{deployment.bucket}.{unique}.items"
+    assert result.destinations == {expected: 1}
     with pytest.raises(LoadDataError, match="empty"):
         load_documents([{"_id": "b"}], target=deployment, collection=ref)
     result = load_documents([{"_id": "b"}], target=deployment, collection=ref, mode="replace")
@@ -116,6 +117,6 @@ def test_mongo_explicit_credentials_live(live_deployments):
     result = load_documents(
         [{"_id": "a"}], target=target, collection=MongoCollectionRef(database, "items")
     )
-    assert result.destinations == {f"{database}/items": 1}
+    assert result.destinations == {f"{database}.items": 1}
     with MongoClient(deployment.uri) as admin:
         assert admin[database].items.count_documents({}) == 1
