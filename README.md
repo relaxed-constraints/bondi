@@ -185,4 +185,4 @@ Use `load_file`, `load_documents`, `load_hf_dataset` or `load_hf_repository`
 from `bondi.data` to insert data into MongoDB and Couchbase. CLI commands are
 `bondi datasets load-file`, `load-hf` and `load-hf-repository`. See the
 [dataset guide](docs/datasets.md) and [demo notebook](notebooks/dataset_loading.ipynb).
-Optional format and Hub readers are available through the `data` extra.
+All file-format and Hugging Face readers are included in a plain BONDI installation.

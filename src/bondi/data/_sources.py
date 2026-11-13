@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 from datetime import UTC, datetime
+from importlib import import_module
 from pathlib import Path
 
 from bondi.mongodb import loads_query_json
@@ -33,13 +34,6 @@ def dataset_info(name: str) -> dict:
     if name not in CATALOG:
         raise ValueError(f"Unknown dataset: {name}")
     return dict(CATALOG[name])
-
-
-def optional(module):
-    try:
-        return __import__(module)
-    except ImportError:
-        raise ImportError("Install bondi[data] to read this source format") from None
 
 
 def checked_events(ijson, handle):
@@ -86,7 +80,7 @@ def records(source, mode):
                     yield decode(line, mode)
     elif path.suffix.lower() == ".json":
         # Arrays are streamed. Single JSON objects are one document.
-        ijson = optional("ijson")
+        ijson = import_module("ijson")
         with path.open("rb") as handle:
             first = next(
                 (
@@ -110,7 +104,7 @@ def records(source, mode):
                     raise ValueError("CSV row does not match its header")
                 yield row
     elif path.suffix.lower() == ".parquet":
-        optional("pyarrow")
+        import_module("pyarrow")
         import pyarrow.parquet as pq
 
         for batch in pq.ParquetFile(path).iter_batches(batch_size=1024):
@@ -133,16 +127,19 @@ def file_info(source):
 def hf_revision(repo_id, revision):
     """Resolve a repository revision once before loading its configurations."""
     return (
-        optional("huggingface_hub").HfApi().dataset_info(repo_id, revision=revision or "main").sha
+        import_module("huggingface_hub")
+        .HfApi()
+        .dataset_info(repo_id, revision=revision or "main")
+        .sha
     )
 
 
 def hf_configs(repo_id, revision):
-    return sorted(optional("datasets").get_dataset_config_names(repo_id, revision=revision))
+    return sorted(import_module("datasets").get_dataset_config_names(repo_id, revision=revision))
 
 
 def hf_plans(repo_id, dataset, revision, split, namespace):
-    library = optional("datasets")
+    library = import_module("datasets")
     available = library.get_dataset_split_names(repo_id, dataset, revision=revision)
     selected = available if split is None else ([split] if isinstance(split, str) else list(split))
     if not selected or len(set(selected)) != len(selected):

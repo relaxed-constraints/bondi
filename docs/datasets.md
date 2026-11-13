@@ -9,7 +9,7 @@ Choose one source and one exact collection reference.
 | `load_hf_dataset` | One HF configuration | One collection |
 | `load_hf_repository` | All HF configurations | One collection per configuration |
 
-Install optional readers with `pip install "bondi[data]"` or `uv sync --extra data`.
+All readers are included in `pip install bondi`. In this repository, use `uv sync`.
 CSV and JSONL use standard-library readers. JSON arrays use ijson, Parquet uses
 PyArrow, and Hub sources use Hugging Face libraries.
 See the [API reference](reference/data.md).

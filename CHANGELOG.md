@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Include CSV, JSON, JSONL, Parquet and Hugging Face loading in a plain BONDI
+  installation. Move dataset reader dependencies into core and remove the data extra.
+
 - **Breaking:** Replace `load_data` with `load_file`, `load_documents`,
   `load_hf_dataset` and `load_hf_repository`. Add CouchbaseCollectionRef.
   Collection references name exact destinations. Hub splits merge by default.

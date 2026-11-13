@@ -223,6 +223,10 @@ version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "datasets" },
+    { name = "huggingface-hub" },
+    { name = "ijson" },
+    { name = "pyarrow" },
     { name = "pymongo" },
     { name = "rich" },
 ]
@@ -230,12 +234,6 @@ dependencies = [
 [package.optional-dependencies]
 couchbase = [
     { name = "couchbase" },
-]
-data = [
-    { name = "datasets" },
-    { name = "huggingface-hub" },
-    { name = "ijson" },
-    { name = "pyarrow" },
 ]
 
 [package.dev-dependencies]
@@ -253,14 +251,14 @@ docs = [
 requires-dist = [
     { name = "click", specifier = ">=8.1,<9" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.6.3,<5" },
-    { name = "datasets", marker = "extra == 'data'", specifier = ">=3,<5" },
-    { name = "huggingface-hub", marker = "extra == 'data'", specifier = ">=0.24,<2" },
-    { name = "ijson", marker = "extra == 'data'", specifier = ">=3,<4" },
-    { name = "pyarrow", marker = "extra == 'data'", specifier = ">=17" },
+    { name = "datasets", specifier = ">=3,<5" },
+    { name = "huggingface-hub", specifier = ">=0.24,<2" },
+    { name = "ijson", specifier = ">=3,<4" },
+    { name = "pyarrow", specifier = ">=17" },
     { name = "pymongo", specifier = ">=4.13,<5" },
     { name = "rich", specifier = ">=13,<15" },
 ]
-provides-extras = ["data", "couchbase"]
+provides-extras = ["couchbase"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -21,6 +21,10 @@ dependencies = [
     "pymongo>=4.13,<5",
     "click>=8.1,<9",
     "rich>=13,<15",
+    "datasets>=3,<5",
+    "huggingface-hub>=0.24,<2",
+    "ijson>=3,<4",
+    "pyarrow>=17",
 ]
 
 [project.scripts]
@@ -34,7 +38,6 @@ Issues = "https://github.com/relaxed-constraints/bondi/issues"
 Changelog = "https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-data = ["datasets>=3,<5", "huggingface-hub>=0.24,<2", "ijson>=3,<4", "pyarrow>=17"]
 couchbase = ["couchbase>=4.6.3,<5"]
 
 [build-system]

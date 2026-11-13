@@ -104,7 +104,6 @@ def test_extended_json_and_plain_wrappers(tmp_path, writer):
 
 
 def test_formats(tmp_path, writer):
-    pytest.importorskip("pyarrow")
     import pyarrow as pa
     import pyarrow.parquet as pq
 
@@ -153,8 +152,6 @@ def test_replace_clears_manually_populated_collection(writer):
 
 @pytest.mark.parametrize("extension", ["json", "jsonl"])
 def test_duplicate_json_keys_rejected(tmp_path, writer, extension):
-    if extension == "json":
-        pytest.importorskip("ijson")
     path = tmp_path / f"data.{extension}"
     path.write_text('{"_id":"a","nested":{"x":1,"x":2}}')
     with pytest.raises(LoadDataError, match="duplicate JSON key"):
@@ -173,7 +170,8 @@ def test_progress_failure_keeps_partial_counts(writer):
 
 
 def test_huggingface_objects(writer):
-    datasets = pytest.importorskip("datasets")
+    import datasets
+
     data = datasets.Dataset.from_list([{"_id": "a"}], split="train")
     result = load(data)
     assert result.destinations == {"test/items": 1}
@@ -406,7 +404,7 @@ def hub(monkeypatch):
     )
     api = SimpleNamespace(HfApi=lambda: SimpleNamespace(dataset_info=resolve))
     monkeypatch.setattr(
-        _sources, "optional", lambda module: api if module == "huggingface_hub" else library
+        _sources, "import_module", lambda module: api if module == "huggingface_hub" else library
     )
     return data, calls, resolutions
 
