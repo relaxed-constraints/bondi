@@ -49,6 +49,8 @@
   and the AI agent skill for the new APIs and commands.
 - Add dataset loading to the homepage and place deployment and loading first in
   the User guide. Show the root changelog under Development without duplicating it.
+- Publish a documentation index for AI agents and per-page Markdown exports,
+  with a Copy as Markdown button on the HTML pages.
 
 ## 0.2.0 — 2026-11-13
 

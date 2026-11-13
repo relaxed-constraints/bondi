@@ -5,6 +5,7 @@ repo_url = "https://github.com/relaxed-constraints/bondi"
 repo_name = "relaxed-constraints/bondi"
 copyright = "Copyright &copy; 2026 Relaxed Constraints"
 site_description = "A Python toolkit for document database research"
+extra_css = ["stylesheets/markdown-copy.css"]
 
 nav = [
     { "Home" = "index.md" },
@@ -70,7 +71,7 @@ nav = [
 [project.theme]
 variant = "modern"
 font = false
-features = ["content.tabs.link", "content.code.copy", "navigation.tabs", "navigation.top", "search.highlight"]
+features = ["content.action.copy", "content.tabs.link", "content.code.copy", "navigation.tabs", "navigation.top", "search.highlight"]
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme)"
@@ -107,3 +108,7 @@ show_signature_annotations = true
 separate_signature = true
 signature_crossrefs = true
 line_length = 76
+
+[project.plugins.llmstxt.sections]
+"Overview and guides" = ["*.md"]
+"API reference" = ["reference/**/*.md"]
