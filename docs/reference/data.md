@@ -1,5 +1,10 @@
 # Dataset loading
 
+::: bondi.data.load_demo_data
+    options:
+      show_root_heading: true
+      heading_level: 2
+
 ::: bondi.data.load_file
     options:
       show_root_heading: true

@@ -9,6 +9,64 @@ See [Database deployment](deployment.md) if you need to create one.
 A plain BONDI installation includes file readers and Hugging Face support.
 Couchbase loading also requires `bondi[couchbase]`.
 
+## Load the packaged demo
+
+BONDI includes eight fictional businesses. No download or source checkout is needed.
+
+```sh
+bondi dataset load-demo --deployment mongo-demo --database demo --collection business
+```
+
+```python
+from bondi.data import load_demo_data
+from bondi.deployment import get_deployment
+from bondi.mongodb import MongoCollectionRef
+
+result = load_demo_data(
+    target=get_deployment("mongo-demo"),
+    collection=MongoCollectionRef("demo", "business"),
+)
+print(result.destinations)  # {"demo.business": 8}
+```
+
+For Couchbase, install `bondi[couchbase]` and use a Couchbase collection reference:
+
+```python
+from bondi.couchbase import CouchbaseCollectionRef
+
+result = load_demo_data(
+    target=get_deployment("cb-demo"),
+    collection=CouchbaseCollectionRef("demo", "_default", "business"),
+)
+```
+
+```sh
+bondi dataset load-demo --deployment cb-demo --bucket demo --collection business
+```
+
+The destination must be empty by default. To reload, use `mode="upsert"` in
+Python or `--mode upsert` in the CLI. This replaces matching business IDs and
+keeps other documents. Use `replace` to clear the collection first.
+The helper uses `business_id` for stable IDs and returns `LoadDataResult`.
+It accepts the same targets and options as `load_documents()`, including explicit
+connections and progress callbacks. It does not start databases or create query indexes.
+
+For the Couchbase query examples, create a primary index after loading:
+
+```python
+from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
+
+deployment = get_deployment("cb-demo")
+with CouchbaseExecutor.from_uri(
+    deployment.uri, username=deployment.username, password=deployment.password
+) as executor:
+    executor.run(CouchbaseQuery(
+        "CREATE PRIMARY INDEX IF NOT EXISTS ON `demo`.`_default`.`business`"
+    ))
+```
+
+See [the API reference](reference/data.md#bondi.data.load_demo_data) for details.
+
 ## Load a file
 
 This example loads `dev/business.json` from the BONDI checkout into `demo.business`.

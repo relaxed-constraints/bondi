@@ -33,8 +33,7 @@ def test_mongo_lifecycle_and_persistence(tmp_path, monkeypatch, live_ports):
         db = deploy_mongodb("lifecycle-test", port=port)
         with MongoClient(db.uri, serverSelectionTimeoutMS=5000) as client:
             assert client.demo.records.count_documents({}) == 0
-        result = db.load_demo_data()
-        assert result.document_count == 8
+
     finally:
         if list_deployments():
             get_deployment("lifecycle-test").remove()

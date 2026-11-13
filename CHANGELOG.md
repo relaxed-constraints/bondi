@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Breaking:** Move demo loading to `bondi.data.load_demo_data()` and
+  `bondi dataset load-demo`. Remove the deployment method, command and
+  DemoDataResult type. Use explicit collection references and LoadDataResult.
+  The default mode is create. Use upsert for repeat loads.
+  Couchbase uses the optional SDK. Create query indexes separately.
+
+
 - **Breaking:** Group lifecycle commands under `bondi deployment` and rename
   `deploy` to `create`. Rename `datasets` to `dataset`.
   Move `load-demo-data` under `deployment`. Remove the old command paths.

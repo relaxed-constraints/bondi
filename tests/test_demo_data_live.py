@@ -1,73 +1,76 @@
-"""Opt-in end-to-end demo loads on isolated MongoDB and Couchbase deployments."""
+"""Demo loads use the same create, upsert and replace rules on both databases."""
+
+from datetime import timedelta
 
 import pytest
 from pymongo import MongoClient
 
 from bondi._cli import main
-from bondi.deployment import deploy_couchbase, deploy_mongodb
-from bondi.deployment._couchbase import request
+from bondi.couchbase import CouchbaseCollectionRef
+from bondi.data import LoadDataError, load_demo_data, load_documents
+from bondi.data._values import document_key
+from bondi.mongodb import MongoCollectionRef
 
 pytestmark = pytest.mark.live
 
 
-@pytest.mark.parametrize("backend", ["mongodb", "couchbase"])
-def test_load_repeat_cli_and_preserve_other_data(tmp_path, monkeypatch, backend, live_ports):
-    monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
-    ports = live_ports.claim(backend)
-    db = None
-    try:
-        if backend == "mongodb":
-            db = deploy_mongodb("demo-load-test", port=ports[0])
-        else:
-            db = deploy_couchbase(
-                "demo-load-test", management_port=ports[0], query_port=ports[1], kv_port=ports[2]
-            )
-        assert db.load_demo_data().document_count == 8
-        if backend == "mongodb":
-            with MongoClient(db.uri) as client:
-                client.demo.business.insert_one({"_id": "keep", "value": 42})
-                client.demo.business.update_one({"_id": "demo-001"}, {"$set": {"name": "changed"}})
-        else:
-            response = request(
-                db,
-                "/query/service",
-                {
-                    "statement": "UPSERT INTO `demo`.`_default`.`business` (KEY, VALUE) "
-                    'VALUES ("keep", {"value":42}), ("demo-001", {"name":"changed"})'
-                },
-                query=True,
-            )
-            assert response["status"] == "success", response
-        args = ["load-demo-data", db.name]
-        if backend == "couchbase":
-            args += ["--create-primary-index"]
-        assert main(args) == 0
-        assert main(args) == 0  # Index creation is repeatable too.
-        if backend == "mongodb":
-            with MongoClient(db.uri) as client:
-                assert client.demo.business.count_documents({}) == 9
-                assert client.demo.business.find_one({"_id": "keep"})["value"] == 42
-                assert client.demo.business.find_one({"_id": "demo-001"})["name"] == "Harbour Cafe"
-            result = db.load_demo_data(database="research", collection="businesses")
-            assert result.database == "research"
-        else:
-            response = request(
-                db,
-                "/query/service",
-                {
-                    "statement": "SELECT RAW b FROM `demo`.`_default`.`business` b",
-                    "scan_consistency": "request_plus",
-                },
-                query=True,
-            )
-            assert response["status"] == "success", response
-            assert len(response["results"]) == 9
-            assert {"value": 42} in response["results"]
-            assert any(d.get("name") == "Harbour Cafe" for d in response["results"])
-            result = db.load_demo_data(scope="research", collection="businesses")
-            assert result.scope == "research"
-        db.stop()
-        assert main(["load-demo-data", db.name]) == 1
-    finally:
-        if db is not None:
-            db.remove()
+@pytest.mark.parametrize("backend", ["mongodb", "community"])
+def test_demo_modes_and_cli(live_deployments, backend, monkeypatch):
+    db = live_deployments(backend)
+    collection = "demo_loader_test"
+    ref = (
+        MongoCollectionRef("demo", collection)
+        if backend == "mongodb"
+        else CouchbaseCollectionRef("demo", "_default", collection)
+    )
+    label = "demo." + collection if backend == "mongodb" else "demo._default." + collection
+    assert load_demo_data(target=db, collection=ref).destinations == {label: 8}
+    with pytest.raises(LoadDataError, match="empty"):
+        load_demo_data(target=db, collection=ref)
+    load_documents(
+        [{"_id": "keep", "value": 42}, {"_id": "demo-001", "name": "changed"}],
+        target=db,
+        collection=ref,
+        mode="upsert",
+    )
+    monkeypatch.setattr("bondi.deployment.get_deployment", lambda name: db)
+    destination = ["--database", "demo"] if backend == "mongodb" else ["--bucket", "demo"]
+    args = [
+        "dataset",
+        "load-demo",
+        "--deployment",
+        db.name,
+        *destination,
+        "--collection",
+        collection,
+        "--mode",
+        "upsert",
+    ]
+    assert main(args) == 0
+    assert main(args) == 0
+
+    if backend == "mongodb":
+        with MongoClient(db.uri) as client:
+            stored = client.demo[collection]
+            assert stored.count_documents({}) == 9
+            assert stored.find_one({"_id": "keep"})["value"] == 42
+            assert stored.find_one({"_id": "demo-001"})["name"] == "Harbour Cafe"
+            load_demo_data(target=db, collection=ref, mode="replace")
+            assert stored.count_documents({}) == 8
+    else:
+        from couchbase.auth import PasswordAuthenticator
+        from couchbase.cluster import Cluster
+        from couchbase.exceptions import DocumentNotFoundException
+        from couchbase.options import ClusterOptions
+
+        cluster = Cluster(db.uri, ClusterOptions(PasswordAuthenticator(db.username, db.password)))
+        try:
+            cluster.wait_until_ready(timedelta(seconds=30))
+            stored = cluster.bucket("demo").default_scope().collection(collection)
+            assert stored.get(document_key("keep")).content_as[dict]["value"] == 42
+            assert stored.get(document_key("demo-001")).content_as[dict]["name"] == "Harbour Cafe"
+            load_demo_data(target=db, collection=ref, mode="replace")
+            with pytest.raises(DocumentNotFoundException):
+                stored.get(document_key("keep"))
+        finally:
+            cluster.close()

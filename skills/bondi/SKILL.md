@@ -83,3 +83,6 @@ See `docs/datasets.md` and `notebooks/dataset_loading.ipynb` in the source check
 Use `bondi deployment create` to create a deployment. Use
 `bondi deployment list|status|start|stop|logs|remove` to manage deployments.
 Use `bondi dataset` for dataset commands. The Python API is unchanged.
+
+Load packaged demo businesses with `bondi.data.load_demo_data(target=deployment, collection=ref)`
+or `bondi dataset load-demo`. Use the dataset loader for all data sources.

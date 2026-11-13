@@ -11,18 +11,22 @@ Use managed deployments with Docker and Compose v2 running on the same machine:
 
 ```sh
 uv run bondi deployment create mongodb --name lesson --port 27019
-uv run bondi deployment load-demo-data lesson
+uv run bondi dataset load-demo --deployment lesson --database demo --collection business
 uv run bondi deployment status lesson
 uv run bondi deployment stop lesson
 uv run bondi deployment start lesson
 ```
 
 Choose an unused name and port; do not assume a student's existing deployment is
-disposable. Deployments start empty. Demo loading upserts eight fictional businesses
-and replaces matching demo IDs; it does not reset arbitrary data.
-For Couchbase, use `bondi deployment create couchbase` and
-`bondi deployment load-demo-data couchbase --create-primary-index` for demo SQL++ queries.
-Do not create that index implicitly in an index experiment.
+disposable. Deployments start empty. Use `bondi.data.load_demo_data(target=deployment,
+collection=ref)` or `bondi dataset load-demo` to load eight fictional businesses.
+Use a MongoCollectionRef or CouchbaseCollectionRef for the exact destination.
+The default create mode requires an empty collection. Use mode="upsert" or
+`--mode upsert` to reload matching business IDs and keep other documents.
+The result is LoadDataResult. Deployment handles do not load data.
+For Couchbase, specify `--bucket demo --collection business` instead of
+`--database demo --collection business`. Install `bondi[couchbase]`.
+Create query indexes separately. Demo loading creates no indexes.
 
 Inspect `uv run bondi --help` and subcommand help for installed CLI options.
 `python -m bondi` is also supported. Python equivalents live in

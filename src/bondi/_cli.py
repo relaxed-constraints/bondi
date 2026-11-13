@@ -124,17 +124,6 @@ def logs(**options):
     return _run(SimpleNamespace(command="logs", **options))
 
 
-@deployment.command("load-demo-data")
-@click.argument("name")
-@click.option("--database", help="MongoDB database. Default: demo.")
-@click.option("--scope", help="Couchbase scope. Default: _default.")
-@click.option("--collection", default="business", show_default=True)
-@click.option("--create-primary-index", is_flag=True, help="Couchbase only.")
-def load_demo_data(**options):
-    """Upsert eight packaged demo businesses."""
-    return _run(SimpleNamespace(command="load-demo-data", **options))
-
-
 @deployment.command("list")
 def list_saved():
     """List saved deployments and their current status."""
@@ -212,20 +201,7 @@ def _run(args):
                 )
         else:
             db = get_deployment(args.name)
-            if args.command == "load-demo-data":
-                result = db.load_demo_data(
-                    database=args.database,
-                    scope=args.scope,
-                    collection=args.collection,
-                    create_primary_index=args.create_primary_index,
-                )
-                destination = ".".join(
-                    part for part in (result.database, result.scope, result.collection) if part
-                )
-                message(
-                    f"{db.name}: loaded {result.document_count} demo documents into {destination}"
-                )
-            elif args.command == "status":
+            if args.command == "status":
                 status_line(db.name, _display_status(db), db.uri)
                 memory = (
                     "not explicitly saved"

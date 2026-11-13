@@ -288,60 +288,8 @@ Use the [dataset loading guide](datasets.md) to load files, Python documents or 
 
 ### Demo data
 
-BONDI also bundles eight fictional businesses from `dev/business.json`.
-This helper needs no checkout, download or specific working directory.
-Its Couchbase implementation does not require the optional SDK.
-
-```sh
-bondi deployment load-demo-data mongo-demo
-bondi deployment load-demo-data cb-demo --create-primary-index
-```
-
-```python
-mongo = get_deployment("mongo-demo")
-result = mongo.load_demo_data()
-print(result.document_count)  # 8
-
-couchbase = get_deployment("cb-demo")
-result = couchbase.load_demo_data(create_primary_index=True)
-print(result.database, result.scope, result.collection)
-```
-
-MongoDB defaults to `demo.business`.
-Couchbase uses its saved bucket, scope `_default` and collection `business`.
-The helper creates missing collections and Couchbase scopes.
-It does not start a stopped deployment.
-
-Choose another destination when needed:
-
-```python
-mongo.load_demo_data(database="research", collection="businesses")
-couchbase.load_demo_data(scope="research", collection="businesses")
-```
-
-```sh
-bondi deployment load-demo-data mongo-demo --database research --collection businesses
-bondi deployment load-demo-data cb-demo --scope research --collection businesses
-```
-
-Destination names allow 1–63 letters, digits, underscores or hyphens.
-Names must not start with a hyphen.
-`database` applies only to MongoDB.
-`scope` and `create_primary_index` apply only to Couchbase.
-Options for the wrong backend raise an error.
-
-The helper uses `business_id` as MongoDB's `_id` or Couchbase's document key.
-It replaces documents with those IDs and preserves unrelated documents.
-Repeated loads create no duplicates.
-`document_count` includes replacements, not only new documents.
-A failed load can leave partial writes. Retrying this helper is safe.
-Do not run loads and lifecycle operations concurrently.
-
-Couchbase creates no primary index unless you request one.
-Use `create_primary_index=True` or `--create-primary-index` for SQL++ demo queries.
-You can repeat this option safely.
-Omit it when an experiment manages its own indexes.
-MongoDB adds no indexes beyond the collection's normal `_id` index.
+Use [demo dataset loading](datasets.md#load-the-packaged-demo) to load eight
+fictional businesses. Data loading is separate from deployment management.
 
 ## Database versions
 

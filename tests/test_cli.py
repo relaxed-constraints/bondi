@@ -436,7 +436,6 @@ def test_cli_command_groups():
         "start",
         "status",
         "stop",
-        "load-demo-data",
     }
     assert set(cli.commands["deployment"].commands["create"].commands) == {"mongodb", "couchbase"}
 

@@ -6,7 +6,10 @@ from contextlib import ExitStack, contextmanager
 
 import pytest
 
+from bondi.couchbase import CouchbaseCollectionRef
+from bondi.data import load_demo_data
 from bondi.deployment import deploy_couchbase, deploy_mongodb
+from bondi.mongodb import MongoCollectionRef
 
 
 class LivePorts:
@@ -83,14 +86,19 @@ def deployment_pool(registry, live_ports):
             # Register teardown before loading data/indexes, including setup failures.
             cleanup.callback(db.remove, keep_data=False)
             if backend == "mongodb":
-                db.load_demo_data()
+                load_demo_data(target=db, collection=MongoCollectionRef("demo", "business"))
             else:
                 from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
 
-                db.load_demo_data(create_primary_index=True)
+                load_demo_data(
+                    target=db, collection=CouchbaseCollectionRef("demo", "_default", "business")
+                )
                 with CouchbaseExecutor.from_uri(
                     db.uri, username=db.username, password=db.password, timeout_seconds=60
                 ) as executor:
+                    executor.run(
+                        CouchbaseQuery("CREATE PRIMARY INDEX ON `demo`.`_default`.`business`")
+                    )
                     executor.run(
                         CouchbaseQuery(
                             "CREATE INDEX city_stars ON "

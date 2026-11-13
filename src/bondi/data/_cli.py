@@ -17,6 +17,7 @@ from . import (
     MongoConnection,
     dataset_info,
     list_datasets,
+    load_demo_data,
     load_file,
     load_hf_dataset,
     load_hf_repository,
@@ -44,7 +45,7 @@ def info(name):
 
 
 def _load_options(function):
-    """Common destination and write options for the three source commands."""
+    """Common destination and write options for dataset source commands."""
     decorators = [
         click.option("--deployment", help="Saved deployment name."),
         click.option("--connection", help="JSON connection file, with optional password_env."),
@@ -68,6 +69,16 @@ def _load_options(function):
     for decorate in reversed(decorators):
         function = decorate(function)
     return function
+
+
+@dataset.command("load-demo")
+@click.option("--collection", required=True, help="Exact destination collection name.")
+@_load_options
+def demo_command(**options):
+    """Load eight packaged fictional businesses."""
+    if options["id_field"] is None:
+        options["id_field"] = "business_id"
+    return _load_dispatch("load-demo", options)
 
 
 @dataset.command("load-file")
@@ -201,7 +212,9 @@ def run(args):
             if isinstance(conn, MongoConnection)
             else CouchbaseCollectionRef(args.bucket, args.scope, args.collection)
         )
-        if args.dataset_command == "load-file":
+        if args.dataset_command == "load-demo":
+            result = load_demo_data(target=target, collection=ref, **options)
+        elif args.dataset_command == "load-file":
             result = load_file(args.source, target=target, collection=ref, **options)
         else:
             result = load_hf_dataset(

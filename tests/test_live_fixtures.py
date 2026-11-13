@@ -53,6 +53,8 @@ def test_pool_reuses_owned_deployment_and_restores_registry(tmp_path, monkeypatc
     monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", "user-registry")
     db = MagicMock()
     calls = []
+    loader = MagicMock()
+    monkeypatch.setattr(conftest, "load_demo_data", loader)
 
     def deploy(name, **kwargs):
         calls.append((name, kwargs, os.environ["BONDI_DEPLOYMENT_DIR"]))
@@ -66,14 +68,17 @@ def test_pool_reuses_owned_deployment_and_restores_registry(tmp_path, monkeypatc
         assert os.environ["BONDI_DEPLOYMENT_DIR"] == "user-registry"
         db.remove.assert_not_called()
     assert calls == [("live-mongodb", {"port": 27117}, str(tmp_path))]
-    db.load_demo_data.assert_called_once_with()
+    loader.assert_called_once_with(
+        target=db, collection=conftest.MongoCollectionRef("demo", "business")
+    )
     db.remove.assert_called_once_with(keep_data=False)
 
 
 def test_failed_demo_setup_still_removes_owned_deployment(tmp_path, monkeypatch):
     monkeypatch.setenv("BONDI_LIVE", "1")
     db = MagicMock()
-    db.load_demo_data.side_effect = RuntimeError("load failed")
+    loader = MagicMock(side_effect=RuntimeError("load failed"))
+    monkeypatch.setattr(conftest, "load_demo_data", loader)
     monkeypatch.setattr(conftest, "deploy_mongodb", lambda *a, **kw: db)
     ports = MagicMock()
     ports.claim.return_value = (27117,)

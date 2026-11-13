@@ -12,17 +12,19 @@ _Requires Docker running._
 Create a local MongoDB deployment and load eight fictional businesses into `demo.business`:
 
 ```python
+from bondi.data import load_demo_data
+from bondi.mongodb import MongoCollectionRef
 from bondi.deployment import deploy_mongodb
 
 deployment = deploy_mongodb()
-deployment.load_demo_data()
+load_demo_data(target=deployment, collection=MongoCollectionRef("demo", "business"))
 ```
 
 The defaults use deployment name `mongodb` and port `27017`; pass `port=<port>`
 to deploy on `<port>` instead. The deployment keeps running after Python exits.
 
 API reference: [`deploy_mongodb()`](reference/deployment.md#bondi.deployment.deploy_mongodb)
-and [`Deployment.load_demo_data()`](reference/deployment.md#bondi.deployment.Deployment.load_demo_data). See also [`deploy_couchbase()`](reference/deployment.md#bondi.deployment.deploy_couchbase) for deploying a local Couchbase instance.
+and [`load_demo_data()`](reference/data.md#bondi.data.load_demo_data). See also [`deploy_couchbase()`](reference/deployment.md#bondi.deployment.deploy_couchbase) for deploying a local Couchbase instance.
 
 
 ## 2. Run a workload

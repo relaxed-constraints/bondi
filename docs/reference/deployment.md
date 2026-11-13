@@ -57,8 +57,3 @@ warnings, manual-override limitations and CLI examples.
     options:
       show_root_heading: true
       heading_level: 3
-
-::: bondi.deployment.DemoDataResult
-    options:
-      show_root_heading: true
-      heading_level: 3
