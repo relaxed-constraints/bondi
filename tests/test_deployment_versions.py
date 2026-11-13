@@ -146,7 +146,7 @@ def test_unavailable_image_error_and_cleanup(docker, backend):
 def test_cli_version_selection_and_conflict(docker, backend, capsys):
     deploy, kwargs, prefix, default, version = backend
     name = "mongodb" if deploy is deploy_mongodb else "couchbase"
-    args = ["deploy", name]
+    args = ["deployment", "create", name]
     if kwargs:
         args += ["--edition", kwargs["edition"]]
     assert main([*args, "--version", version]) == 0

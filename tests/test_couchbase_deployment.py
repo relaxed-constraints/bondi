@@ -151,13 +151,14 @@ def test_cli_couchbase_defaults_and_env(capsys, monkeypatch):
     db.username = "Administrator"
     monkeypatch.setenv("TEST_CB_PASSWORD", "hidden-password")
     with patch("bondi._cli.deploy_couchbase", return_value=db) as deploy:
-        assert main(["deploy", "couchbase"]) == 0
+        assert main(["deployment", "create", "couchbase"]) == 0
         assert deploy.call_args.kwargs["edition"] == "community"
         assert deploy.call_args.kwargs["password"] == "bondi-local"
         assert (
             main(
                 [
-                    "deploy",
+                    "deployment",
+                    "create",
                     "couchbase",
                     "--password-env",
                     "TEST_CB_PASSWORD",
@@ -193,7 +194,10 @@ def test_initialization_deadline(setup):
 def test_missing_password_env_does_not_deploy(monkeypatch, capsys):
     monkeypatch.delenv("MISSING_CB_PASSWORD", raising=False)
     with patch("bondi._cli.deploy_couchbase") as deploy:
-        assert main(["deploy", "couchbase", "--password-env", "MISSING_CB_PASSWORD"]) == 1
+        assert (
+            main(["deployment", "create", "couchbase", "--password-env", "MISSING_CB_PASSWORD"])
+            == 1
+        )
         deploy.assert_not_called()
     assert "unset" in capsys.readouterr().err
 
@@ -249,7 +253,7 @@ def test_invalid_memory_limit_has_no_side_effects(setup, tmp_path, limit):
 
 
 def test_cli_memory_limit(setup, capsys):
-    assert main(["deploy", "couchbase", "--memory-limit-mb", "16384"]) == 0
+    assert main(["deployment", "create", "couchbase", "--memory-limit-mb", "16384"]) == 0
     assert get_deployment("couchbase").memory_limit_mb == 16384
-    assert main(["deploy", "couchbase", "--memory-limit-mb", "0"]) == 1
+    assert main(["deployment", "create", "couchbase", "--memory-limit-mb", "0"]) == 1
     assert "memory_limit_mb" in capsys.readouterr().err

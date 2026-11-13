@@ -10,18 +10,18 @@ execution, schema inspection, estimation and generation are Python APIs.
 Use managed deployments with Docker and Compose v2 running on the same machine:
 
 ```sh
-uv run bondi deploy mongodb --name lesson --port 27019
-uv run bondi load-demo-data lesson
-uv run bondi status lesson
-uv run bondi stop lesson
-uv run bondi start lesson
+uv run bondi deployment create mongodb --name lesson --port 27019
+uv run bondi deployment load-demo-data lesson
+uv run bondi deployment status lesson
+uv run bondi deployment stop lesson
+uv run bondi deployment start lesson
 ```
 
 Choose an unused name and port; do not assume a student's existing deployment is
 disposable. Deployments start empty. Demo loading upserts eight fictional businesses
 and replaces matching demo IDs; it does not reset arbitrary data.
-For Couchbase, use `bondi deploy couchbase` and
-`bondi load-demo-data couchbase --create-primary-index` for demo SQL++ queries.
+For Couchbase, use `bondi deployment create couchbase` and
+`bondi deployment load-demo-data couchbase --create-primary-index` for demo SQL++ queries.
 Do not create that index implicitly in an index experiment.
 
 Inspect `uv run bondi --help` and subcommand help for installed CLI options.
@@ -30,7 +30,7 @@ Inspect `uv run bondi --help` and subcommand help for installed CLI options.
 and `list_deployments`. A deployment handle exposes connection details and
 lifecycle methods; loading a handle does not start the database.
 
-Closing an executor does not stop Docker. CLI `bondi remove NAME` deletes data
+Closing an executor does not stop Docker. CLI `bondi deployment remove NAME` deletes data
 and configuration by default, with confirmation; `--keep-data` preserves them.
 Python `deployment.remove()` also deletes data and configuration by default.
 Use `keep_data=True` to retain them. Match cleanup to the user's intended data ownership.
@@ -54,8 +54,8 @@ deploy_mongodb("example-mongo", version="8.0.16")
 deploy_couchbase("example-cb", version="7.6.12", edition="enterprise")
 ```
 
-Equivalent CLI options are `bondi deploy mongodb --version 8.0.16` and
-`bondi deploy couchbase --version 7.6.12 --edition enterprise`. Version aliases
+Equivalent CLI options are `bondi deployment create mongodb --version 8.0.16` and
+`bondi deployment create couchbase --version 7.6.12 --edition enterprise`. Version aliases
 such as `latest`, partial versions and arbitrary image references are rejected.
 
 Omitted version (`None`) preserves an existing deployment's saved image, including
@@ -98,7 +98,7 @@ See the [memory guide](https://relaxed-constraints.github.io/bondi/deployment/#m
 
 BONDI 0.1.6 adds
 `deploy_couchbase(..., memory_limit_mb=16384)` and
-`bondi deploy couchbase --memory-limit-mb 16384` for a 16 GiB container.
+`bondi deployment create couchbase --memory-limit-mb 16384` for a 16 GiB container.
 Check the installed signature or CLI help before using this option; 0.1.5 does
 not support it. Values are positive integer MiB; the default remains 4096.
 
@@ -110,7 +110,7 @@ Experiment-specific quotas belong in the consumer project.
 
 The limit is persisted as `Deployment.memory_limit_mb`. Conflicting deploy
 requests fail before Docker access; use `get_deployment(name).start()` or
-`bondi start NAME` to reuse saved settings. Older metadata is interpreted as
+`bondi deployment start NAME` to reuse saved settings. Older metadata is interpreted as
 4096 MiB, while existing Compose overrides remain untouched. The attribute
 reports saved configuration, not observed Docker memory.
 

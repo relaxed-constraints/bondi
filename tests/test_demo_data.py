@@ -125,6 +125,7 @@ def test_cli_options_and_error(capsys):
         assert (
             main(
                 [
+                    "deployment",
                     "load-demo-data",
                     "cb",
                     "--scope",
@@ -141,7 +142,7 @@ def test_cli_options_and_error(capsys):
         )
         assert "loaded 8 demo documents into demo.research.businesses" in capsys.readouterr().out
         db.load_demo_data.side_effect = RuntimeError("not running")
-        assert main(["load-demo-data", "cb"]) == 1
+        assert main(["deployment", "load-demo-data", "cb"]) == 1
         assert "not running" in capsys.readouterr().err
 
 

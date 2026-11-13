@@ -128,20 +128,28 @@ def test_other_conflicts_still_fail(docker):
 def test_cli_options_status_and_warning(docker, capsys):
     assert (
         main(
-            ["deploy", "mongodb", "--memory-limit-mb", "1024", "--wiredtiger-cache-size-gb", "0.25"]
+            [
+                "deployment",
+                "create",
+                "mongodb",
+                "--memory-limit-mb",
+                "1024",
+                "--wiredtiger-cache-size-gb",
+                "0.25",
+            ]
         )
         == 0
     )
-    assert main(["status", "mongodb"]) == 0
+    assert main(["deployment", "status", "mongodb"]) == 0
     output = capsys.readouterr().out
     assert "Saved container memory limit: 1024 MiB" in output
     assert "Saved WiredTiger cache size: 0.25 GiB" in output
     with pytest.warns(UserWarning, match="requested 2048 MiB, existing 1024 MiB"):
-        assert main(["deploy", "mongodb", "--memory-limit-mb", "2048"]) == 0
-    assert main(["deploy", "mongodb", "--wiredtiger-cache-size-gb", "nan"]) == 1
+        assert main(["deployment", "create", "mongodb", "--memory-limit-mb", "2048"]) == 0
+    assert main(["deployment", "create", "mongodb", "--wiredtiger-cache-size-gb", "nan"]) == 1
 
 
 def test_cli_unspecified_status(docker, capsys):
     deploy_mongodb()
-    main(["status", "mongodb"])
+    main(["deployment", "status", "mongodb"])
     assert capsys.readouterr().out.count("not explicitly saved") == 2

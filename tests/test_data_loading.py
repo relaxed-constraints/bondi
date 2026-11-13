@@ -137,7 +137,7 @@ def test_couchbase_conversion():
 def test_cli_catalog(capsys):
     from bondi._cli import main
 
-    assert main(["datasets", "info", "adult"]) == 0
+    assert main(["dataset", "info", "adult"]) == 0
     assert "origami-ml/jsynth-data" in capsys.readouterr().out
 
 
@@ -235,7 +235,7 @@ def test_cli_mongo_password_env(tmp_path, monkeypatch, capsys, with_password):
     assert (
         main(
             [
-                "datasets",
+                "dataset",
                 "load-file",
                 "demo.jsonl",
                 "--connection",
@@ -276,7 +276,7 @@ def test_cli_missing_mongo_password_env_fails_before_loading(tmp_path, monkeypat
     assert (
         main(
             [
-                "datasets",
+                "dataset",
                 "load-file",
                 "demo.jsonl",
                 "--connection",
@@ -324,14 +324,14 @@ def test_cli_list_readable_and_json(capsys):
     from bondi._cli import main
     from bondi.data import list_datasets
 
-    assert main(["datasets", "list"]) == 0
+    assert main(["dataset", "list"]) == 0
     text = capsys.readouterr().out
     assert text.startswith("Available datasets")
     assert "Source" in text and "Description" in text
     assert "origami-ml/jsynth-data" in text
     for name in list_datasets():
         assert name in text
-    assert main(["datasets", "list", "--json"]) == 0
+    assert main(["dataset", "list", "--json"]) == 0
     assert json.loads(capsys.readouterr().out) == list_datasets()
 
 
@@ -339,9 +339,9 @@ def test_cli_empty_catalogue(monkeypatch, capsys):
     from bondi._cli import main
 
     monkeypatch.setattr("bondi.data._cli.list_datasets", lambda: {})
-    assert main(["datasets", "list"]) == 0
+    assert main(["dataset", "list"]) == 0
     assert capsys.readouterr().out == "No datasets available.\n"
-    assert main(["datasets", "list", "--json"]) == 0
+    assert main(["dataset", "list", "--json"]) == 0
     assert capsys.readouterr().out == "{}\n"
 
 
@@ -358,7 +358,7 @@ def test_cli_missing_database_message(monkeypatch, capsys):
     assert (
         main(
             [
-                "datasets",
+                "dataset",
                 "load-file",
                 "adult.jsonl",
                 "--deployment",
@@ -529,7 +529,7 @@ def test_cli_hf_dispatch(writer, hub, monkeypatch, capsys, command):
     monkeypatch.setattr(
         "bondi.deployment.get_deployment", lambda name: MongoConnection("mongodb://unused")
     )
-    args = ["datasets", command, "org/forum", "--deployment", "db", "--database", "demo"]
+    args = ["dataset", command, "org/forum", "--deployment", "db", "--database", "demo"]
     if command == "load-hf":
         args += ["--dataset", "users", "--collection", "exact", "--split", "train"]
     assert main(args) == 0
@@ -555,7 +555,7 @@ def test_cli_couchbase_ref_and_options(monkeypatch, capsys):
     assert (
         main(
             [
-                "datasets",
+                "dataset",
                 "load-file",
                 "input.jsonl",
                 "--deployment",
@@ -591,7 +591,7 @@ def test_removed_cli_options_rejected(option):
     result = CliRunner().invoke(
         cli,
         [
-            "datasets",
+            "dataset",
             "load-file",
             "data.jsonl",
             "--collection",

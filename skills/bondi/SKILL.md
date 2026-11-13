@@ -77,3 +77,9 @@ Sources can be files, Hub datasets or document iterables. Use a namespace when a
 Create mode refuses nonempty collections. Replacement explicitly permits clearing the selected collection.
 Do not change a user's write mode to bypass a refusal. Report partial writes if a load fails.
 See `docs/datasets.md` and `notebooks/dataset_loading.ipynb` in the source checkout.
+
+## CLI command groups
+
+Use `bondi deployment create` to create a deployment. Use
+`bondi deployment list|status|start|stop|logs|remove` to manage deployments.
+Use `bondi dataset` for dataset commands. The Python API is unchanged.

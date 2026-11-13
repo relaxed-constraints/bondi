@@ -18,7 +18,7 @@ def db():
 
 def test_deploy_defaults_and_options(db, capsys):
     with patch("bondi._cli.deploy_mongodb", return_value=db) as deploy:
-        assert main(["deploy", "mongodb"]) == 0
+        assert main(["deployment", "create", "mongodb"]) == 0
         deploy.assert_called_once_with(
             "mongodb",
             port=27017,
@@ -28,7 +28,19 @@ def test_deploy_defaults_and_options(db, capsys):
             wiredtiger_cache_size_gb=None,
         )
         assert (
-            main(["deploy", "mongodb", "--name", "demo", "--port", "27019", "--timeout", "300"])
+            main(
+                [
+                    "deployment",
+                    "create",
+                    "mongodb",
+                    "--name",
+                    "demo",
+                    "--port",
+                    "27019",
+                    "--timeout",
+                    "300",
+                ]
+            )
             == 0
         )
         deploy.assert_called_with(
@@ -49,7 +61,7 @@ def test_deploy_defaults_and_options(db, capsys):
 @pytest.mark.parametrize("command", ["start", "stop"])
 def test_lifecycle(db, command):
     with patch("bondi._cli.get_deployment", return_value=db) as get:
-        assert main([command, "demo", "--timeout", "30"]) == 0
+        assert main(["deployment", command, "demo", "--timeout", "30"]) == 0
     get.assert_called_once_with("demo")
     getattr(db, command).assert_called_once_with(timeout=30)
 
@@ -57,27 +69,29 @@ def test_lifecycle(db, command):
 @pytest.mark.parametrize("delete", [False, True])
 def test_removal_is_explicit(db, delete, capsys):
     with patch("bondi._cli.get_deployment", return_value=db):
-        assert main(["remove", "demo", "-y"] + ([] if delete else ["--keep-data"])) == 0
+        assert (
+            main(["deployment", "remove", "demo", "-y"] + ([] if delete else ["--keep-data"])) == 0
+        )
     db.remove.assert_called_once_with(keep_data=not delete, timeout=120)
     assert ("deleted" if delete else "retained") in capsys.readouterr().out
 
 
 def test_status_and_logs(db, capsys):
     with patch("bondi._cli.get_deployment", return_value=db):
-        assert main(["status", "demo"]) == 0
+        assert main(["deployment", "status", "demo"]) == 0
         assert "demo: stopped" in capsys.readouterr().out
         db.logs.return_value = "MongoDB log\n"
-        assert main(["logs", "demo", "--tail", "10"]) == 0
+        assert main(["deployment", "logs", "demo", "--tail", "10"]) == 0
         db.logs.assert_called_once_with(tail=10)
         assert capsys.readouterr().out == "MongoDB log\n"
 
 
 def test_list(db, capsys):
     with patch("bondi._cli.list_deployments", return_value=[]):
-        assert main(["list"]) == 0
+        assert main(["deployment", "list"]) == 0
         assert "No saved deployments" in capsys.readouterr().out
     with patch("bondi._cli.list_deployments", return_value=[db]):
-        assert main(["list"]) == 0
+        assert main(["deployment", "list"]) == 0
         output = capsys.readouterr().out
         assert all(value in output for value in ("Name", "Status", "demo", "stopped", db.uri))
 
@@ -93,7 +107,7 @@ def test_list(db, capsys):
 )
 def test_failures_are_nonzero_without_traceback(error, capsys):
     with patch("bondi._cli.get_deployment", side_effect=error):
-        assert main(["status", "demo"]) == 1
+        assert main(["deployment", "status", "demo"]) == 1
     output = capsys.readouterr()
     assert "bondi:" in output.err
     assert "Traceback" not in output.err
@@ -102,12 +116,18 @@ def test_failures_are_nonzero_without_traceback(error, capsys):
 
 def test_interruption(capsys):
     with patch("bondi._cli.deploy_mongodb", side_effect=KeyboardInterrupt):
-        assert main(["deploy", "mongodb"]) == 130
+        assert main(["deployment", "create", "mongodb"]) == 130
     assert "interrupted" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
-    "args", [[], ["stop"], ["deploy", "unknown"], ["deploy", "mongodb", "--port", "oops"]]
+    "args",
+    [
+        [],
+        ["deployment", "stop"],
+        ["deployment", "create", "unknown"],
+        ["deployment", "create", "mongodb", "--port", "oops"],
+    ],
 )
 def test_invalid_syntax(args):
     with pytest.raises(SystemExit) as exc:
@@ -117,7 +137,7 @@ def test_invalid_syntax(args):
 
 def test_help(capsys):
     assert main(["--help"]) == 0
-    assert "deploy" in capsys.readouterr().out
+    assert "deployment" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("answer", ["y", "yes", " YES "])
@@ -126,7 +146,7 @@ def test_removal_confirmation_accepts(db, answer):
         patch("bondi._cli.get_deployment", return_value=db),
         patch("builtins.input", return_value=answer) as prompt,
     ):
-        assert main(["remove", "demo"]) == 0
+        assert main(["deployment", "remove", "demo"]) == 0
     assert "permanently delete" in prompt.call_args.args[0]
     db.remove.assert_called_once_with(keep_data=False, timeout=120)
 
@@ -137,7 +157,7 @@ def test_removal_confirmation_declines(db, answer):
         patch("bondi._cli.get_deployment", return_value=db),
         patch("builtins.input", return_value=answer),
     ):
-        assert main(["remove", "demo"]) == 1
+        assert main(["deployment", "remove", "demo"]) == 1
     db.remove.assert_not_called()
 
 
@@ -147,7 +167,7 @@ def test_removal_confirmation_interrupted(db, error, code):
         patch("bondi._cli.get_deployment", return_value=db),
         patch("builtins.input", side_effect=error),
     ):
-        assert main(["remove", "demo"]) == code
+        assert main(["deployment", "remove", "demo"]) == code
     db.remove.assert_not_called()
 
 
@@ -156,7 +176,7 @@ def test_keep_data_prompt(db):
         patch("bondi._cli.get_deployment", return_value=db),
         patch("builtins.input", return_value="y") as prompt,
     ):
-        assert main(["remove", "demo", "--keep-data"]) == 0
+        assert main(["deployment", "remove", "demo", "--keep-data"]) == 0
     assert "keeping its data" in prompt.call_args.args[0]
     db.remove.assert_called_once_with(keep_data=True, timeout=120)
 
@@ -171,7 +191,8 @@ def test_click_couchbase_options_and_secret(db, monkeypatch):
         result = CliRunner().invoke(
             cli,
             [
-                "deploy",
+                "deployment",
+                "create",
                 "couchbase",
                 "--name",
                 "cb",
@@ -217,9 +238,9 @@ def test_click_couchbase_options_and_secret(db, monkeypatch):
 @pytest.mark.parametrize(
     "args",
     [
-        ["datasets", "load-file", "demo.jsonl", "--collection", "items"],
+        ["dataset", "load-file", "demo.jsonl", "--collection", "items"],
         [
-            "datasets",
+            "dataset",
             "load-file",
             "demo.jsonl",
             "--collection",
@@ -230,7 +251,7 @@ def test_click_couchbase_options_and_secret(db, monkeypatch):
             "b",
         ],
         [
-            "datasets",
+            "dataset",
             "load-file",
             "demo.jsonl",
             "--collection",
@@ -240,9 +261,9 @@ def test_click_couchbase_options_and_secret(db, monkeypatch):
             "--mode",
             "invalid",
         ],
-        ["datasets"],
-        ["deploy"],
-        ["stop", "a", "--unknown"],
+        ["dataset"],
+        ["deployment", "create"],
+        ["deployment", "stop", "a", "--unknown"],
     ],
 )
 def test_click_invalid_options(args):
@@ -262,7 +283,7 @@ def test_click_operation_failure_exit_code():
     from bondi._cli import cli
 
     with patch("bondi._cli.get_deployment", side_effect=RuntimeError("unavailable")):
-        result = CliRunner().invoke(cli, ["status", "missing"])
+        result = CliRunner().invoke(cli, ["deployment", "status", "missing"])
     assert result.exit_code == 1
     assert result.stdout == ""
     assert "unavailable" in result.stderr
@@ -280,7 +301,7 @@ def test_click_hf_options(monkeypatch):
     result = CliRunner().invoke(
         cli,
         [
-            "datasets",
+            "dataset",
             "load-hf",
             "org/repo",
             "--dataset",
@@ -321,7 +342,7 @@ def test_terminal_values_are_literal_and_redirected_output_has_no_ansi(db):
 
     db.name = "[red]literal[/red]"
     with patch("bondi._cli.list_deployments", return_value=[db]):
-        result = CliRunner().invoke(cli, ["list"])
+        result = CliRunner().invoke(cli, ["deployment", "list"])
     assert result.exit_code == 0
     assert db.name in result.output
     assert "\x1b[" not in result.output
@@ -334,7 +355,7 @@ def test_raw_logs_preserve_markup_and_newlines(db):
 
     db.logs.return_value = "[red]raw[/red]\n\x1b[31mlast line\x1b[0m"
     with patch("bondi._cli.get_deployment", return_value=db):
-        result = CliRunner().invoke(cli, ["logs", "demo"])
+        result = CliRunner().invoke(cli, ["deployment", "logs", "demo"])
     assert result.output == db.logs.return_value
 
 
@@ -342,14 +363,14 @@ def test_raw_logs_preserve_markup_and_newlines(db):
     "args",
     [
         [],
-        ["deploy"],
-        ["deploy", "mongodb"],
-        ["deploy", "couchbase"],
-        ["datasets"],
-        ["datasets", "load-file"],
-        ["datasets", "list"],
-        ["datasets", "info"],
-        ["remove"],
+        ["deployment", "create"],
+        ["deployment", "create", "mongodb"],
+        ["deployment", "create", "couchbase"],
+        ["dataset"],
+        ["dataset", "load-file"],
+        ["dataset", "list"],
+        ["dataset", "info"],
+        ["deployment", "remove"],
     ],
 )
 def test_command_help(args):
@@ -371,7 +392,7 @@ def test_removed_volume_label(db, command, retained, capsys):
         patch("bondi._cli.list_deployments", return_value=[db]),
         patch("bondi._cli.get_deployment", return_value=db),
     ):
-        assert main([command] + (["demo"] if command == "status" else [])) == 0
+        assert main(["deployment", command] + (["demo"] if command == "status" else [])) == 0
     output = capsys.readouterr().out
     assert "removed" in output
     assert ("data retained" in output) == retained
@@ -401,3 +422,33 @@ def test_status_colours(state, code):
         _terminal.status("demo", state, "uri")
         _terminal.table("Deployments", ["Status"], [[state]])
     assert output.getvalue().count(f"\x1b[{code}m{state}") == 2
+
+
+def test_cli_command_groups():
+    from bondi._cli import cli
+
+    assert set(cli.commands) == {"dataset", "deployment"}
+    assert set(cli.commands["deployment"].commands) == {
+        "create",
+        "list",
+        "logs",
+        "remove",
+        "start",
+        "status",
+        "stop",
+        "load-demo-data",
+    }
+    assert set(cli.commands["deployment"].commands["create"].commands) == {"mongodb", "couchbase"}
+
+
+@pytest.mark.parametrize(
+    "command", ["datasets", "deploy", "list", "logs", "remove", "start", "status", "stop"]
+)
+def test_old_root_commands_are_rejected(command):
+    from click.testing import CliRunner
+
+    from bondi._cli import cli
+
+    result = CliRunner().invoke(cli, [command])
+    assert result.exit_code == 2
+    assert "No such command" in result.output

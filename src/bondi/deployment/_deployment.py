@@ -487,7 +487,7 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
         if differences:
             raise ValueError(
                 f"Deployment {name!r} already uses saved configuration; conflicting fields: "
-                f"{', '.join(differences)}. Inspect 'bondi status {name}'. "
+                f"{', '.join(differences)}. Inspect 'bondi deployment status {name}'. "
                 "Use another name to keep it, or remove it only if its data is disposable."
             )
         # Memory requests never reconfigure existing MongoDB assets.
@@ -510,7 +510,7 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
         except (RuntimeError, OSError, ValueError) as exc:
             raise RuntimeError(
                 f"{exc}\nExisting deployment {name!r} was retained. "
-                f"Inspect 'bondi logs {name}' and retry 'bondi start {name}'."
+                f"Inspect 'bondi deployment logs {name}' and retry 'bondi deployment start {name}'."
             ) from exc
         return deployment
     if backend == "mongodb":
@@ -557,7 +557,7 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
             raise RuntimeError(
                 f"Startup failed for {name!r}: {startup_error}. "
                 f"Cleanup also failed: {cleanup_error}. Metadata retained at {path}. "
-                f"Restore Docker access and run 'bondi remove {name}' to finish cleanup."
+                f"Restore Docker access and run 'bondi deployment remove {name}' to finish cleanup."
             ) from startup_error
         if isinstance(startup_error, (KeyboardInterrupt, SystemExit)):
             raise

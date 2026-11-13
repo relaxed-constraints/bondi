@@ -8,7 +8,7 @@ import click
 
 from bondi._terminal import message, table
 from bondi._terminal import status as status_line
-from bondi.data._cli import datasets
+from bondi.data._cli import dataset
 from bondi.deployment import deploy_couchbase, deploy_mongodb, get_deployment, list_deployments
 
 
@@ -24,11 +24,16 @@ def _exit_with_result(ctx, result, **options):
 
 
 @cli.group(no_args_is_help=False)
-def deploy():
+def deployment():
+    """Create and manage local database deployments."""
+
+
+@deployment.group(no_args_is_help=False)
+def create():
     """Create a database deployment and wait for readiness."""
 
 
-@deploy.command("mongodb")
+@create.command("mongodb")
 @click.option("--name", default="mongodb", show_default=True)
 @click.option("--port", type=int, default=27017, show_default=True)
 @click.option(
@@ -44,10 +49,10 @@ def deploy():
 )
 def mongodb(**options):
     """Deploy MongoDB."""
-    return _run(SimpleNamespace(command="deploy", backend="mongodb", **options))
+    return _run(SimpleNamespace(command="create", backend="mongodb", **options))
 
 
-@deploy.command("couchbase")
+@create.command("couchbase")
 @click.option("--name", default="couchbase", show_default=True)
 @click.option("--management-port", type=int, default=8091, show_default=True)
 @click.option("--query-port", type=int, default=8093, show_default=True)
@@ -75,10 +80,10 @@ def mongodb(**options):
 )
 def couchbase(**options):
     """Deploy and initialize Couchbase."""
-    return _run(SimpleNamespace(command="deploy", backend="couchbase", **options))
+    return _run(SimpleNamespace(command="create", backend="couchbase", **options))
 
 
-@cli.command("start")
+@deployment.command("start")
 @click.argument("name")
 @click.option("--timeout", type=float, default=120, show_default=True)
 def start(**options):
@@ -86,7 +91,7 @@ def start(**options):
     return _run(SimpleNamespace(command="start", **options))
 
 
-@cli.command("stop")
+@deployment.command("stop")
 @click.argument("name")
 @click.option("--timeout", type=float, default=120, show_default=True)
 def stop(**options):
@@ -94,7 +99,7 @@ def stop(**options):
     return _run(SimpleNamespace(command="stop", **options))
 
 
-@cli.command("remove")
+@deployment.command("remove")
 @click.argument("name")
 @click.option("--timeout", type=float, default=120, show_default=True)
 @click.option("--keep-data", is_flag=True, help="Retain data and configuration for a later start.")
@@ -104,14 +109,14 @@ def remove(**options):
     return _run(SimpleNamespace(command="remove", **options))
 
 
-@cli.command("status")
+@deployment.command("status")
 @click.argument("name")
 def status(**options):
     """Show a deployment's current state, URI and saved memory settings."""
     return _run(SimpleNamespace(command="status", **options))
 
 
-@cli.command("logs")
+@deployment.command("logs")
 @click.argument("name")
 @click.option("--tail", type=int, default=50, show_default=True, help="Number of log lines.")
 def logs(**options):
@@ -119,7 +124,7 @@ def logs(**options):
     return _run(SimpleNamespace(command="logs", **options))
 
 
-@cli.command("load-demo-data")
+@deployment.command("load-demo-data")
 @click.argument("name")
 @click.option("--database", help="MongoDB database. Default: demo.")
 @click.option("--scope", help="Couchbase scope. Default: _default.")
@@ -130,7 +135,7 @@ def load_demo_data(**options):
     return _run(SimpleNamespace(command="load-demo-data", **options))
 
 
-@cli.command("list")
+@deployment.command("list")
 def list_saved():
     """List saved deployments and their current status."""
     return _run(SimpleNamespace(command="list"))
@@ -145,11 +150,11 @@ def _display_status(db):
 
 def _run(args):
     try:
-        if args.command == "datasets":
+        if args.command == "dataset":
             from bondi.data._cli import run
 
             return run(args)
-        if args.command == "deploy":
+        if args.command == "create":
             if args.backend == "mongodb":
                 db = deploy_mongodb(
                     args.name,
@@ -198,7 +203,7 @@ def _run(args):
         elif args.command == "list":
             deployments = list_deployments()
             if not deployments:
-                message("No saved deployments. Create one with: bondi deploy mongodb")
+                message("No saved deployments. Create one with: bondi deployment create mongodb")
             else:
                 table(
                     "Saved deployments",
@@ -276,7 +281,7 @@ def _run(args):
     return 0
 
 
-cli.add_command(datasets)
+cli.add_command(dataset)
 
 
 def main(argv: list[str] | None = None) -> int:

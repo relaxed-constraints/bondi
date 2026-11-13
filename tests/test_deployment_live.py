@@ -51,14 +51,19 @@ def test_cli_lifecycle(tmp_path, monkeypatch, live_ports):
 
     def cli(*args):
         return subprocess.run(
-            [sys.executable, "-m", "bondi", *args], capture_output=True, text=True, timeout=150
+            [sys.executable, "-m", "bondi", "deployment", *args],
+            capture_output=True,
+            text=True,
+            timeout=150,
         )
 
     try:
-        result = cli("deploy", "mongodb", "--name", "cli-test", "--port", str(port))
+        result = cli("create", "mongodb", "--name", "cli-test", "--port", str(port))
         assert result.returncode == 0, result.stderr
         assert f":{port}/" in result.stdout
-        assert "cli-test: running" in cli("list").stdout
+        listing = cli("list")
+        assert listing.returncode == 0
+        assert "cli-test" in listing.stdout and "running" in listing.stdout
         assert cli("logs", "cli-test", "--tail", "2").returncode == 0
         assert cli("stop", "cli-test").returncode == 0
         assert "stopped" in cli("status", "cli-test").stdout

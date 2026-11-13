@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Breaking:** Group lifecycle commands under `bondi deployment` and rename
+  `deploy` to `create`. Rename `datasets` to `dataset`.
+  Move `load-demo-data` under `deployment`. Remove the old command paths.
+
 - Rewrite the dataset guide with simple file and Hub examples first, followed
   by connections, IDs, replacement, type conversion and progress reporting.
 
@@ -43,7 +47,7 @@
   Preserve command names, options, defaults, removal confirmation and JSON output.
   Add styled tables for datasets and deployments, and coloured status messages.
 
-- Show a readable table for `bondi datasets list`. Add `--json` for catalogue metadata.
+- Show a readable table for `bondi dataset list`. Add `--json` for catalogue metadata.
 
 - Explain all three ID options when a source document lacks an ID and namespace.
 
@@ -59,7 +63,7 @@
 - Add dataset loading for MongoDB and Couchbase with local files, Hub sources,
   Python iterables, split handling, stable IDs, write modes.
   Add explicit Extended JSON conversion, bucket creation, optional index profiles,
-  progress reports, `bondi datasets` commands and a demo notebook.
+  progress reports, `bondi dataset` commands and a demo notebook.
 
 ## 0.2.0 — 2026-11-13
 

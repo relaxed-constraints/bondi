@@ -25,18 +25,18 @@ from ._writers import connection
 
 
 @click.group(no_args_is_help=False)
-def datasets():
+def dataset():
     """List, inspect or load datasets."""
 
 
-@datasets.command("list")
+@dataset.command("list")
 @click.option("--json", "as_json", is_flag=True, help="Output catalogue metadata as JSON.")
 def listing(as_json):
     """Show available datasets."""
     return _dispatch(dataset_command="list", json=as_json)
 
 
-@datasets.command("info")
+@dataset.command("info")
 @click.argument("name")
 def info(name):
     """Show dataset metadata as JSON."""
@@ -70,7 +70,7 @@ def _load_options(function):
     return function
 
 
-@datasets.command("load-file")
+@dataset.command("load-file")
 @click.argument("source", type=click.Path(path_type=Path))
 @click.option("--collection", required=True, help="Exact destination collection name.")
 @_load_options
@@ -79,7 +79,7 @@ def file_command(**options):
     return _load_dispatch("load-file", options)
 
 
-@datasets.command("load-hf")
+@dataset.command("load-hf")
 @click.argument("source")
 @click.option("--dataset", help="HF configuration name. Required for multi-config repositories.")
 @click.option("--split", multiple=True, help="Select splits. Default: combine all splits.")
@@ -91,7 +91,7 @@ def hf_command(**options):
     return _load_dispatch("load-hf", options)
 
 
-@datasets.command("load-hf-repository")
+@dataset.command("load-hf-repository")
 @click.argument("source")
 @click.option("--split", multiple=True, help="Select splits in every dataset. Default: all.")
 @click.option("--revision", help="Hub branch, tag or commit.")
@@ -112,7 +112,7 @@ def _load_dispatch(command, options):
 def _dispatch(**options):
     from bondi._cli import _run
 
-    return _run(SimpleNamespace(command="datasets", **options))
+    return _run(SimpleNamespace(command="dataset", **options))
 
 
 def run(args):

@@ -19,7 +19,7 @@ It uses the running deployment named `notebook-datasets`.
 Run this command from the repository root:
 
 ```sh
-bondi datasets load-file dev/business.json \
+bondi dataset load-file dev/business.json \
   --deployment notebook-datasets \
   --database demo --collection business \
   --id-field business_id
@@ -92,7 +92,7 @@ This example loads Adult into `demo.adult`.
 It combines all available splits by default:
 
 ```sh
-bondi datasets load-hf origami-ml/jsynth-data \
+bondi dataset load-hf origami-ml/jsynth-data \
   --dataset adult \
   --deployment notebook-datasets \
   --database demo --collection adult
@@ -118,7 +118,7 @@ The collection name stays exactly as specified.
 To load only the training split, add `--split train`:
 
 ```sh
-bondi datasets load-hf origami-ml/jsynth-data \
+bondi dataset load-hf origami-ml/jsynth-data \
   --dataset adult --split train \
   --deployment notebook-datasets \
   --database demo --collection adult_train
@@ -155,8 +155,8 @@ A commit identifies the exact source version.
 ### Find suggested datasets
 
 ```sh
-bondi datasets list
-bondi datasets info adult
+bondi dataset list
+bondi dataset info adult
 ```
 
 The list shows suggested Hub configurations.
@@ -178,7 +178,7 @@ The following examples use a placeholder repository, `our-org/forum-data`.
 Replace it with your repository ID:
 
 ```sh
-bondi datasets load-hf-repository our-org/forum-data \
+bondi dataset load-hf-repository our-org/forum-data \
   --deployment notebook-datasets --database forum
 ```
 
@@ -228,7 +228,7 @@ print(result.destinations)  # {"demo._default.business": 8}
 ```
 
 ```sh
-bondi datasets load-file dev/business.json \
+bondi dataset load-file dev/business.json \
   --deployment cb-demo \
   --bucket demo --scope _default --collection business \
   --id-field business_id
