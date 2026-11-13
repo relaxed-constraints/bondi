@@ -13,7 +13,14 @@ Release artifacts: [PyPI](https://pypi.org/project/bondi/0.3.0/) and
 
 ## 0.3.0 verification
 
-Release checks are in progress. Publication and deployment follow successful checks.
+Ruff lint and formatting, the strict documentation build, wheel and source builds,
+and Twine validation passed. A fresh wheel installation passed API, CLI, dependency
+and packaged-data checks.
+
+The dataset notebook passed its file and Python-document examples, plus Adult
+training and combined-split loads. The optional whole-repository download was not run.
+All 1,537 tests passed on 2026-11-13, including the full live MongoDB and
+Couchbase suite. Test deployments were removed after the run.
 
 ## 0.2.0 verification
 
