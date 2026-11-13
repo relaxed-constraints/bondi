@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Start the dataset-loading notebook with a single-file business collection example.
+
 - **Breaking:** `Deployment.remove()` now deletes data and saved configuration
   by default. Use `remove(keep_data=True)` to retain them. Remove the
   `delete_data` argument without a compatibility alias. Align the API with
