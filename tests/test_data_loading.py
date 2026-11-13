@@ -80,8 +80,13 @@ def test_generated_ids_stable_and_duplicates_preserved(writer):
 
 
 def test_ids_and_partial_results(writer):
-    with pytest.raises(LoadDataError, match="namespace"):
+    with pytest.raises(LoadDataError, match="namespace") as missing_id:
         load([{"v": 1}])
+    message = str(missing_id.value)
+    assert "items:unsplit, shard 0, row 0" in message
+    assert 'namespace="my-dataset" to generate stable IDs' in message
+    assert 'id_field="field_name" to use an existing field' in message
+    assert "add _id to each document" in message
     result = []
     with pytest.raises(LoadDataError, match="Duplicate") as error:
         load([{"_id": "a"}, {"_id": "a"}], mode="upsert", batch_size=1, on_progress=result.append)

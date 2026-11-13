@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Explain all three ID options when a source document lacks an ID and namespace.
+
 - Shorten generated dataset IDs to `gen:` plus 24 hexadecimal characters.
   This changes generated IDs from the earlier unreleased format. Upsert retains
   documents with old IDs, so use explicit replacement when migrating.

@@ -99,6 +99,9 @@ def document_key(value):
 
 def generated_id(namespace, collection, split, shard, row):
     if not namespace:
-        raise ValueError("namespace is required when a source document has no ID")
+        raise ValueError(
+            'Document has no _id. Provide namespace="my-dataset" to generate stable IDs, '
+            'set id_field="field_name" to use an existing field, or add _id to each document.'
+        )
     parts = [namespace, collection, split, shard, row]
     return "gen:" + hashlib.sha256(json.dumps(parts).encode()).hexdigest()[:24]
