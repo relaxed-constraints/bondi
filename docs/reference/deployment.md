@@ -1,5 +1,9 @@
 # Database deployment
 
+For command names, options and output behaviour, see the
+[CLI guide](../deployment.md#deploy-via-command-line).
+Use `bondi --help` or `bondi COMMAND --help` for the command reference.
+
 Both deployment functions accept `version: str | None = None`. Explicit numeric
 `major.minor.patch` versions select the Docker image for new deployments; omission
 reuses an existing image or selects the pinned default for a new name. The selected

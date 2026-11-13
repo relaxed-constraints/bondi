@@ -254,3 +254,10 @@ Replacement is destructive and is not atomic across collections or documents.
 The loader does not automatically retry, roll back or resume a failed load.
 
 See the [API reference](reference/data.md) and [dataset notebook](tutorials.md#load-datasets-into-mongodb).
+
+### Terminal output
+
+`bondi datasets list` shows a Rich table. Use `--json` for machine-readable
+catalogue metadata. The `info` and `load` commands still return plain JSON.
+JSON output contains no colour codes, headings or progress messages.
+Use `bondi datasets load --help` to inspect all loading options.

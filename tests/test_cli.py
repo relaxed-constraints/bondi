@@ -78,7 +78,8 @@ def test_list(db, capsys):
         assert "No saved deployments" in capsys.readouterr().out
     with patch("bondi._cli.list_deployments", return_value=[db]):
         assert main(["list"]) == 0
-        assert "demo: stopped" in capsys.readouterr().out
+        output = capsys.readouterr().out
+        assert all(value in output for value in ("Name", "Status", "demo", "stopped", db.uri))
 
 
 @pytest.mark.parametrize(
@@ -115,9 +116,7 @@ def test_invalid_syntax(args):
 
 
 def test_help(capsys):
-    with pytest.raises(SystemExit) as exc:
-        main(["--help"])
-    assert exc.value.code == 0
+    assert main(["--help"]) == 0
     assert "deploy" in capsys.readouterr().out
 
 
@@ -160,3 +159,217 @@ def test_keep_data_prompt(db):
         assert main(["remove", "demo", "--keep-data"]) == 0
     assert "keeping its data" in prompt.call_args.args[0]
     db.remove.assert_called_once_with(delete_data=False, timeout=120)
+
+
+def test_click_couchbase_options_and_secret(db, monkeypatch):
+    from click.testing import CliRunner
+
+    from bondi._cli import cli
+
+    monkeypatch.setenv("CB_SECRET", "private-password")
+    with patch("bondi._cli.deploy_couchbase", return_value=db) as deploy:
+        result = CliRunner().invoke(
+            cli,
+            [
+                "deploy",
+                "couchbase",
+                "--name",
+                "cb",
+                "--management-port",
+                "18091",
+                "--query-port",
+                "18093",
+                "--kv-port",
+                "11211",
+                "--edition",
+                "enterprise",
+                "--version",
+                "8.0.0",
+                "--username",
+                "research",
+                "--password-env",
+                "CB_SECRET",
+                "--bucket",
+                "travel",
+                "--memory-limit-mb",
+                "8192",
+                "--timeout",
+                "90",
+            ],
+        )
+    assert result.exit_code == 0, result.output
+    deploy.assert_called_once_with(
+        "cb",
+        management_port=18091,
+        query_port=18093,
+        kv_port=11211,
+        edition="enterprise",
+        version="8.0.0",
+        username="research",
+        password="private-password",
+        bucket="travel",
+        memory_limit_mb=8192,
+        timeout=90,
+    )
+    assert "private-password" not in result.output
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["datasets", "load", "demo"],
+        ["datasets", "load", "demo", "--deployment", "a", "--connection", "b"],
+        ["datasets", "load", "demo", "--deployment", "a", "--mode", "invalid"],
+        ["datasets"],
+        ["deploy"],
+        ["stop", "a", "--unknown"],
+    ],
+)
+def test_click_invalid_options(args):
+    from click.testing import CliRunner
+
+    from bondi._cli import cli
+
+    with patch("bondi._cli.get_deployment") as get:
+        result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 2
+    get.assert_not_called()
+
+
+def test_click_operation_failure_exit_code():
+    from click.testing import CliRunner
+
+    from bondi._cli import cli
+
+    with patch("bondi._cli.get_deployment", side_effect=RuntimeError("unavailable")):
+        result = CliRunner().invoke(cli, ["status", "missing"])
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert "unavailable" in result.stderr
+
+
+def test_click_repeated_splits_and_load_options(monkeypatch):
+    from types import SimpleNamespace
+
+    from click.testing import CliRunner
+
+    from bondi._cli import cli
+
+    captured = {}
+
+    def run(args):
+        captured.update(vars(args))
+        return 0
+
+    monkeypatch.setattr("bondi.data._cli.run", run)
+    result = CliRunner().invoke(
+        cli,
+        [
+            "datasets",
+            "load",
+            "--manifest",
+            "data.json",
+            "--deployment",
+            "db",
+            "--database",
+            "travel",
+            "--bucket",
+            "travel",
+            "--scope",
+            "research",
+            "--collection",
+            "items",
+            "--id-field",
+            "key",
+            "--namespace",
+            "test",
+            "--indexes",
+            "joins",
+            "--bucket-memory-mb",
+            "256",
+            "--batch-size",
+            "25",
+            "--mode",
+            "replace",
+            "--allow-unowned",
+            "--split",
+            "train",
+            "--split",
+            "test",
+            "--splits",
+            "merge",
+            "--json-mode",
+            "extended",
+            "--naive-datetimes",
+            "utc",
+            "--decimal-mode",
+            "string",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    args = SimpleNamespace(**captured)
+    assert args.source is None and args.manifest == "data.json"
+    assert args.split == ["train", "test"]
+    assert args.allow_unowned and args.batch_size == 25 and args.bucket_memory_mb == 256
+    assert (args.database, args.bucket, args.scope, args.collection) == (
+        "travel",
+        "travel",
+        "research",
+        "items",
+    )
+    assert (args.id_field, args.namespace, args.indexes) == ("key", "test", "joins")
+    assert (args.mode, args.splits, args.json_mode, args.naive_datetimes, args.decimal_mode) == (
+        "replace",
+        "merge",
+        "extended",
+        "utc",
+        "string",
+    )
+
+
+def test_terminal_values_are_literal_and_redirected_output_has_no_ansi(db):
+    from click.testing import CliRunner
+
+    from bondi._cli import cli
+
+    db.name = "[red]literal[/red]"
+    with patch("bondi._cli.list_deployments", return_value=[db]):
+        result = CliRunner().invoke(cli, ["list"])
+    assert result.exit_code == 0
+    assert db.name in result.output
+    assert "\x1b[" not in result.output
+
+
+def test_raw_logs_preserve_markup_and_newlines(db):
+    from click.testing import CliRunner
+
+    from bondi._cli import cli
+
+    db.logs.return_value = "[red]raw[/red]\n\x1b[31mlast line\x1b[0m"
+    with patch("bondi._cli.get_deployment", return_value=db):
+        result = CliRunner().invoke(cli, ["logs", "demo"])
+    assert result.output == db.logs.return_value
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        [],
+        ["deploy"],
+        ["deploy", "mongodb"],
+        ["deploy", "couchbase"],
+        ["datasets"],
+        ["datasets", "load"],
+        ["datasets", "list"],
+        ["datasets", "info"],
+        ["remove"],
+    ],
+)
+def test_command_help(args):
+    from click.testing import CliRunner
+
+    from bondi._cli import cli
+
+    result = CliRunner().invoke(cli, [*args, "--help"])
+    assert result.exit_code == 0
+    assert "Usage:" in result.output

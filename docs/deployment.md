@@ -135,6 +135,12 @@ older repository-level BONDI Compose containers.
 
 ### Deploy via command line
 
+The CLI uses Click for commands and Rich for terminal output. Both are included
+with BONDI. Lists use tables, and status messages use colour in a terminal.
+Redirected output has no automatic colour. Raw database logs remain unchanged.
+Errors go to stderr. Operations exit with code 0 on success, 1 on failure,
+2 for invalid command syntax, or 130 on interruption.
+
 The `bondi` command calls the same deployment API. In a uv project, use
 `uv run bondi`; in an activated Python environment, use `bondi` directly.
 `python -m bondi` is also supported.

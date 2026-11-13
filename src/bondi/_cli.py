@@ -1,104 +1,142 @@
-"""Command-line adapter for the deployment API (no extra CLI dependencies)."""
+"""Click commands for database deployments and datasets."""
 
-import argparse
 import os
 import sys
+from types import SimpleNamespace
 
+import click
+
+from bondi._terminal import message, table
+from bondi._terminal import status as status_line
+from bondi.data._cli import datasets
 from bondi.deployment import deploy_couchbase, deploy_mongodb, get_deployment, list_deployments
 
 
-def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="bondi", description="Manage local research databases with Docker Compose."
-    )
-    commands = parser.add_subparsers(dest="command", required=True)
-    deploy = commands.add_parser("deploy", help="Create/start a database and wait for readiness")
-    backends = deploy.add_subparsers(dest="backend", required=True)
-    mongo = backends.add_parser("mongodb", help="Deploy MongoDB")
-    mongo.add_argument("--name", default="mongodb")
-    mongo.add_argument("--port", type=int, default=27017)
-    mongo.add_argument(
-        "--memory-limit-mb",
-        type=int,
-        help=(
-            "Container cap in MiB; omitted reuses existing value; "
-            "differing values warn and are ignored"
-        ),
-    )
-    mongo.add_argument(
-        "--wiredtiger-cache-size-gb",
-        type=float,
-        help="WiredTiger cache in GiB (0.25–10000); differing existing values warn and are ignored",
-    )
-    mongo.add_argument("--timeout", type=float, default=120)
-    couchbase = backends.add_parser("couchbase", help="Deploy and initialize Couchbase")
-    couchbase.add_argument("--name", default="couchbase")
-    couchbase.add_argument("--management-port", type=int, default=8091)
-    couchbase.add_argument("--query-port", type=int, default=8093)
-    couchbase.add_argument("--kv-port", type=int, default=11210)
-    couchbase.add_argument("--edition", choices=["community", "enterprise"], default="community")
-    couchbase.add_argument("--username", default="Administrator")
-    couchbase.add_argument("--password-env", help="Read password from this environment variable")
-    couchbase.add_argument("--bucket", default="demo")
-    couchbase.add_argument(
-        "--memory-limit-mb",
-        type=int,
-        default=4096,
-        help="Container memory limit in MiB, separate from Couchbase quotas (default: 4096)",
-    )
-    couchbase.add_argument("--timeout", type=float, default=300)
-    for command in (mongo, couchbase):
-        command.add_argument(
-            "--version",
-            help="Database major.minor.patch version; omitted reuses saved image or pinned default",
-        )
-    for name, help_text in (
-        ("start", "Start a saved deployment and wait for readiness"),
-        ("stop", "Stop a deployment, retaining data"),
-        ("remove", "Remove a deployment and its data (asks for confirmation)"),
-        ("status", "Show a deployment's current state and URI"),
-        ("logs", "Show recent database logs"),
-    ):
-        command = commands.add_parser(name, help=help_text)
-        command.add_argument("name", help="Saved deployment name")
-        if name in {"start", "stop", "remove"}:
-            command.add_argument(
-                "--timeout",
-                type=float,
-                default=120,
-                help="Operation deadline in seconds (default: 120)",
-            )
-        if name == "remove":
-            command.add_argument(
-                "--keep-data",
-                action="store_true",
-                help="Retain data volume and configuration for a later start",
-            )
-            command.add_argument(
-                "-y", "--yes", action="store_true", help="Skip the removal confirmation"
-            )
-        if name == "logs":
-            command.add_argument("--tail", type=int, default=50, help="Number of log lines")
-    load = commands.add_parser("load-demo-data", help="Upsert eight packaged demo businesses")
-    load.add_argument("name", help="Running deployment name")
-    load.add_argument("--database", help="MongoDB database (default: demo)")
-    load.add_argument("--scope", help="Couchbase scope (default: _default)")
-    load.add_argument("--collection", default="business")
-    load.add_argument("--create-primary-index", action="store_true", help="Couchbase only")
-    commands.add_parser("list", help="List saved deployments with current status")
-    from bondi.data._cli import add_parser
-
-    add_parser(commands)
-    return parser
+@click.group(no_args_is_help=False)
+def cli():
+    """Manage research databases and load datasets."""
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Run the CLI, returning 0 on success, 1 on operation failure, or 130 on Ctrl-C.
+@cli.result_callback()
+@click.pass_context
+def _exit_with_result(ctx, result, **options):
+    ctx.exit(result or 0)
 
-    Argparse exits with code 2 for invalid command syntax. Removal requires
-    confirmation unless -y is supplied; declined/EOF confirmation returns 1.
-    """
-    args = _parser().parse_args(argv)
+
+@cli.group(no_args_is_help=False)
+def deploy():
+    """Create a database deployment and wait for readiness."""
+
+
+@deploy.command("mongodb")
+@click.option("--name", default="mongodb", show_default=True)
+@click.option("--port", type=int, default=27017, show_default=True)
+@click.option(
+    "--memory-limit-mb", type=int, help="Container cap in MiB. Omission reuses saved settings."
+)
+@click.option(
+    "--wiredtiger-cache-size-gb", type=float, help="WiredTiger cache in GiB (0.25–10000)."
+)
+@click.option("--timeout", type=float, default=120, show_default=True)
+@click.option(
+    "--version",
+    help="Database major.minor.patch version. Omission reuses the saved image or pinned default.",
+)
+def mongodb(**options):
+    """Deploy MongoDB."""
+    return _run(SimpleNamespace(command="deploy", backend="mongodb", **options))
+
+
+@deploy.command("couchbase")
+@click.option("--name", default="couchbase", show_default=True)
+@click.option("--management-port", type=int, default=8091, show_default=True)
+@click.option("--query-port", type=int, default=8093, show_default=True)
+@click.option("--kv-port", type=int, default=11210, show_default=True)
+@click.option(
+    "--edition",
+    type=click.Choice(["community", "enterprise"]),
+    default="community",
+    show_default=True,
+)
+@click.option("--username", default="Administrator", show_default=True)
+@click.option("--password-env", help="Read the password from this environment variable.")
+@click.option("--bucket", default="demo", show_default=True)
+@click.option(
+    "--memory-limit-mb",
+    type=int,
+    default=4096,
+    show_default=True,
+    help="Container cap in MiB, separate from service quotas.",
+)
+@click.option("--timeout", type=float, default=300, show_default=True)
+@click.option(
+    "--version",
+    help="Database major.minor.patch version. Omission reuses the saved image or pinned default.",
+)
+def couchbase(**options):
+    """Deploy and initialize Couchbase."""
+    return _run(SimpleNamespace(command="deploy", backend="couchbase", **options))
+
+
+@cli.command("start")
+@click.argument("name")
+@click.option("--timeout", type=float, default=120, show_default=True)
+def start(**options):
+    """Start a saved deployment and wait for readiness."""
+    return _run(SimpleNamespace(command="start", **options))
+
+
+@cli.command("stop")
+@click.argument("name")
+@click.option("--timeout", type=float, default=120, show_default=True)
+def stop(**options):
+    """Stop a deployment and retain its data."""
+    return _run(SimpleNamespace(command="stop", **options))
+
+
+@cli.command("remove")
+@click.argument("name")
+@click.option("--timeout", type=float, default=120, show_default=True)
+@click.option("--keep-data", is_flag=True, help="Retain data and configuration for a later start.")
+@click.option("-y", "--yes", is_flag=True, help="Skip the removal confirmation.")
+def remove(**options):
+    """Remove a deployment and its data. Ask for confirmation first."""
+    return _run(SimpleNamespace(command="remove", **options))
+
+
+@cli.command("status")
+@click.argument("name")
+def status(**options):
+    """Show a deployment's current state, URI and saved memory settings."""
+    return _run(SimpleNamespace(command="status", **options))
+
+
+@cli.command("logs")
+@click.argument("name")
+@click.option("--tail", type=int, default=50, show_default=True, help="Number of log lines.")
+def logs(**options):
+    """Show recent database logs without extra formatting."""
+    return _run(SimpleNamespace(command="logs", **options))
+
+
+@cli.command("load-demo-data")
+@click.argument("name")
+@click.option("--database", help="MongoDB database. Default: demo.")
+@click.option("--scope", help="Couchbase scope. Default: _default.")
+@click.option("--collection", default="business", show_default=True)
+@click.option("--create-primary-index", is_flag=True, help="Couchbase only.")
+def load_demo_data(**options):
+    """Upsert eight packaged demo businesses."""
+    return _run(SimpleNamespace(command="load-demo-data", **options))
+
+
+@cli.command("list")
+def list_saved():
+    """List saved deployments and their current status."""
+    return _run(SimpleNamespace(command="list"))
+
+
+def _run(args):
     try:
         if args.command == "datasets":
             from bondi.data._cli import run
@@ -136,26 +174,30 @@ def main(argv: list[str] | None = None) -> int:
                     timeout=args.timeout,
                 )
 
-            print(f"{db.name}: running — {db.uri}")
+            status_line(db.name, "running", db.uri)
             if args.backend == "mongodb":
-                print(f'Connect: mongosh "{db.uri}"')
-                print("Install mongosh: https://www.mongodb.com/docs/mongodb-shell/install/")
-                print("Install mongoimport, mongoexport, mongodump, mongorestore:")
-                print("  https://www.mongodb.com/docs/database-tools/installation/")
+                message(f'Connect: mongosh "{db.uri}"')
+                message("Install mongosh: https://www.mongodb.com/docs/mongodb-shell/install/")
+                message("Install mongoimport, mongoexport, mongodump, mongorestore:")
+                message("  https://www.mongodb.com/docs/database-tools/installation/")
             else:
-                print(f"Console: {db.console_url}")
-                print(f"Username: {db.username}")
+                message(f"Console: {db.console_url}")
+                message(f"Username: {db.username}")
                 if args.password_env:
-                    print(f"Password: from {args.password_env} (value not displayed)")
+                    message(f"Password: from {args.password_env} (value not displayed)")
                 else:
-                    print("Password: bondi-local (local demo default)")
-                print(f"Bucket: {db.bucket} (default scope and collection)")
+                    message("Password: bondi-local (local demo default)")
+                message(f"Bucket: {db.bucket} (default scope and collection)")
         elif args.command == "list":
             deployments = list_deployments()
             if not deployments:
-                print("No saved deployments. Create one with: bondi deploy mongodb")
-            for db in deployments:
-                print(f"{db.name}: {db.status()} — {db.uri}")
+                message("No saved deployments. Create one with: bondi deploy mongodb")
+            else:
+                table(
+                    "Saved deployments",
+                    ("Name", "Status", "URI"),
+                    [(db.name, db.status(), db.uri) for db in deployments],
+                )
         else:
             db = get_deployment(args.name)
             if args.command == "load-demo-data":
@@ -168,26 +210,26 @@ def main(argv: list[str] | None = None) -> int:
                 destination = ".".join(
                     part for part in (result.database, result.scope, result.collection) if part
                 )
-                print(
+                message(
                     f"{db.name}: loaded {result.document_count} demo documents into {destination}"
                 )
             elif args.command == "status":
-                print(f"{db.name}: {db.status()} — {db.uri}")
+                status_line(db.name, db.status(), db.uri)
                 memory = (
                     "not explicitly saved"
                     if db.memory_limit_mb is None
                     else f"{db.memory_limit_mb} MiB"
                 )
-                print(f"Saved container memory limit: {memory}")
+                message(f"Saved container memory limit: {memory}")
                 if db.backend == "mongodb":
                     cache = (
                         "not explicitly saved"
                         if db.wiredtiger_cache_size_gb is None
                         else f"{db.wiredtiger_cache_size_gb} GiB"
                     )
-                    print(f"Saved WiredTiger cache size: {cache}")
+                    message(f"Saved WiredTiger cache size: {cache}")
             elif args.command == "logs":
-                print(db.logs(tail=args.tail), end="")
+                sys.stdout.write(db.logs(tail=args.tail))
             elif args.command == "remove":
                 if not args.yes:
                     action = (
@@ -198,30 +240,50 @@ def main(argv: list[str] | None = None) -> int:
                     try:
                         answer = input(f"{db.name}: {action}? [y/N] ")
                     except EOFError:
-                        print(
+                        message(
                             "bondi: removal cancelled; use -y for unattended removal.",
-                            file=sys.stderr,
+                            error=True,
                         )
                         return 1
                     if answer.strip().lower() not in {"y", "yes"}:
-                        print("Removal cancelled; nothing was changed.")
+                        message("Removal cancelled; nothing was changed.")
                         return 1
                 db.remove(delete_data=not args.keep_data, timeout=args.timeout)
                 detail = "data retained" if args.keep_data else "data and configuration deleted"
-                print(f"{db.name}: removed ({detail})")
+                message(f"{db.name}: removed ({detail})")
             elif args.command == "start":
                 db.start(timeout=args.timeout)
-                print(f"{db.name}: running — {db.uri}")
+                status_line(db.name, "running", db.uri)
             elif args.command == "stop":
                 db.stop(timeout=args.timeout)
-                print(f"{db.name}: stopped (data retained)")
+                message(f"{db.name}: stopped (data retained)")
     except FileNotFoundError as exc:
-        print(f"bondi: saved deployment files not found: {exc.filename or exc}", file=sys.stderr)
+        message(f"bondi: saved deployment files not found: {exc.filename or exc}", error=True)
         return 1
     except (ValueError, RuntimeError, OSError, ImportError) as exc:
-        print(f"bondi: {exc}", file=sys.stderr)
+        message(f"bondi: {exc}", error=True)
         return 1
     except KeyboardInterrupt:
-        print("bondi: interrupted; inspect deployment status before retrying.", file=sys.stderr)
+        message("bondi: interrupted; inspect deployment status before retrying.", error=True)
         return 130
     return 0
+
+
+cli.add_command(datasets)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the CLI.
+
+    Operations return 0 on success, 1 on failure, or 130 on interruption.
+    Invalid syntax raises SystemExit(2). Help returns 0.
+    """
+    try:
+        result = cli.main(args=argv, prog_name="bondi", standalone_mode=False)
+    except click.ClickException as exc:
+        exc.show()
+        raise SystemExit(exc.exit_code) from None
+    except click.Abort:
+        message("bondi: interrupted; inspect deployment status before retrying.", error=True)
+        return 130
+    return result or 0

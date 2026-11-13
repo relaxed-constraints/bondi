@@ -387,7 +387,7 @@ def test_cli_list_readable_and_json(capsys):
 
     assert main(["datasets", "list"]) == 0
     text = capsys.readouterr().out
-    assert text.startswith("Dataset")
+    assert text.startswith("Available datasets")
     assert "Source" in text and "Description" in text
     assert "Packaged with BONDI" in text
     assert "origami-ml/jsynth-data" in text

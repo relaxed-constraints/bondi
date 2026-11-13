@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Migrate the CLI to Click and Rich, included in the core dependencies.
+  Preserve command names, options, defaults, removal confirmation and JSON output.
+  Add styled tables for datasets and deployments, and coloured status messages.
+
 - Show a readable table for `bondi datasets list`. Add `--json` for catalogue metadata.
 
 - Explain all three ID options when a source document lacks an ID and namespace.

@@ -4,36 +4,80 @@ import json
 import os
 from dataclasses import asdict
 from pathlib import Path
+from types import SimpleNamespace
+
+import click
+
+from bondi._terminal import table
 
 from . import CouchbaseConnection, MongoConnection, dataset_info, list_datasets, load_data
 
 
-def add_parser(commands):
-    parser = commands.add_parser("datasets", help="List, inspect or load datasets")
-    sub = parser.add_subparsers(dest="dataset_command", required=True)
-    listing = sub.add_parser("list", help="Show available datasets")
-    listing.add_argument("--json", action="store_true", help="Output catalogue metadata as JSON")
-    info = sub.add_parser("info")
-    info.add_argument("name")
-    load = sub.add_parser("load")
-    load.add_argument("source", nargs="?")
-    load.add_argument("--manifest")
-    target = load.add_mutually_exclusive_group(required=True)
-    target.add_argument("--deployment")
-    target.add_argument(
-        "--connection", help="JSON connection file, with password_env for Couchbase"
-    )
-    for option in ("database", "bucket", "scope", "collection", "id-field", "namespace", "indexes"):
-        load.add_argument("--" + option)
-    load.add_argument("--bucket-memory-mb", type=int)
-    load.add_argument("--batch-size", type=int, default=1000)
-    load.add_argument("--mode", choices=("create", "replace", "upsert"), default="create")
-    load.add_argument("--allow-unowned", action="store_true")
-    load.add_argument("--split", action="append")
-    load.add_argument("--splits", choices=("preserve", "merge"), default="preserve")
-    load.add_argument("--json-mode", choices=("plain", "extended"), default="plain")
-    load.add_argument("--naive-datetimes", choices=("error", "utc"), default="error")
-    load.add_argument("--decimal-mode", choices=("error", "string"), default="error")
+@click.group(no_args_is_help=False)
+def datasets():
+    """List, inspect or load datasets."""
+
+
+@datasets.command("list")
+@click.option("--json", "as_json", is_flag=True, help="Output catalogue metadata as JSON.")
+def listing(as_json):
+    """Show available datasets."""
+    return _dispatch(dataset_command="list", json=as_json)
+
+
+@datasets.command("info")
+@click.argument("name")
+def info(name):
+    """Show dataset metadata as JSON."""
+    return _dispatch(dataset_command="info", name=name)
+
+
+@datasets.command("load")
+@click.argument("source", required=False)
+@click.option("--manifest", help="Dataset manifest file.")
+@click.option("--deployment", help="Saved deployment name.")
+@click.option("--connection", help="JSON connection file. Use password_env for credentials.")
+@click.option("--database")
+@click.option("--bucket")
+@click.option("--scope")
+@click.option("--collection")
+@click.option("--id-field")
+@click.option("--namespace")
+@click.option("--indexes")
+@click.option("--bucket-memory-mb", type=int)
+@click.option("--batch-size", type=int, default=1000, show_default=True)
+@click.option(
+    "--mode",
+    type=click.Choice(["create", "replace", "upsert"]),
+    default="create",
+    show_default=True,
+)
+@click.option("--allow-unowned", is_flag=True)
+@click.option("--split", multiple=True, help="Select a split. Repeat to select several.")
+@click.option(
+    "--splits", type=click.Choice(["preserve", "merge"]), default="preserve", show_default=True
+)
+@click.option(
+    "--json-mode", type=click.Choice(["plain", "extended"]), default="plain", show_default=True
+)
+@click.option(
+    "--naive-datetimes", type=click.Choice(["error", "utc"]), default="error", show_default=True
+)
+@click.option(
+    "--decimal-mode", type=click.Choice(["error", "string"]), default="error", show_default=True
+)
+def load(**options):
+    """Load documents and output the result as JSON."""
+    if (options["deployment"] is None) == (options["connection"] is None):
+        raise click.UsageError("Specify exactly one of --deployment or --connection.")
+    options["split"] = list(options["split"]) or None
+    return _dispatch(dataset_command="load", **options)
+
+
+def _dispatch(**options):
+    from bondi._cli import _run
+
+    return _run(SimpleNamespace(command="datasets", **options))
 
 
 def run(args):
@@ -44,16 +88,14 @@ def run(args):
         elif not datasets:
             print("No datasets available.")
         else:
-            rows = [("Dataset", "Source", "Description")]
-            rows.extend(
-                (name, info.get("repo_id", "Packaged with BONDI"), info["description"])
-                for name, info in datasets.items()
+            table(
+                "Available datasets",
+                ("Dataset", "Source", "Description"),
+                [
+                    (name, info.get("repo_id", "Packaged with BONDI"), info["description"])
+                    for name, info in datasets.items()
+                ],
             )
-            widths = [max(len(row[i]) for row in rows) for i in range(2)]
-            for index, row in enumerate(rows):
-                print(f"{row[0]:<{widths[0]}}  {row[1]:<{widths[1]}}  {row[2]}")
-                if index == 0:
-                    print(f"{'-' * widths[0]}  {'-' * widths[1]}  {'-' * len(row[2])}")
         return 0
     if args.dataset_command == "info":
         print(json.dumps(dataset_info(args.name), indent=2))
