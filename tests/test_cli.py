@@ -217,9 +217,29 @@ def test_click_couchbase_options_and_secret(db, monkeypatch):
 @pytest.mark.parametrize(
     "args",
     [
-        ["datasets", "load", "demo"],
-        ["datasets", "load", "demo", "--deployment", "a", "--connection", "b"],
-        ["datasets", "load", "demo", "--deployment", "a", "--mode", "invalid"],
+        ["datasets", "load-file", "demo.jsonl", "--collection", "items"],
+        [
+            "datasets",
+            "load-file",
+            "demo.jsonl",
+            "--collection",
+            "items",
+            "--deployment",
+            "a",
+            "--connection",
+            "b",
+        ],
+        [
+            "datasets",
+            "load-file",
+            "demo.jsonl",
+            "--collection",
+            "items",
+            "--deployment",
+            "a",
+            "--mode",
+            "invalid",
+        ],
         ["datasets"],
         ["deploy"],
         ["stop", "a", "--unknown"],
@@ -248,7 +268,7 @@ def test_click_operation_failure_exit_code():
     assert "unavailable" in result.stderr
 
 
-def test_click_repeated_splits_and_load_options(monkeypatch):
+def test_click_hf_options(monkeypatch):
     from types import SimpleNamespace
 
     from click.testing import CliRunner
@@ -256,74 +276,42 @@ def test_click_repeated_splits_and_load_options(monkeypatch):
     from bondi._cli import cli
 
     captured = {}
-
-    def run(args):
-        captured.update(vars(args))
-        return 0
-
-    monkeypatch.setattr("bondi.data._cli.run", run)
+    monkeypatch.setattr("bondi.data._cli.run", lambda args: captured.update(vars(args)))
     result = CliRunner().invoke(
         cli,
         [
             "datasets",
-            "load",
-            "--manifest",
-            "data.json",
+            "load-hf",
+            "org/repo",
+            "--dataset",
+            "users",
             "--deployment",
             "db",
             "--database",
             "travel",
-            "--bucket",
-            "travel",
-            "--scope",
-            "research",
             "--collection",
             "items",
-            "--id-field",
-            "key",
-            "--namespace",
-            "test",
-            "--indexes",
-            "joins",
-            "--bucket-memory-mb",
-            "256",
-            "--batch-size",
-            "25",
-            "--mode",
-            "replace",
             "--split",
             "train",
             "--split",
             "test",
-            "--splits",
-            "merge",
-            "--json-mode",
-            "extended",
-            "--naive-datetimes",
-            "utc",
-            "--decimal-mode",
-            "string",
+            "--mode",
+            "replace",
+            "--revision",
+            "v1",
+            "--namespace",
+            "test",
+            "--id-field",
+            "key",
         ],
     )
     assert result.exit_code == 0, result.output
     args = SimpleNamespace(**captured)
-    assert args.source is None and args.manifest == "data.json"
+    assert args.source == "org/repo" and args.dataset == "users"
     assert args.split == ["train", "test"]
-    assert args.batch_size == 25 and args.bucket_memory_mb == 256
-    assert (args.database, args.bucket, args.scope, args.collection) == (
-        "travel",
-        "travel",
-        "research",
-        "items",
-    )
-    assert (args.id_field, args.namespace, args.indexes) == ("key", "test", "joins")
-    assert (args.mode, args.splits, args.json_mode, args.naive_datetimes, args.decimal_mode) == (
-        "replace",
-        "merge",
-        "extended",
-        "utc",
-        "string",
-    )
+    assert args.collection == "items" and args.database == "travel"
+    assert args.mode == "replace" and args.revision == "v1"
+    assert args.namespace == "test" and args.id_field == "key"
 
 
 def test_terminal_values_are_literal_and_redirected_output_has_no_ansi(db):
@@ -358,7 +346,7 @@ def test_raw_logs_preserve_markup_and_newlines(db):
         ["deploy", "mongodb"],
         ["deploy", "couchbase"],
         ["datasets"],
-        ["datasets", "load"],
+        ["datasets", "load-file"],
         ["datasets", "list"],
         ["datasets", "info"],
         ["remove"],

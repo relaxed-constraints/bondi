@@ -2,12 +2,14 @@
 
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from bson import ObjectId
 
-from bondi.data import LoadDataError, MongoConnection, load_data
+from bondi.data import LoadDataError, MongoConnection, load_documents, load_file
 from bondi.data._values import convert, document_key
+from bondi.mongodb import MongoCollectionRef
 
 
 @pytest.fixture
@@ -43,12 +45,12 @@ def writer(monkeypatch):
     return MemoryWriter
 
 
-def load(source=None, **kwargs):
-    return load_data(
+def load(source, **kwargs):
+    loader = load_file if isinstance(source, Path) else load_documents
+    return loader(
         source,
         target=MongoConnection("mongodb://unused"),
-        database="test",
-        collection="items",
+        collection=MongoCollectionRef("test", "items"),
         **kwargs,
     )
 
@@ -90,48 +92,6 @@ def test_ids_and_partial_results(writer):
         load([{"_id": "b", "fail": True}], mode="upsert")
     assert error.value.result.uncertain_writes
     assert "secret" not in str(error.value)
-
-
-def test_preflight_all_destinations_before_replace(writer, monkeypatch):
-    load_data(
-        {"a": [{"_id": "a"}], "b": [{"_id": "b"}]}, target=MongoConnection("x"), database="test"
-    )
-    original = writer.preflight
-
-    def preflight(self, dest, quota):
-        if dest[2] == "b":
-            raise RuntimeError("Destination unavailable")
-        return original(self, dest, quota)
-
-    monkeypatch.setattr(writer, "preflight", preflight)
-    with pytest.raises(LoadDataError):
-        load_data({"a": [], "b": []}, target=MongoConnection("x"), database="test", mode="replace")
-    assert writer.data[("test", None, "a")]
-
-
-def test_splits_merge_and_replace_scope(writer):
-    manifest = {
-        "version": 1,
-        "namespace": "sample",
-        "collections": {"items": {"splits": {"train": [{"v": 1}], "test": [{"v": 2}]}}},
-    }
-    r = load(manifest=manifest)
-    assert set(r.destinations) == {"test/items_train", "test/items_test"}
-    r = load(manifest=manifest, split="train", mode="replace")
-    assert "test/items_test" not in r.destinations
-    r = load(manifest=manifest, splits="merge")
-    assert r.destinations == {"test/items": 2}
-    assert len(writer.data[("test", None, "items")]) == 2
-
-
-def test_duplicate_ids_across_merged_splits(writer):
-    manifest = {
-        "version": 1,
-        "namespace": "sample",
-        "collections": {"items": {"splits": {"train": [{"_id": "a"}], "test": [{"_id": "a"}]}}},
-    }
-    with pytest.raises(LoadDataError, match="Duplicate"):
-        load(manifest=manifest, splits="merge", mode="upsert")
 
 
 def test_extended_json_and_plain_wrappers(tmp_path, writer):
@@ -201,27 +161,6 @@ def test_duplicate_json_keys_rejected(tmp_path, writer, extension):
         load(path)
 
 
-def test_manifest_destinations_indexes_and_collisions(writer):
-    manifest = {
-        "version": 1,
-        "namespace": "x",
-        "collections": {
-            "logical": {"source": [{"_id": "a"}], "collection": "physical", "database": "other"}
-        },
-        "index_profiles": {
-            "baseline": {
-                "mongodb": [{"collection": "logical", "name": "lookup", "keys": [["field", 1]]}]
-            }
-        },
-    }
-    result = load(manifest=manifest, indexes="baseline")
-    assert result.destinations == {"other/physical": 1}
-    assert writer.index_defs[0]["name"] == "lookup"
-    manifest["collections"]["second"] = manifest["collections"]["logical"]
-    with pytest.raises(ValueError, match="same destination"):
-        load(manifest=manifest)
-
-
 def test_progress_failure_keeps_partial_counts(writer):
     def callback(result):
         result.destinations.clear()  # The callback receives an independent snapshot.
@@ -237,36 +176,7 @@ def test_huggingface_objects(writer):
     datasets = pytest.importorskip("datasets")
     data = datasets.Dataset.from_list([{"_id": "a"}], split="train")
     result = load(data)
-    assert result.destinations == {"test/items_train": 1}
-    split_data = datasets.DatasetDict({"test": datasets.Dataset.from_list([{"_id": "b"}])})
-    result = load(split_data)
-    assert result.destinations == {"test/items_test": 1}
-
-
-def test_read_configured_hub_source(monkeypatch, tmp_path, writer):
-    from types import SimpleNamespace
-
-    from bondi.data import _sources
-
-    path = tmp_path / "train.jsonl"
-    path.write_text('{"value":1}\n')
-    revisions = []
-
-    class Hub:
-        @staticmethod
-        def HfApi():
-            return SimpleNamespace(dataset_info=lambda *a, **k: SimpleNamespace(sha="pinned"))
-
-        @staticmethod
-        def hf_hub_download(*args, **kwargs):
-            revisions.append(kwargs["revision"])
-            return str(path)
-
-    monkeypatch.setattr(_sources, "optional", lambda module: Hub)
-    result = load("adult", split="train")
-    assert result.destinations == {"test/items_train": 1}
-    assert result.sources[0]["revision"] == "pinned"
-    assert set(revisions) == {"pinned"}
+    assert result.destinations == {"test/items": 1}
 
 
 def test_numeric_ids_do_not_depend_on_bson_width(writer):
@@ -323,8 +233,23 @@ def test_cli_mongo_password_env(tmp_path, monkeypatch, capsys, with_password):
     path = tmp_path / "connection.json"
     path.write_text(json.dumps(config))
     loader = MagicMock(return_value=LoadDataResult("mongodb"))
-    monkeypatch.setattr("bondi.data._cli.load_data", loader)
-    assert main(["datasets", "load", "demo", "--connection", str(path), "--database", "test"]) == 0
+    monkeypatch.setattr("bondi.data._cli.load_file", loader)
+    assert (
+        main(
+            [
+                "datasets",
+                "load-file",
+                "demo.jsonl",
+                "--connection",
+                str(path),
+                "--database",
+                "test",
+                "--collection",
+                "items",
+            ]
+        )
+        == 0
+    )
     target = loader.call_args.kwargs["target"]
     assert target.username == "user"
     assert target.password == ("p@ss:/%" if with_password else None)
@@ -349,8 +274,23 @@ def test_cli_missing_mongo_password_env_fails_before_loading(tmp_path, monkeypat
     )
     monkeypatch.delenv("BONDI_TEST_PASSWORD", raising=False)
     loader = MagicMock()
-    monkeypatch.setattr("bondi.data._cli.load_data", loader)
-    assert main(["datasets", "load", "demo", "--connection", str(path), "--database", "test"]) == 1
+    monkeypatch.setattr("bondi.data._cli.load_file", loader)
+    assert (
+        main(
+            [
+                "datasets",
+                "load-file",
+                "demo.jsonl",
+                "--connection",
+                str(path),
+                "--database",
+                "test",
+                "--collection",
+                "items",
+            ]
+        )
+        == 1
+    )
     loader.assert_not_called()
     assert "password_env" in capsys.readouterr().err
 
@@ -390,7 +330,6 @@ def test_cli_list_readable_and_json(capsys):
     text = capsys.readouterr().out
     assert text.startswith("Available datasets")
     assert "Source" in text and "Description" in text
-    assert "Packaged with BONDI" in text
     assert "origami-ml/jsynth-data" in text
     for name in list_datasets():
         assert name in text
@@ -408,21 +347,6 @@ def test_cli_empty_catalogue(monkeypatch, capsys):
     assert capsys.readouterr().out == "{}\n"
 
 
-@pytest.mark.parametrize("database", [None, ""])
-def test_missing_database_explains_options_before_connecting(monkeypatch, database):
-    from unittest.mock import Mock
-
-    constructor = Mock()
-    monkeypatch.setattr("bondi.data._loader.MongoWriter", constructor)
-    with pytest.raises(ValueError) as error:
-        load_data("adult", target=MongoConnection("mongodb://unused"), database=database)
-    message = str(error.value)
-    assert "MongoDB requires a destination database" in message
-    assert "--database NAME" in message
-    assert 'database="NAME"' in message
-    constructor.assert_not_called()
-
-
 def test_cli_missing_database_message(monkeypatch, capsys):
     from unittest.mock import Mock
 
@@ -433,9 +357,277 @@ def test_cli_missing_database_message(monkeypatch, capsys):
     )
     constructor = Mock()
     monkeypatch.setattr("bondi.data._loader.MongoWriter", constructor)
-    assert main(["datasets", "load", "adult", "--deployment", "notebook-datasets"]) == 1
+    assert (
+        main(
+            [
+                "datasets",
+                "load-file",
+                "adult.jsonl",
+                "--deployment",
+                "notebook-datasets",
+                "--collection",
+                "adult",
+            ]
+        )
+        == 1
+    )
     output = capsys.readouterr()
     assert not output.out
     assert "MongoDB requires a destination database" in output.err
     assert "--database NAME" in output.err
     constructor.assert_not_called()
+
+
+@pytest.fixture
+def hub(monkeypatch):
+    from types import SimpleNamespace
+
+    from bondi.data import _sources
+
+    data = {
+        "users": {"train": [{"value": 1}], "test": [{"value": 2}]},
+        "posts": {"train": [{"value": 3}], "test": [{"value": 4}]},
+    }
+    calls = []
+    resolutions = []
+
+    def resolve(repo, revision):
+        resolutions.append((repo, revision))
+        return SimpleNamespace(sha="fixed-commit")
+
+    def rows(repo, *, name, revision, split, streaming):
+        calls.append((name, revision, split, streaming))
+        return iter(data[name][split])
+
+    library = SimpleNamespace(
+        get_dataset_config_names=lambda *a, **k: list(data),
+        get_dataset_split_names=lambda repo, config, **k: list(data[config]),
+        load_dataset=rows,
+    )
+    api = SimpleNamespace(HfApi=lambda: SimpleNamespace(dataset_info=resolve))
+    monkeypatch.setattr(
+        _sources, "optional", lambda module: api if module == "huggingface_hub" else library
+    )
+    return data, calls, resolutions
+
+
+def test_hf_combines_splits_into_exact_destination(writer, hub):
+    from bondi.data import load_hf_dataset
+
+    result = load_hf_dataset(
+        "org/forum",
+        dataset="users",
+        target=MongoConnection("x"),
+        collection=MongoCollectionRef("test", "chosen"),
+    )
+    assert result.destinations == {"test/chosen": 2}
+    assert result.source_counts == {"users:test": 1, "users:train": 1}
+    assert all(source["revision"] == "fixed-commit" for source in result.sources)
+    assert {row[1] for row in hub[1]} == {"fixed-commit"}
+    assert len(hub[2]) == 1
+    before = dict(writer.data[("test", None, "chosen")])
+    load_hf_dataset(
+        "org/forum",
+        dataset="users",
+        split="train",
+        target=MongoConnection("x"),
+        collection=MongoCollectionRef("test", "chosen"),
+        mode="replace",
+    )
+    after = writer.data[("test", None, "chosen")]
+    assert len(after) == 1 and set(after) <= set(before)
+
+
+def test_hf_selection_errors_before_writes(writer, hub):
+    from bondi.data import load_hf_dataset, load_hf_repository
+
+    kwargs = dict(target=MongoConnection("x"), collection=MongoCollectionRef("db", "c"))
+    with pytest.raises(ValueError, match="Specify dataset"):
+        load_hf_dataset("org/forum", **kwargs)
+    with pytest.raises(ValueError, match="Unknown dataset"):
+        load_hf_dataset("org/forum", dataset="missing", **kwargs)
+    with pytest.raises(ValueError, match="absent"):
+        load_hf_dataset("org/forum", dataset="users", split="validation", **kwargs)
+    hub[0]["users"].pop("train")
+    with pytest.raises(ValueError, match="absent"):
+        load_hf_repository("org/forum", target=MongoConnection("x"), database="db", split="train")
+    assert writer.data == {}
+
+
+def test_hf_repository_names_revision_and_partial_failure(writer, hub):
+    from bondi.data import load_hf_repository
+
+    result = load_hf_repository("org/forum", target=MongoConnection("x"), database="db")
+    assert list(result) == ["posts", "users"]
+    assert result["users"].destinations == {"db/users": 2}
+    assert len(hub[2]) == 1
+    assert {call[1] for call in hub[1]} == {"fixed-commit"}
+    hub[0]["users"]["train"] = [{"fail": True}]
+    with pytest.raises(LoadDataError) as error:
+        load_hf_repository("org/forum", target=MongoConnection("x"), database="db", mode="replace")
+    assert error.value.result.destinations["db/posts"] == 2
+    assert error.value.result.destinations["db/users"] == 1
+    assert error.value.result.uncertain_writes
+
+
+def test_hf_duplicate_ids_across_splits(writer, hub):
+    from bondi.data import load_hf_dataset
+
+    hub[0]["users"] = {"train": [{"_id": "same"}], "test": [{"_id": "same"}]}
+    with pytest.raises(LoadDataError, match="Duplicate"):
+        load_hf_dataset(
+            "org/forum",
+            dataset="users",
+            target=MongoConnection("x"),
+            collection=MongoCollectionRef("db", "c"),
+        )
+
+
+def test_hf_single_config_and_invalid_repository_names(writer, hub):
+    from bondi.data import load_hf_dataset, load_hf_repository
+
+    hub[0].pop("posts")
+    assert load_hf_dataset(
+        "org/forum", target=MongoConnection("x"), collection=MongoCollectionRef("db", "c")
+    ).destinations == {"db/c": 2}
+    hub[0]["bad/name"] = hub[0]["users"]
+    before = dict(writer.data)
+    with pytest.raises(ValueError, match="Destination names"):
+        load_hf_repository("org/forum", target=MongoConnection("x"), database="db")
+    assert writer.data == before
+
+
+def test_collection_refs_and_old_interface_removed(writer):
+    import bondi.data
+    from bondi.couchbase import CouchbaseCollectionRef
+
+    ref = CouchbaseCollectionRef("bucket", "_default", "items")
+    assert ref == CouchbaseCollectionRef("bucket", "_default", "items")
+    assert len({ref, ref}) == 1
+    with pytest.raises(ValueError):
+        CouchbaseCollectionRef("", "_default", "items")
+    with pytest.raises(TypeError, match="target backend"):
+        load_documents([], target=MongoConnection("x"), collection=ref)
+    with pytest.raises(TypeError, match="iterable"):
+        load_documents(
+            {"items": []}, target=MongoConnection("x"), collection=MongoCollectionRef("db", "c")
+        )
+    assert not hasattr(bondi.data, "load_data")
+    with pytest.raises(TypeError):
+        load([], manifest={})
+
+
+def test_extended_json_documents(writer):
+    load([{"_id": "a", "date": {"$date": "2020-01-01T00:00:00Z"}}], json_mode="extended")
+    assert isinstance(next(iter(writer.data[("test", None, "items")].values()))["date"], datetime)
+
+
+@pytest.mark.parametrize("command", ["load-hf", "load-hf-repository"])
+def test_cli_hf_dispatch(writer, hub, monkeypatch, capsys, command):
+    import json
+
+    from bondi._cli import main
+
+    monkeypatch.setattr(
+        "bondi.deployment.get_deployment", lambda name: MongoConnection("mongodb://unused")
+    )
+    args = ["datasets", command, "org/forum", "--deployment", "db", "--database", "demo"]
+    if command == "load-hf":
+        args += ["--dataset", "users", "--collection", "exact", "--split", "train"]
+    assert main(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+    if command == "load-hf":
+        assert payload["destinations"] == {"demo/exact": 1}
+    else:
+        assert set(payload) == {"users", "posts"}
+        assert payload["users"]["destinations"] == {"demo/users": 2}
+
+
+def test_cli_couchbase_ref_and_options(monkeypatch, capsys):
+    from unittest.mock import Mock
+
+    from bondi._cli import main
+    from bondi.couchbase import CouchbaseCollectionRef
+    from bondi.data import CouchbaseConnection, LoadDataResult
+
+    target = CouchbaseConnection("couchbase://unused", "u", "p")
+    monkeypatch.setattr("bondi.deployment.get_deployment", lambda name: target)
+    loader = Mock(return_value=LoadDataResult("couchbase"))
+    monkeypatch.setattr("bondi.data._cli.load_file", loader)
+    assert (
+        main(
+            [
+                "datasets",
+                "load-file",
+                "input.jsonl",
+                "--deployment",
+                "db",
+                "--bucket",
+                "b",
+                "--scope",
+                "s",
+                "--collection",
+                "c",
+                "--bucket-memory-mb",
+                "256",
+                "--json-mode",
+                "extended",
+                "--id-field",
+                "key",
+            ]
+        )
+        == 0
+    )
+    assert loader.call_args.kwargs["collection"] == CouchbaseCollectionRef("b", "s", "c")
+    assert loader.call_args.kwargs["bucket_memory_mb"] == 256
+    assert loader.call_args.kwargs["json_mode"] == "extended"
+    assert loader.call_args.kwargs["id_field"] == "key"
+
+
+@pytest.mark.parametrize("option", ["--manifest", "--splits", "--indexes", "--allow-unowned"])
+def test_removed_cli_options_rejected(option):
+    from click.testing import CliRunner
+
+    from bondi._cli import cli
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "datasets",
+            "load-file",
+            "data.jsonl",
+            "--collection",
+            "c",
+            option,
+            "x",
+        ],
+    )
+    assert result.exit_code == 2
+    assert "No such option" in result.output
+
+
+def test_extended_wrappers_do_not_relax_native_datetime_policy(writer):
+    with pytest.raises(LoadDataError, match="naive datetime"):
+        load(
+            [
+                {
+                    "_id": "a",
+                    "native": datetime(2020, 1, 1),
+                    "wrapper": {"$date": "2020-01-01T00:00:00Z"},
+                }
+            ],
+            json_mode="extended",
+        )
+    load(
+        [
+            {
+                "_id": "a",
+                "native": datetime(2020, 1, 1),
+                "wrapper": {"$date": "2020-01-01T00:00:00Z"},
+            }
+        ],
+        json_mode="extended",
+        naive_datetimes="utc",
+    )
+    row = next(iter(writer.data[("test", None, "items")].values()))
+    assert row["native"] == row["wrapper"]

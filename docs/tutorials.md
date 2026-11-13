@@ -128,6 +128,7 @@ which detailed diagnostics are unavailable in Community edition.
 
 [Open `dataset_loading.ipynb`](https://github.com/relaxed-constraints/bondi/blob/main/notebooks/dataset_loading.ipynb)
 
-Load JSONL files and split datasets into a disposable MongoDB database.
-Inspect dates, IDs, replacement and progress reports. The final cell removes the demo deployment.
+Start with one JSON file, then dictionaries and multiple local files. Optional
+Hugging Face examples load one split, all splits, or a whole repository.
+The final cell removes the demo deployment and all its data.
 See [Loading datasets](datasets.md) for the API and CLI workflow.

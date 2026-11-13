@@ -72,5 +72,6 @@ speculative compatibility layers.
 
 `bondi.data` reads existing documents and writes them to native databases.
 Source readers, conversion rules and writers remain separate. Consumers own data generation and benchmark-specific verification.
-Manifests describe sources and destinations without wrapping document rows in a new dataset class.
+Single-source loaders use exact collection references. Hub repository loading
+maps configurations directly to collection names. There are no manifests.
 Loading is synchronous and non-atomic. Partial results report acknowledged writes.

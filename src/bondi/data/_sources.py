@@ -3,15 +3,13 @@
 import csv
 import hashlib
 import json
-from collections.abc import Mapping
-from importlib.resources import files
+from datetime import UTC, datetime
 from pathlib import Path
 
 from bondi.mongodb import loads_query_json
 
 # Resolve this revision once when preparing a load and record the exact commit.
 CATALOG = {
-    "demo": {"description": "Eight fictional businesses", "collection": "business"},
     **{
         name: {
             "description": f"JSynth {name} dataset",
@@ -132,153 +130,77 @@ def file_info(source):
     return {"kind": "file", "file": path.name, "sha256": digest.hexdigest()}
 
 
-def prepare(source, manifest, collection, namespace, split, splits):
-    """Return logical source specifications and optional index profiles."""
-    profiles = {}
-    base = Path.cwd()
-    if manifest is not None:
-        if source is not None:
-            raise ValueError("Use source or manifest, not both")
-        if isinstance(manifest, Mapping):
-            spec = dict(manifest)
-        else:
-            path = Path(manifest)
-            base = path.resolve().parent
-            spec = decode(path.read_text(), "plain")
-        if set(spec) - {"version", "namespace", "collections", "index_profiles"}:
-            raise ValueError("Unknown manifest fields")
-        if (
-            type(spec.get("version")) is not int
-            or spec["version"] != 1
-            or not isinstance(spec.get("collections"), dict)
-        ):
-            raise ValueError("Manifest requires version=1 and collections mapping")
-        namespace = namespace or spec.get("namespace")
-        if not namespace:
-            raise ValueError("Manifest requires a namespace")
-        profiles = spec.get("index_profiles", {})
-        entries = spec["collections"]
-    elif isinstance(source, str) and source in CATALOG:
-        info = dataset_info(source)
-        namespace = namespace or f"bondi:{source}"
-        collection = collection or info["collection"]
-        if source == "demo":
-            entries = {
-                collection: {
-                    "source": json.loads(
-                        files("bondi.deployment").joinpath("business.json").read_text()
-                    ),
-                    "id_field": "business_id",
-                }
-            }
-        else:
-            entries = {collection: {"hf": info}}
-    elif isinstance(source, Mapping):
-        # HF DatasetDict is a split mapping, not a collection mapping.
-        if type(source).__name__ in ("DatasetDict", "IterableDatasetDict"):
-            if not collection:
-                raise ValueError("collection is required for a split dataset")
-            entries = {collection: {"splits": source}}
-        else:
-            entries = {name: {"source": rows} for name, rows in source.items()}
-    else:
-        if not collection or source is None:
-            raise ValueError("source and collection are required")
-        declared_split = getattr(source, "split", None)
-        if declared_split is not None and type(source).__module__.startswith("datasets."):
-            entries = {collection: {"splits": {str(declared_split): source}}}
-        else:
-            entries = {collection: {"source": source}}
-    selected = [split] if isinstance(split, str) else split
-    if selected is not None and (not selected or len(set(selected)) != len(selected)):
-        raise ValueError("split selection must be nonempty and distinct")
+def hf_revision(repo_id, revision):
+    """Resolve a repository revision once before loading its configurations."""
+    return (
+        optional("huggingface_hub").HfApi().dataset_info(repo_id, revision=revision or "main").sha
+    )
+
+
+def hf_configs(repo_id, revision):
+    return sorted(optional("datasets").get_dataset_config_names(repo_id, revision=revision))
+
+
+def hf_plans(repo_id, dataset, revision, split, namespace):
+    library = optional("datasets")
+    available = library.get_dataset_split_names(repo_id, dataset, revision=revision)
+    selected = available if split is None else ([split] if isinstance(split, str) else list(split))
+    if not selected or len(set(selected)) != len(selected):
+        raise ValueError("Select at least one distinct split")
+    if any(part not in available for part in selected):
+        raise ValueError(f"{dataset}: requested split is absent. Available splits: {available}")
+    namespace = namespace or f"hf:{repo_id}:{dataset}"
     plans = []
-    for logical, spec in entries.items():
-        if not isinstance(spec, dict):
-            raise ValueError("Each manifest collection requires an object")
-        allowed = {
-            "source",
-            "splits",
-            "hf",
-            "id_field",
-            "database",
-            "bucket",
-            "scope",
-            "bucket_memory_mb",
-            "collection",
-        }
-        if set(spec) - allowed:
-            raise ValueError("Unknown collection manifest fields")
-        if sum(key in spec for key in ("source", "splits", "hf")) != 1:
-            raise ValueError("Each collection needs exactly one source, splits or hf field")
-        revision = None
-        if "hf" in spec:
-            hf = spec["hf"]
-            hub = optional("huggingface_hub")
-            revision = (
-                hub.HfApi().dataset_info(hf["repo_id"], revision=hf.get("revision", "main")).sha
+    for part in sorted(selected):
+        source = library.load_dataset(
+            repo_id, name=dataset, revision=revision, split=part, streaming=True
+        )
+        plans.append(
+            source_plan(
+                source,
+                dataset,
+                namespace,
+                part,
+                {
+                    "kind": "huggingface",
+                    "repo_id": repo_id,
+                    "dataset": dataset,
+                    "revision": revision,
+                },
             )
-            if hf["repo_id"] == "origami-ml/jsynth-data":
-                sources = {
-                    part: hub.hf_hub_download(
-                        hf["repo_id"],
-                        f"{hf['config']}/{part}.jsonl",
-                        repo_type="dataset",
-                        revision=revision,
-                    )
-                    for part in ("train", "test")
-                    if selected is None or part in selected
-                }
-            else:
-                datasets = optional("datasets")
-                sources = datasets.load_dataset(
-                    hf["repo_id"], name=hf.get("config"), revision=revision, streaming=True
-                )
-            namespace = namespace or f"hf:{hf['repo_id']}:{hf.get('config', 'default')}"
-        elif "splits" in spec:
-            sources = spec["splits"]
-        else:
-            sources = {None: spec["source"]}
-        if selected is not None and any(part not in sources for part in selected):
-            raise ValueError(f"{logical}: requested split is absent")
-        # Manifest insertion order is explicit. Other inputs use sorted split names.
-        order = list(sources) if manifest is not None else sorted(sources, key=lambda x: x or "")
-        for part in order:
-            if selected is not None and part not in selected:
-                continue
-            raw = sources[part]
-            shards = (
-                [raw]
-                if not isinstance(raw, (list, tuple))
-                or not raw
-                or not all(isinstance(x, (str, Path)) for x in raw)
-                else raw
-            )
-            for shard_index, shard in enumerate(shards):
-                if isinstance(shard, (str, Path)):
-                    shard = base / shard
-                base_collection = spec.get("collection", logical)
-                target = (
-                    base_collection
-                    if part is None or splits == "merge"
-                    else f"{base_collection}_{part}"
-                )
-                info = file_info(shard)
-                info.update(collection=logical, split=part, shard=shard_index, namespace=namespace)
-                if revision:
-                    info.update(revision=revision, repo_id=spec["hf"]["repo_id"])
-                plans.append(
-                    dict(
-                        logical=logical,
-                        collection=target,
-                        split=part,
-                        shard=shard_index,
-                        source=shard,
-                        namespace=namespace,
-                        spec=spec,
-                        info=info,
-                    )
-                )
-    if not plans:
-        raise ValueError("No collections selected")
-    return plans, profiles
+        )
+    return plans
+
+
+def source_plan(source, logical, namespace, split=None, info=None):
+    info = dict(info if info is not None else file_info(source))
+    info.update(collection=logical, split=split, shard=0, namespace=namespace)
+    return dict(
+        source=source, logical=logical, split=split, shard=0, namespace=namespace, info=info
+    )
+
+
+def decode_document(value):
+    """Decode JSON wrappers while leaving existing Python/BSON values unchanged."""
+    if isinstance(value, dict):
+        if any(not isinstance(key, str) for key in value):
+            raise ValueError("document keys must be strings")
+        try:
+            text = json.dumps(value)
+        except TypeError:
+            return {key: decode_document(item) for key, item in value.items()}
+        return _json_dates_utc(loads_query_json(text))
+    if isinstance(value, (list, tuple)):
+        return [decode_document(item) for item in value]
+    return value
+
+
+def _json_dates_utc(value):
+    # Only values decoded from JSON reach here. Existing Python datetimes do not.
+    if isinstance(value, datetime) and value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    if isinstance(value, dict):
+        return {key: _json_dates_utc(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_dates_utc(item) for item in value]
+    return value

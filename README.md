@@ -181,7 +181,8 @@ Report problems or suggest improvements through [GitHub issues](https://github.c
 
 ## Dataset loading (unreleased)
 
-Use `bondi.data.load_data()` or `bondi datasets load` to insert files, Hub datasets
-or Python documents into MongoDB and Couchbase. See the
+Use `load_file`, `load_documents`, `load_hf_dataset` or `load_hf_repository`
+from `bondi.data` to insert data into MongoDB and Couchbase. CLI commands are
+`bondi datasets load-file`, `load-hf` and `load-hf-repository`. See the
 [dataset guide](docs/datasets.md) and [demo notebook](notebooks/dataset_loading.ipynb).
 Optional format and Hub readers are available through the `data` extra.

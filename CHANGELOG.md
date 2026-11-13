@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Breaking:** Replace `load_data` with `load_file`, `load_documents`,
+  `load_hf_dataset` and `load_hf_repository`. Add CouchbaseCollectionRef.
+  Collection references name exact destinations. Hub splits merge by default.
+  Remove manifests, split suffixes and index profiles. CLI commands are now
+  `load-file`, `load-hf` and `load-hf-repository`.
+
 - Remove dataset ownership tracking and the `allow_unowned` option.
   `mode="replace"` explicitly permits clearing selected collections.
   The loader no longer creates or uses a metadata collection.

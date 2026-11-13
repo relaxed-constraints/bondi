@@ -4,7 +4,9 @@ from uuid import uuid4
 
 import pytest
 
-from bondi.data import LoadDataError, load_data
+from bondi.couchbase import CouchbaseCollectionRef
+from bondi.data import LoadDataError, load_documents
+from bondi.mongodb import MongoCollectionRef
 
 pytestmark = pytest.mark.live
 
@@ -13,32 +15,29 @@ pytestmark = pytest.mark.live
 def test_loader_live(backend, live_deployments):
     deployment = live_deployments(backend)
     unique = "load_" + uuid4().hex[:10]
-    options = (
-        {"database": unique}
+    ref = (
+        MongoCollectionRef(unique, "items")
         if backend == "mongodb"
-        else {"bucket": deployment.bucket, "scope": unique}
+        else CouchbaseCollectionRef(deployment.bucket, unique, "items")
     )
     # Fixture cleanup removes the entire isolated deployment.
-    result = load_data([{"_id": "a", "v": 1}], target=deployment, collection="items", **options)
+    result = load_documents([{"_id": "a", "v": 1}], target=deployment, collection=ref)
     assert sum(result.destinations.values()) == 1
     with pytest.raises(LoadDataError, match="empty"):
-        load_data([{"_id": "b"}], target=deployment, collection="items", **options)
-    result = load_data(
-        [{"_id": "b"}], target=deployment, collection="items", mode="replace", **options
-    )
+        load_documents([{"_id": "b"}], target=deployment, collection=ref)
+    result = load_documents([{"_id": "b"}], target=deployment, collection=ref, mode="replace")
     assert sum(result.destinations.values()) == 1
-    result = load_data(
-        [{"_id": "b", "v": 2}], target=deployment, collection="items", mode="upsert", **options
+    result = load_documents(
+        [{"_id": "b", "v": 2}], target=deployment, collection=ref, mode="upsert"
     )
     assert sum(result.destinations.values()) == 1
 
-    load_data(
+    load_documents(
         [{"_id": "replacement"}],
         target=deployment,
-        collection="items",
+        collection=ref,
         mode="replace",
         namespace="different-dataset",
-        **options,
     )
     if backend == "mongodb":
         from pymongo import MongoClient
@@ -65,7 +64,7 @@ def test_loader_live(backend, live_deployments):
             writer.close()
 
 
-def test_couchbase_new_bucket_and_native_indexes(live_deployments):
+def test_couchbase_new_bucket(live_deployments):
     from datetime import timedelta
 
     from couchbase.auth import PasswordAuthenticator
@@ -78,31 +77,13 @@ def test_couchbase_new_bucket_and_native_indexes(live_deployments):
     deployment = live_deployments("community")
     bucket = "load_" + uuid4().hex[:10]
     target = CouchbaseConnection(deployment.uri, deployment.username, deployment.password)
-    manifest = {
-        "version": 1,
-        "namespace": "live-bucket",
-        "collections": {"items": {"source": [{"_id": "x", "field": "value"}]}},
-        "index_profiles": {
-            "baseline": {
-                "couchbase": [{"collection": "items", "name": "field_idx", "keys": ["field"]}]
-            }
-        },
-    }
+    ref = CouchbaseCollectionRef(bucket, "_default", "items")
+    rows = [{"_id": "x", "field": "value"}]
     with pytest.raises(LoadDataError, match="bucket_memory_mb"):
-        load_data(manifest=manifest, target=target, bucket=bucket)
-    result = load_data(
-        manifest=manifest, target=target, bucket=bucket, bucket_memory_mb=100, indexes="baseline"
-    )
+        load_documents(rows, target=target, collection=ref)
+    result = load_documents(rows, target=target, collection=ref, bucket_memory_mb=100)
     assert sum(result.destinations.values()) == 1
-    # Reusing a matching index must not make a repeated load fail.
-    load_data(
-        manifest=manifest,
-        target=target,
-        bucket=bucket,
-        bucket_memory_mb=100,
-        indexes="baseline",
-        mode="replace",
-    )
+    load_documents(rows, target=target, collection=ref, mode="replace")
     cluster = Cluster(
         deployment.uri,
         ClusterOptions(PasswordAuthenticator(deployment.username, deployment.password)),
@@ -112,7 +93,6 @@ def test_couchbase_new_bucket_and_native_indexes(live_deployments):
         collection = cluster.bucket(bucket).default_scope().collection("items")
         assert collection.get(document_key("x")).content_as[dict]["field"] == "value"
         assert cluster.buckets().get_bucket(bucket).ram_quota_mb == 100
-        assert any(i.name == "field_idx" for i in cluster.query_indexes().get_all_indexes(bucket))
     finally:
         cluster.close()
 
@@ -133,7 +113,9 @@ def test_mongo_explicit_credentials_live(live_deployments):
     uri = deployment.uri.replace("mongodb://", "mongodb://ignored:ignored@")
     uri = uri.rstrip("/") + ("&" if "?" in uri else "/?") + f"authSource={database}"
     target = MongoConnection(uri, username="loader", password=password)
-    result = load_data([{"_id": "a"}], target=target, database=database, collection="items")
+    result = load_documents(
+        [{"_id": "a"}], target=target, collection=MongoCollectionRef(database, "items")
+    )
     assert result.destinations == {f"{database}/items": 1}
     with MongoClient(deployment.uri) as admin:
         assert admin[database].items.count_documents({}) == 1

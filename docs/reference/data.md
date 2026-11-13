@@ -1,6 +1,21 @@
 # Dataset loading
 
-::: bondi.data.load_data
+::: bondi.data.load_file
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: bondi.data.load_documents
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: bondi.data.load_hf_dataset
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: bondi.data.load_hf_repository
     options:
       show_root_heading: true
       heading_level: 2
@@ -35,5 +50,7 @@
       show_root_heading: true
       heading_level: 2
 
-Selecting `mode="replace"` permits clearing the selected collections. The loader
-stores no ownership metadata and has no `allow_unowned` option.
+::: bondi.couchbase.CouchbaseCollectionRef
+    options:
+      show_root_heading: true
+      heading_level: 2

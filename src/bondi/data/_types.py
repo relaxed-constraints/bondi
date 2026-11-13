@@ -47,7 +47,7 @@ class LoadDataResult:
     """Load progress and source information, without connection credentials.
 
     Counts include acknowledged writes only. A driver failure can leave additional
-    writes whose outcome is unknown. Collections and index changes are not atomic.
+    writes whose outcome is unknown. Collection changes are not atomic.
     Attributes:
         backend: Destination backend.
         destinations: Counts by destination collection.

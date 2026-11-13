@@ -9,8 +9,19 @@ from types import SimpleNamespace
 import click
 
 from bondi._terminal import table
+from bondi.couchbase.collection import CouchbaseCollectionRef
+from bondi.mongodb import MongoCollectionRef
 
-from . import CouchbaseConnection, MongoConnection, dataset_info, list_datasets, load_data
+from . import (
+    CouchbaseConnection,
+    MongoConnection,
+    dataset_info,
+    list_datasets,
+    load_file,
+    load_hf_dataset,
+    load_hf_repository,
+)
+from ._writers import connection
 
 
 @click.group(no_args_is_help=False)
@@ -32,45 +43,70 @@ def info(name):
     return _dispatch(dataset_command="info", name=name)
 
 
-@datasets.command("load")
-@click.argument("source", required=False)
-@click.option("--manifest", help="Dataset manifest file.")
-@click.option("--deployment", help="Saved deployment name.")
-@click.option("--connection", help="JSON connection file. Use password_env for credentials.")
-@click.option("--database")
-@click.option("--bucket")
-@click.option("--scope")
-@click.option("--collection")
-@click.option("--id-field")
-@click.option("--namespace")
-@click.option("--indexes")
-@click.option("--bucket-memory-mb", type=int)
-@click.option("--batch-size", type=int, default=1000, show_default=True)
-@click.option(
-    "--mode",
-    type=click.Choice(["create", "replace", "upsert"]),
-    default="create",
-    show_default=True,
-)
-@click.option("--split", multiple=True, help="Select a split. Repeat to select several.")
-@click.option(
-    "--splits", type=click.Choice(["preserve", "merge"]), default="preserve", show_default=True
-)
-@click.option(
-    "--json-mode", type=click.Choice(["plain", "extended"]), default="plain", show_default=True
-)
-@click.option(
-    "--naive-datetimes", type=click.Choice(["error", "utc"]), default="error", show_default=True
-)
-@click.option(
-    "--decimal-mode", type=click.Choice(["error", "string"]), default="error", show_default=True
-)
-def load(**options):
-    """Load documents and output the result as JSON."""
+def _load_options(function):
+    """Common destination and write options for the three source commands."""
+    decorators = [
+        click.option("--deployment", help="Saved deployment name."),
+        click.option("--connection", help="JSON connection file, with optional password_env."),
+        click.option("--database", help="MongoDB destination database."),
+        click.option("--bucket", help="Couchbase destination bucket."),
+        click.option("--scope", default="_default", show_default=True),
+        click.option("--id-field"),
+        click.option("--namespace"),
+        click.option("--bucket-memory-mb", type=int),
+        click.option("--batch-size", type=int, default=1000, show_default=True),
+        click.option(
+            "--mode",
+            type=click.Choice(["create", "replace", "upsert"]),
+            default="create",
+            show_default=True,
+        ),
+        click.option("--json-mode", type=click.Choice(["plain", "extended"]), default="plain"),
+        click.option("--naive-datetimes", type=click.Choice(["error", "utc"]), default="error"),
+        click.option("--decimal-mode", type=click.Choice(["error", "string"]), default="error"),
+    ]
+    for decorate in reversed(decorators):
+        function = decorate(function)
+    return function
+
+
+@datasets.command("load-file")
+@click.argument("source", type=click.Path(path_type=Path))
+@click.option("--collection", required=True, help="Exact destination collection name.")
+@_load_options
+def file_command(**options):
+    """Load one CSV, JSON, JSONL or Parquet file."""
+    return _load_dispatch("load-file", options)
+
+
+@datasets.command("load-hf")
+@click.argument("source")
+@click.option("--dataset", help="HF configuration name. Required for multi-config repositories.")
+@click.option("--split", multiple=True, help="Select splits. Default: combine all splits.")
+@click.option("--revision", help="Hub branch, tag or commit.")
+@click.option("--collection", required=True, help="Exact collection name. No suffix is added.")
+@_load_options
+def hf_command(**options):
+    """Load one Hugging Face dataset into one collection."""
+    return _load_dispatch("load-hf", options)
+
+
+@datasets.command("load-hf-repository")
+@click.argument("source")
+@click.option("--split", multiple=True, help="Select splits in every dataset. Default: all.")
+@click.option("--revision", help="Hub branch, tag or commit.")
+@_load_options
+def repository_command(**options):
+    """Load all HF configurations, using their names as collection names."""
+    return _load_dispatch("load-hf-repository", options)
+
+
+def _load_dispatch(command, options):
     if (options["deployment"] is None) == (options["connection"] is None):
         raise click.UsageError("Specify exactly one of --deployment or --connection.")
-    options["split"] = list(options["split"]) or None
-    return _dispatch(dataset_command="load", **options)
+    if "split" in options:
+        options["split"] = list(options["split"]) or None
+    return _dispatch(dataset_command=command, **options)
 
 
 def _dispatch(**options):
@@ -126,24 +162,57 @@ def run(args):
     options = {
         key: getattr(args, key)
         for key in (
-            "manifest",
-            "database",
-            "bucket",
-            "collection",
             "id_field",
             "namespace",
-            "indexes",
             "bucket_memory_mb",
             "batch_size",
             "mode",
-            "split",
-            "splits",
             "json_mode",
             "naive_datetimes",
             "decimal_mode",
         )
     }
-    options["scope"] = args.scope or "_default"
-    result = load_data(args.source, target=target, **options)
-    print(json.dumps(asdict(result), indent=2))
+    conn = connection(target)
+    if isinstance(conn, MongoConnection):
+        if not args.database:
+            raise ValueError("MongoDB requires a destination database. Specify --database NAME.")
+        if args.bucket is not None or args.scope != "_default":
+            raise ValueError("MongoDB does not accept --bucket or --scope")
+    else:
+        if not args.bucket:
+            raise ValueError("Couchbase requires a destination bucket. Specify --bucket NAME.")
+        if args.database is not None:
+            raise ValueError("Couchbase does not accept --database")
+    if args.dataset_command == "load-hf-repository":
+        result = load_hf_repository(
+            args.source,
+            target=target,
+            database=args.database,
+            bucket=args.bucket,
+            scope=args.scope,
+            split=args.split,
+            revision=args.revision,
+            **options,
+        )
+        payload = {key: asdict(value) for key, value in result.items()}
+    else:
+        ref = (
+            MongoCollectionRef(args.database, args.collection)
+            if isinstance(conn, MongoConnection)
+            else CouchbaseCollectionRef(args.bucket, args.scope, args.collection)
+        )
+        if args.dataset_command == "load-file":
+            result = load_file(args.source, target=target, collection=ref, **options)
+        else:
+            result = load_hf_dataset(
+                args.source,
+                target=target,
+                collection=ref,
+                dataset=args.dataset,
+                split=args.split,
+                revision=args.revision,
+                **options,
+            )
+        payload = asdict(result)
+    print(json.dumps(payload, indent=2))
     return 0

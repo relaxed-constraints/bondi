@@ -70,8 +70,10 @@ See `docs/load-generation.md` in the source checkout.
 
 ## Dataset loading (unreleased)
 
-Check the installed version before using `bondi.data.load_data` or `bondi datasets`.
+Use `load_file`, `load_documents`, `load_hf_dataset` or `load_hf_repository`
+from `bondi.data`. Single-source calls require an exact CollectionRef.
+Hub calls combine all splits by default; select a split explicitly when needed.
 Sources can be files, Hub datasets or document iterables. Use a namespace when anonymous sources lack IDs.
-Create mode refuses nonempty collections. Replacement requires ownership or an explicit override.
+Create mode refuses nonempty collections. Replacement explicitly permits clearing the selected collection.
 Do not change a user's write mode to bypass a refusal. Report partial writes if a load fails.
 See `docs/datasets.md` and `notebooks/dataset_loading.ipynb` in the source checkout.

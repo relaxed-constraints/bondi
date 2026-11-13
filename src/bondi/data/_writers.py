@@ -60,14 +60,6 @@ class MongoWriter:
         if not result.acknowledged:
             raise RuntimeError("MongoDB did not acknowledge the write")
 
-    def indexes(self, dest, definitions):
-        for definition in definitions:
-            self.client[dest[0]][dest[2]].create_index(
-                [tuple(pair) for pair in definition["keys"]],
-                name=definition["name"],
-                **definition.get("options", {}),
-            )
-
     def close(self):
         self.client.close()
 
@@ -163,32 +155,6 @@ class CouchbaseWriter:
             collection.upsert(key, document)
         else:
             collection.insert(key, document)
-
-    def indexes(self, dest, definitions):
-        from couchbase.management.options import CreateQueryIndexOptions, GetAllQueryIndexOptions
-
-        for definition in definitions:
-            manager = self.cluster.query_indexes()
-            existing = manager.get_all_indexes(
-                dest[0], GetAllQueryIndexOptions(scope_name=dest[1], collection_name=dest[2])
-            )
-            match = next((index for index in existing if index.name == definition["name"]), None)
-            keys = [f"`{key}`" for key in definition["keys"]]
-            if match is not None:
-                if (
-                    match.index_key != keys
-                    or match.condition
-                    or match.is_primary
-                    or match.partition
-                ):
-                    raise ValueError("Existing Couchbase index differs from the selected profile")
-                continue
-            manager.create_index(
-                dest[0],
-                definition["name"],
-                [f"`{key}`" for key in definition["keys"]],
-                CreateQueryIndexOptions(scope_name=dest[1], collection_name=dest[2]),
-            )
 
     def close(self):
         self.cluster.close()
