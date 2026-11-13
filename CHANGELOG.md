@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Wait for healthy Couchbase nodes and a successful query before creating a missing
+  bucket. Use the existing startup deadline. Add repeated Community 8.0.0 restart
+  checks for the first-bucket directory conflict.
+
 - Fix Couchbase replacement loads into new collections by skipping the unnecessary
   deletion scan after successful creation. Creation conflicts still fail.
 - Preserve the original scan or deletion error if Couchbase scan cancellation also

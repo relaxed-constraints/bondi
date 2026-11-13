@@ -350,6 +350,8 @@ def deploy_couchbase(
 ) -> Deployment:
     """Deploy a local Couchbase node with Data, Query and Index services.
 
+    Waits for healthy nodes and a successful query before creating a missing bucket.
+    These checks share the startup timeout; there is no fixed startup delay.
     Creates a 256 MiB bucket with its default scope/collection; no data or indexes
     are added. Community is the default. All three distinct ports bind localhost.
     Credentials are saved in owner-only metadata and never printed by the CLI.

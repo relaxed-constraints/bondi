@@ -77,3 +77,49 @@ def test_couchbase_lifecycle(tmp_path, monkeypatch, edition, live_ports):
         if list_deployments():
             get_deployment("cb-test").remove()
     assert list_deployments() == []
+
+
+@pytest.mark.parametrize("attempt", range(3))
+def test_fresh_community_800_restarts(tmp_path, monkeypatch, live_ports, attempt):
+    """Each fresh volume must survive restart without a legacy bucket directory."""
+    from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
+
+    monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
+    ports = live_ports.claim("couchbase")
+    db = deploy_couchbase(
+        f"cb-readiness-{attempt}",
+        version="8.0.0",
+        bucket="travel",
+        management_port=ports[0],
+        query_port=ports[1],
+        kv_port=ports[2],
+    )
+    try:
+        with CouchbaseExecutor.from_uri(
+            db.uri,
+            username=db.username,
+            password=db.password,
+            timeout_seconds=30,
+        ) as executor:
+            executor.run(
+                CouchbaseQuery(
+                    'UPSERT INTO `travel` (KEY, VALUE) VALUES ("restart-check", {"value":42})'
+                )
+            )
+        for _ in range(2):
+            db.stop()
+            db.start(timeout=90)
+            assert db.status() == "running"
+            with CouchbaseExecutor.from_uri(
+                db.uri,
+                username=db.username,
+                password=db.password,
+                timeout_seconds=30,
+            ) as executor:
+                result = executor.run(
+                    CouchbaseQuery('SELECT RAW d.`value` FROM `travel` d USE KEYS "restart-check"'),
+                    collect_results=True,
+                )
+                assert result.documents == [42]
+    finally:
+        db.remove()
