@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Explain how to supply a missing MongoDB database name when loading datasets.
+
 - Start the dataset-loading notebook with a single-file business collection example.
 
 - **Breaking:** `Deployment.remove()` now deletes data and saved configuration

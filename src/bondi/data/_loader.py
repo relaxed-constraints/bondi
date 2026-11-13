@@ -45,7 +45,8 @@ def load_data(
         source: File, registered name, document iterable, HF dataset or collection mapping.
         target: Deployment, MongoConnection or CouchbaseConnection.
         manifest: Version 1 manifest path or mapping. Mutually exclusive with source.
-        database: Default MongoDB database. Manifests can override each destination.
+        database: MongoDB database. Required unless supplied by the manifest.
+            Manifests can override each destination.
         bucket: Default Couchbase bucket. Defaults to a managed deployment's bucket.
         scope: Default Couchbase scope.
         collection: Name for a single source. Catalogue entries provide defaults.
@@ -108,6 +109,11 @@ def load_data(
         root = (
             spec.get("bucket", bucket) if backend == "couchbase" else spec.get("database", database)
         )
+        if backend == "mongodb" and (root is None or root == ""):
+            raise ValueError(
+                "MongoDB requires a destination database. Specify --database NAME in the CLI "
+                'or database="NAME" in Python, or set database in the manifest collection.'
+            )
         dest = (
             name(root),
             name(spec.get("scope", scope)) if backend == "couchbase" else None,

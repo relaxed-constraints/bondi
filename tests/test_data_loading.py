@@ -405,3 +405,36 @@ def test_cli_empty_catalogue(monkeypatch, capsys):
     assert capsys.readouterr().out == "No datasets available.\n"
     assert main(["datasets", "list", "--json"]) == 0
     assert capsys.readouterr().out == "{}\n"
+
+
+@pytest.mark.parametrize("database", [None, ""])
+def test_missing_database_explains_options_before_connecting(monkeypatch, database):
+    from unittest.mock import Mock
+
+    constructor = Mock()
+    monkeypatch.setattr("bondi.data._loader.MongoWriter", constructor)
+    with pytest.raises(ValueError) as error:
+        load_data("adult", target=MongoConnection("mongodb://unused"), database=database)
+    message = str(error.value)
+    assert "MongoDB requires a destination database" in message
+    assert "--database NAME" in message
+    assert 'database="NAME"' in message
+    constructor.assert_not_called()
+
+
+def test_cli_missing_database_message(monkeypatch, capsys):
+    from unittest.mock import Mock
+
+    from bondi._cli import main
+
+    monkeypatch.setattr(
+        "bondi.deployment.get_deployment", lambda name: MongoConnection("mongodb://unused")
+    )
+    constructor = Mock()
+    monkeypatch.setattr("bondi.data._loader.MongoWriter", constructor)
+    assert main(["datasets", "load", "adult", "--deployment", "notebook-datasets"]) == 1
+    output = capsys.readouterr()
+    assert not output.out
+    assert "MongoDB requires a destination database" in output.err
+    assert "--database NAME" in output.err
+    constructor.assert_not_called()

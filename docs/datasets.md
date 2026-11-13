@@ -261,3 +261,7 @@ See the [API reference](reference/data.md) and [dataset notebook](tutorials.md#l
 catalogue metadata. The `info` and `load` commands still return plain JSON.
 JSON output contains no colour codes, headings or progress messages.
 Use `bondi datasets load --help` to inspect all loading options.
+
+MongoDB loads require `--database NAME` in the CLI or `database="NAME"` in Python,
+unless the manifest supplies a database for each collection. A saved deployment
+selects the server, not the destination database.
