@@ -179,7 +179,7 @@ BONDI is maintained by **Relaxed Constraints** and distributed under the [MIT li
 For development, see [Contributing](https://relaxed-constraints.github.io/bondi/contributing/).
 Report problems or suggest improvements through [GitHub issues](https://github.com/relaxed-constraints/bondi/issues).
 
-## Dataset loading (unreleased)
+## Dataset loading
 
 Use `load_demo_data`, `load_file`, `load_documents`, `load_hf_dataset` or `load_hf_repository`
 from `bondi.data` to insert data into MongoDB and Couchbase. CLI commands are

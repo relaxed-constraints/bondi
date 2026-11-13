@@ -2,77 +2,53 @@
 
 ## Unreleased
 
-- Show this changelog under Development in the documentation, using the same source file.
+## 0.3.0 — 2026-11-13
 
-- **Breaking:** Move demo loading to `bondi.data.load_demo_data()` and
-  `bondi dataset load-demo`. Remove the deployment method, command and
-  DemoDataResult type. Use explicit collection references and LoadDataResult.
-  The default mode is create. Use upsert for repeat loads.
-  Couchbase uses the optional SDK. Create query indexes separately.
+### Breaking changes
 
+- Group deployment CLI commands under `bondi deployment`. Use
+  `bondi deployment create` instead of `bondi deploy`. Move list, status,
+  start, stop, logs and remove into this group. Dataset commands use
+  `bondi dataset`. There are no compatibility aliases.
+- `Deployment.remove()` now deletes data and saved configuration by default.
+  Use `remove(keep_data=True)` to retain them. Remove the `delete_data` argument.
+  This aligns Python removal with the CLI (issue #9).
+- Move demo loading from `Deployment.load_demo_data()` to
+  `bondi.data.load_demo_data(target=..., collection=...)`.
+  Replace `bondi load-demo-data` with `bondi dataset load-demo`.
+  Use an explicit collection reference and the shared `LoadDataResult`.
+  The default mode requires an empty collection. Use upsert for repeat loads.
+  Remove `DemoDataResult`. Couchbase now uses the optional SDK for demo loading.
+  Create query indexes separately.
 
-- **Breaking:** Group lifecycle commands under `bondi deployment` and rename
-  `deploy` to `create`. Rename `datasets` to `dataset`.
-  Move `load-demo-data` under `deployment`. Remove the old command paths.
+### Dataset loading
 
-- Rewrite the dataset guide with simple file and Hub examples first, followed
-  by connections, IDs, replacement, type conversion and progress reporting.
+- Add `load_file`, `load_documents`, `load_hf_dataset` and `load_hf_repository`
+  for MongoDB and Couchbase. Support CSV, JSON, JSONL, Parquet, Python dictionaries
+  and Hugging Face datasets. File and Hub readers are core dependencies.
+- Use `MongoCollectionRef` and the new `CouchbaseCollectionRef` to name exact
+  destinations. Hub loads combine all splits by default, or select named splits.
+  Repository loading uses dataset names as collection names.
+- Support create, upsert and replace modes. Replacement explicitly permits
+  clearing the selected collection. No ownership metadata or indexes are created.
+- Preserve supplied IDs or use a selected ID field. Generate missing IDs from
+  a stable namespace as `gen:` plus 24 hexadecimal characters.
+- Add Extended JSON decoding and explicit Couchbase type conversion.
+  Support bucket, scope and collection creation, progress callbacks and partial
+  failure reports. Result destinations use dotted names.
+- Accept managed deployments or explicit connections. MongoDB connections support
+  optional username and password fields. CLI connection files support password_env.
+- Add dataset guides, an API reference, a notebook and live type-conversion tests.
 
-- Reorganize the deployment guide around CLI and Python examples. Simplify
-  lifecycle, version, memory and troubleshooting instructions.
+### CLI and documentation
 
-- Add live Couchbase round-trip tests for native Python/BSON values and Extended
-  JSON documents and files, including nested dates, ObjectIds and decimals.
-
-- Use dotted destination labels in load results: `database.collection` for MongoDB
-  and `bucket.scope.collection` for Couchbase.
-
-- Include CSV, JSON, JSONL, Parquet and Hugging Face loading in a plain BONDI
-  installation. Move dataset reader dependencies into core and remove the data extra.
-
-- **Breaking:** Replace `load_data` with `load_file`, `load_documents`,
-  `load_hf_dataset` and `load_hf_repository`. Add CouchbaseCollectionRef.
-  Collection references name exact destinations. Hub splits merge by default.
-  Remove manifests, split suffixes and index profiles. CLI commands are now
-  `load-file`, `load-hf` and `load-hf-repository`.
-
-- Remove dataset ownership tracking and the `allow_unowned` option.
-  `mode="replace"` explicitly permits clearing selected collections.
-  The loader no longer creates or uses a metadata collection.
-
-- Explain how to supply a missing MongoDB database name when loading datasets.
-
-- Start the dataset-loading notebook with a single-file business collection example.
-
-- **Breaking:** `Deployment.remove()` now deletes data and saved configuration
-  by default. Use `remove(keep_data=True)` to retain them. Remove the
-  `delete_data` argument without a compatibility alias. Align the API with
-  CLI removal (issue #9).
-
-- Show removed deployments in dim grey. Add `(data retained)` only when the
-  Compose data volume exists. Show unhealthy deployments in red.
-
-- Migrate the CLI to Click and Rich, included in the core dependencies.
-  Preserve command names, options, defaults, removal confirmation and JSON output.
-  Add styled tables for datasets and deployments, and coloured status messages.
-
-- Show a readable table for `bondi dataset list`. Add `--json` for catalogue metadata.
-
-- Explain all three ID options when a source document lacks an ID and namespace.
-
-- Shorten generated dataset IDs to `gen:` plus 24 hexadecimal characters.
-  This changes generated IDs from the earlier unreleased format. Upsert retains
-  documents with old IDs, so use explicit replacement when migrating.
-
-- Fix dataset notebook cleanup to explicitly delete its demo data volume.
-
-- Add optional username and password fields to dataset MongoConnection.
-  MongoDB CLI connection files can read passwords through password_env.
-
-- Add dataset loading for MongoDB and Couchbase with local files, Hub sources,
-  Python iterables, split handling, stable IDs, write modes.
-  Add explicit Extended JSON conversion, bucket creation, optional index profiles,
-  progress reports, `bondi dataset` commands and a demo notebook.
+- Use Click and Rich for CLI parsing and readable tables. Add `--json` to
+  `bondi dataset list`. Show unhealthy deployments in red and removed ones in
+  dim grey, with `(data retained)` when their volume exists.
+- Reorganize the guides from simple examples to advanced options. Update notebooks
+  and the AI agent skill for the new APIs and commands.
+- Add dataset loading to the homepage and place deployment and loading first in
+  the User guide. Show the root changelog under Development without duplicating it.
 
 ## 0.2.0 — 2026-11-13
 

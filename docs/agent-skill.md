@@ -1,4 +1,4 @@
-# BONDI agent skill
+# AI agent skill
 
 The BONDI skill helps coding agents use the Python API and CLI, choose components,
 find tutorials, and develop BONDI itself when requested. It encourages agents to
@@ -19,35 +19,16 @@ npx skills add relaxed-constraints/bondi --skill bondi
 
 Choose your agent when prompted. The
 [open-source skills installer](https://github.com/vercel-labs/skills) requires
-Node.js (currently 22.20 or newer). Alternatively, select one agent explicitly:
+Node.js (currently 22.20 or newer).
 
-```sh
-npx skills add relaxed-constraints/bondi --skill bondi -a codex
-npx skills add relaxed-constraints/bondi --skill bondi -a claude-code
-npx skills add relaxed-constraints/bondi --skill bondi -a gemini-cli
-npx skills add relaxed-constraints/bondi --skill bondi -a cursor
-```
+Start a new agent session after installation if the skill is not discovered.
 
-Run only the commands for the agents you use. Installation is project-local by
-default; add `-g` for personal installation across projects. Start a new agent
-session after installation if the skill is not discovered.
-
-The GitHub command needs a repository revision containing `skills/bondi/`.
-The initial skill is newer than v0.1.4; that tag does not contain it.
-From a BONDI checkout containing the skill, you can install the local copy:
-
-```sh
-npx skills add . --skill bondi
-```
-
-For coursework, keep the installed skill and installer-generated lockfile with
-your project according to your agent's conventions. Record the BONDI version
-separately: updating a skill does not update the Python package. Apply skill updates deliberately with `npx skills update bondi`.
+Apply skill updates deliberately with `npx skills update bondi`.
 
 ## Manual fallback
 
 No Node.js is required. Clone the repository or download its GitHub source archive,
-then copy the **whole** `skills/bondi/` directory, including `references/`, to
+then copy or sim-link the **whole** `skills/bondi/` directory, including `references/`, to
 one of these locations:
 
 | Agent | Inside your project | Personal installation |
@@ -64,10 +45,6 @@ destination does not already exist:
 mkdir -p .agents/skills
 cp -R /path/to/bondi/skills/bondi .agents/skills/bondi
 ```
-
-If already installed, review and replace the existing directory deliberately
-instead of nesting another copy inside it. Manual copies do not update
-automatically. Avoid installing duplicate copies of the same skill for one agent.
 
 See the native skill documentation for
 [Codex](https://learn.chatgpt.com/docs/build-skills),

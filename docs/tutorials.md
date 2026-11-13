@@ -32,7 +32,7 @@ named deployment and loads the demo data; its final cell removes the deployment,
 including its data volume and saved configuration. If you interrupt execution,
 run that cleanup cell manually. The schema notebook needs no database or Docker.
 
-### VS Code (recommended for students)
+### VS Code (recommended)
 
 1. Open the BONDI repository folder in VS Code and install Microsoft's **Python**
    and **Jupyter** extensions.

@@ -8,28 +8,27 @@ queries, run experiments against databases, inspect data, and generate workloads
 Research models and experiment tracking belong in your project; the toolkit supplies
 the shared database components.
 
-## What's currently supported
-
-| Capability | MongoDB | Couchbase |
-| --- | --- | --- |
-| **[Local deployments via CLI & API](deployment.md)** | ✅ Supported | ✅ Supported |
-| **[Native queries and workload persistence](workloads.md)** | ✅ Find and aggregation |  ✅ SQL++ |
-| **[Query and workload execution, explain and profiling](executor.md)** | ✅ Supported |  ✅ Supported; detailed profiling depends on server support (enterprise edition) |
-| **[Load generation](load-generation.md)** | ✅ Sustained load with sync and async executors | ✅ Same API |
-| **[Summary parsing](summaries.md)** | ✅ Supported |  ✅ Supported; some metrics unavailable |
-| **[Schema inspection](schemas.md)** |  ✅ Python documents from either backend or files |  ✅ Same parser |
-| **[Sampling estimation](mongodb-estimation.md)** | ✅ Supported | ❌ Planned/deferred |
-| **[Pattern-based workload generation](workload-generation.md)** | 🟡 Flat find queries; no logical expressions or aggregation pipelines | ❌ Not implemented |
-
-BONDI [0.2.0](https://pypi.org/project/bondi/0.2.0/) is available under the MIT license.
-
 ## Start here
 
 1. [Install the toolkit](installation.md).
 2. [Deploy a local database](deployment.md) using the CLI or Python API, then load your data.
 3. [Run your first query](quickstart.md).
 
-Explore the **User guide** by task, follow a **Tutorial** for a complete workflow,
+Explore the [User guide](deployment.md) by task, follow a [Tutorial](tutorials.md) for a complete workflow,
 or use the [API reference](api.md) to look up a particular class or method.
 
-Read [Loading datasets](datasets.md) to load local files, Hub datasets or generated documents into either backend.
+## What's currently supported
+
+| Capability | MongoDB | Couchbase |
+| --- | --- | --- |
+| **[Local deployments via CLI & API](deployment.md)** | ✅ Supported | ✅ Supported |
+| **[Dataset loading](datasets.md)** | ✅ Files, Python documents and Hugging Face datasets | ✅ Same sources, with type conversion |
+| **[Native queries and workload persistence](workloads.md)** | ✅ Find and aggregation |  ✅ SQL++ |
+| **[Query and workload execution, explain and profiling](executor.md)** | ✅ Supported |  ✅ Supported; detailed profiling requires enterprise edition |
+| **[Load generation](load-generation.md)** | ✅ Sustained load with sync and async executors | ✅ Same API |
+| **[Summary parsing](summaries.md)** | ✅ Supported |  ✅ Supported; some metrics unavailable |
+| **[Schema inspection](schemas.md)** |  ✅ Python documents from either backend or files |  ✅ Same parser |
+| **[Sampling estimation](mongodb-estimation.md)** | ✅ Supported | ❌ Planned/deferred |
+| **[Pattern-based workload generation](workload-generation.md)** | 🟡 Flat find queries; no logical expressions or aggregation pipelines | ❌ Not implemented |
+
+BONDI [0.3.0](https://pypi.org/project/bondi/0.3.0/) is available under the MIT license.

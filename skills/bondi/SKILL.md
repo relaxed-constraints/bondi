@@ -19,7 +19,7 @@ it is not a query translator or an experiment-tracking framework.
 
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
-and dependency constraints before using an API. This skill describes the 0.2.0 API.
+and dependency constraints before using an API. This skill describes the 0.3.0 API.
 It includes sustained load generation, pattern selection, workload callbacks,
 MongoDB memory limits and executor health checks. Check installed signatures before
 using these features. Online documentation can be newer than the installed package.
@@ -68,7 +68,7 @@ Drain expiry records unresolved results and requests cooperative cancellation;
 no hard process deadline or server-side cancellation guarantee is provided.
 See `docs/load-generation.md` in the source checkout.
 
-## Dataset loading (unreleased)
+## Dataset loading
 
 Use `load_file`, `load_documents`, `load_hf_dataset` or `load_hf_repository`
 from `bondi.data`. Single-source calls require an exact CollectionRef.
@@ -82,7 +82,8 @@ See `docs/datasets.md` and `notebooks/dataset_loading.ipynb` in the source check
 
 Use `bondi deployment create` to create a deployment. Use
 `bondi deployment list|status|start|stop|logs|remove` to manage deployments.
-Use `bondi dataset` for dataset commands. The Python API is unchanged.
+Use `bondi dataset` for dataset commands. Python deployment creation still uses
+`deploy_mongodb()` and `deploy_couchbase()`.
 
 Load packaged demo businesses with `bondi.data.load_demo_data(target=deployment, collection=ref)`
 or `bondi dataset load-demo`. Use the dataset loader for all data sources.

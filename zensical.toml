@@ -10,11 +10,12 @@ nav = [
     { "Home" = "index.md" },
     { "Getting started" = [
         { "Installation" = "installation.md" },
-        { "Coding agent skill" = "agent-skill.md" },
-        { "Database deployment" = "deployment.md" },
         { "Quickstart" = "quickstart.md" },
+        { "AI agent skill" = "agent-skill.md" },
     ] },
     { "User guide" = [
+        { "Database deployment" = "deployment.md" },
+        { "Loading datasets" = "datasets.md" },
         { "Queries and workloads" = [
             { "MongoDB queries" = "find-query.md" },
             { "MongoDB Query statistics" = "mongodb-query-statistics.md" },
@@ -30,7 +31,6 @@ nav = [
         { "Schema inspection" = "schemas.md" },
         { "Cardinality estimation" = "mongodb-estimation.md" },
         { "Workload generation" = "workload-generation.md" },
-        { "Loading datasets" = "datasets.md" },
     ] },
     { "Tutorials" = "tutorials.md" },
     { "API reference" = [

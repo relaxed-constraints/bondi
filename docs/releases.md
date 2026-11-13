@@ -2,15 +2,18 @@
 
 ## Current release
 
-Version 0.2.0 adds sustained query load generation for MongoDB and Couchbase.
-Executors support warm-up, measurement, draining and streamed result callbacks.
-Selection policies choose individual queries or patterns with explicit weights.
-The release also adds a MongoDB tutorial and updates the documentation theme.
+Version 0.3.0 adds dataset loading and reorganizes the CLI.
+Use `bondi deployment` to manage databases and `bondi dataset` to load data.
+The Python removal default now deletes data. Use `keep_data=True` to retain it.
+Demo loading now lives in `bondi.data`.
 
-See the [load generation guide](load-generation.md), [tutorials](tutorials.md), and
-[changelog](https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md).
-Release artifacts: [PyPI](https://pypi.org/project/bondi/0.2.0/) and
-[GitHub v0.2.0](https://github.com/relaxed-constraints/bondi/releases/tag/v0.2.0).
+See the [dataset guide](datasets.md) and [changelog](changelog.md) for the full changes.
+Release artifacts: [PyPI](https://pypi.org/project/bondi/0.3.0/) and
+[GitHub v0.3.0](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.0).
+
+## 0.3.0 verification
+
+Release checks are in progress. Publication and deployment follow successful checks.
 
 ## 0.2.0 verification
 
@@ -83,10 +86,10 @@ reference were checked for the new metrics.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.2.0` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.3.0` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.2.0` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.3.0` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.
@@ -150,8 +153,8 @@ Couchbase Community and Couchbase Enterprise deployments in a temporary registry
 They load the packaged demo collection and the Couchbase `city_stars` index needed
 by executor probes. Each backend/edition is reused within the test session and
 removed, including its data, during teardown—even when a test or demo setup fails.
-Lifecycle and demo-loader tests create separate deployments because they exercise
-stop/remove/restart and mutate their own fixtures.
+Lifecycle tests create separate deployments for stop/remove/restart checks.
+Demo-loader tests use separate collections in the shared fixtures.
 
 Tests never look up or reuse your normal BONDI deployments. The temporary registry
 produces distinct Docker project identities; cleanup only targets deployments
