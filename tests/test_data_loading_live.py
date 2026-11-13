@@ -120,3 +120,100 @@ def test_mongo_explicit_credentials_live(live_deployments):
     assert result.destinations == {f"{database}.items": 1}
     with MongoClient(deployment.uri) as admin:
         assert admin[database].items.count_documents({}) == 1
+
+
+@pytest.mark.parametrize("source_kind", ["native", "extended_documents", "extended_jsonl"])
+def test_couchbase_type_conversion_round_trip(live_deployments, tmp_path, source_kind):
+    """Check parsing, conversion, SDK serialization and stored JSON together."""
+    import json
+    from datetime import date, datetime, timedelta, timezone
+    from decimal import Decimal
+
+    from bson import Decimal128, ObjectId
+    from couchbase.auth import PasswordAuthenticator
+    from couchbase.cluster import Cluster
+    from couchbase.options import ClusterOptions
+
+    from bondi.data import load_file
+    from bondi.data._values import document_key
+
+    deployment = live_deployments("community")
+    scope = "types_" + uuid4().hex[:10]
+    ref = CouchbaseCollectionRef(deployment.bucket, scope, "items")
+    oid = ObjectId("507f1f77bcf86cd799439011")
+    native = {
+        "_id": oid,
+        "nested": {
+            "values": [
+                oid,
+                datetime(2026, 1, 2, 13, 4, 5, 123456, tzinfo=timezone(timedelta(hours=11))),
+                Decimal("12.50"),
+                Decimal128("0.125"),
+                date(2026, 1, 2),
+                2**53 - 1,
+                True,
+                None,
+            ]
+        },
+    }
+    extended = {
+        "_id": {"$oid": str(oid)},
+        "nested": {
+            "values": [
+                {"$oid": str(oid)},
+                {"$date": "2026-01-02T13:04:05.123+11:00"},
+                {"$numberDecimal": "12.50"},
+                {"$numberDecimal": "0.125"},
+                "2026-01-02",
+                {"$numberLong": str(2**53 - 1)},
+                True,
+                None,
+            ]
+        },
+    }
+    kwargs = dict(target=deployment, collection=ref, decimal_mode="string")
+    if source_kind == "native":
+        result = load_documents([native], **kwargs)
+    elif source_kind == "extended_documents":
+        result = load_documents([extended], json_mode="extended", **kwargs)
+    else:
+        path = tmp_path / "types.jsonl"
+        path.write_text(json.dumps(extended) + "\n")
+        result = load_file(path, json_mode="extended", **kwargs)
+
+    assert result.destinations == {f"{deployment.bucket}.{scope}.items": 1}
+    assert result.conversions["objectid"] == 2
+    assert result.conversions["datetime"] == 1
+    assert result.conversions["decimal_string"] == 2
+    cluster = Cluster(
+        deployment.uri,
+        ClusterOptions(PasswordAuthenticator(deployment.username, deployment.password)),
+    )
+    try:
+        cluster.wait_until_ready(timedelta(seconds=30))
+        stored = (
+            cluster.bucket(ref.bucket)
+            .scope(ref.scope)
+            .collection(ref.collection)
+            .get(document_key(oid))
+            .content_as[dict]
+        )
+        assert stored == {
+            "_id": str(oid),
+            "nested": {
+                "values": [
+                    str(oid),
+                    "2026-01-02T02:04:05.123Z",
+                    "12.50",
+                    "0.125",
+                    "2026-01-02",
+                    2**53 - 1,
+                    True,
+                    None,
+                ]
+            },
+        }
+        assert type(stored["nested"]["values"][5]) is int
+        assert type(stored["nested"]["values"][6]) is bool
+    finally:
+        cluster.close()

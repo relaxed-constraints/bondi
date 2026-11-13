@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add live Couchbase round-trip tests for native Python/BSON values and Extended
+  JSON documents and files, including nested dates, ObjectIds and decimals.
+
 - Use dotted destination labels in load results: `database.collection` for MongoDB
   and `bucket.scope.collection` for Couchbase.
 
