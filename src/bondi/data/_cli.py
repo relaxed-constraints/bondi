@@ -11,7 +11,8 @@ from . import CouchbaseConnection, MongoConnection, dataset_info, list_datasets,
 def add_parser(commands):
     parser = commands.add_parser("datasets", help="List, inspect or load datasets")
     sub = parser.add_subparsers(dest="dataset_command", required=True)
-    sub.add_parser("list")
+    listing = sub.add_parser("list", help="Show available datasets")
+    listing.add_argument("--json", action="store_true", help="Output catalogue metadata as JSON")
     info = sub.add_parser("info")
     info.add_argument("name")
     load = sub.add_parser("load")
@@ -37,7 +38,22 @@ def add_parser(commands):
 
 def run(args):
     if args.dataset_command == "list":
-        print(json.dumps(list_datasets(), indent=2))
+        datasets = list_datasets()
+        if args.json:
+            print(json.dumps(datasets, indent=2))
+        elif not datasets:
+            print("No datasets available.")
+        else:
+            rows = [("Dataset", "Source", "Description")]
+            rows.extend(
+                (name, info.get("repo_id", "Packaged with BONDI"), info["description"])
+                for name, info in datasets.items()
+            )
+            widths = [max(len(row[i]) for row in rows) for i in range(2)]
+            for index, row in enumerate(rows):
+                print(f"{row[0]:<{widths[0]}}  {row[1]:<{widths[1]}}  {row[2]}")
+                if index == 0:
+                    print(f"{'-' * widths[0]}  {'-' * widths[1]}  {'-' * len(row[2])}")
         return 0
     if args.dataset_command == "info":
         print(json.dumps(dataset_info(args.name), indent=2))

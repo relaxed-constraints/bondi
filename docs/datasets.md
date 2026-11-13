@@ -48,9 +48,12 @@ JSONL contains one document per nonempty line. Parquet uses its declared column 
 
 ```sh
 bondi datasets list
+bondi datasets list --json
 bondi datasets info adult
 bondi datasets load adult --deployment mongodb --database research --splits merge
 ```
+
+`list` shows a readable table by default. Use `--json` for the complete catalogue metadata in scripts.
 
 The catalogue includes the packaged `demo` and pinned JSynth `adult`, `diabetes` and `electric_vehicles` configurations.
 Hub loads record the resolved commit. Registered JSONL files use the direct JSON reader to preserve document structure.

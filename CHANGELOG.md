@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show a readable table for `bondi datasets list`. Add `--json` for catalogue metadata.
+
 - Explain all three ID options when a source document lacks an ID and namespace.
 
 - Shorten generated dataset IDs to `gen:` plus 24 hexadecimal characters.

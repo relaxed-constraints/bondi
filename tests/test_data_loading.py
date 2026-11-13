@@ -377,3 +377,31 @@ def test_generated_id_collisions_are_rejected(writer, monkeypatch):
     with pytest.raises(LoadDataError, match="Duplicate incoming document ID") as error:
         load([{"v": 1}, {"v": 2}], namespace="collision-test", mode="upsert", batch_size=1)
     assert error.value.result.destinations == {"test/items": 1}
+
+
+def test_cli_list_readable_and_json(capsys):
+    import json
+
+    from bondi._cli import main
+    from bondi.data import list_datasets
+
+    assert main(["datasets", "list"]) == 0
+    text = capsys.readouterr().out
+    assert text.startswith("Dataset")
+    assert "Source" in text and "Description" in text
+    assert "Packaged with BONDI" in text
+    assert "origami-ml/jsynth-data" in text
+    for name in list_datasets():
+        assert name in text
+    assert main(["datasets", "list", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out) == list_datasets()
+
+
+def test_cli_empty_catalogue(monkeypatch, capsys):
+    from bondi._cli import main
+
+    monkeypatch.setattr("bondi.data._cli.list_datasets", lambda: {})
+    assert main(["datasets", "list"]) == 0
+    assert capsys.readouterr().out == "No datasets available.\n"
+    assert main(["datasets", "list", "--json"]) == 0
+    assert capsys.readouterr().out == "{}\n"
