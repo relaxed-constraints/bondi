@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fix Couchbase replacement loads into new collections by skipping the unnecessary
+  deletion scan after successful creation. Creation conflicts still fail.
+- Preserve the original scan or deletion error if Couchbase scan cancellation also
+  fails. Keep driver details redacted in LoadDataError.
+
 ## 0.3.0 — 2026-11-13
 
 ### Breaking changes
