@@ -34,3 +34,6 @@
     options:
       show_root_heading: true
       heading_level: 2
+
+Selecting `mode="replace"` permits clearing the selected collections. The loader
+stores no ownership metadata and has no `allow_unowned` option.

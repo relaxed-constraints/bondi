@@ -52,7 +52,6 @@ def info(name):
     default="create",
     show_default=True,
 )
-@click.option("--allow-unowned", is_flag=True)
 @click.option("--split", multiple=True, help="Select a split. Repeat to select several.")
 @click.option(
     "--splits", type=click.Choice(["preserve", "merge"]), default="preserve", show_default=True
@@ -137,7 +136,6 @@ def run(args):
             "bucket_memory_mb",
             "batch_size",
             "mode",
-            "allow_unowned",
             "split",
             "splits",
             "json_mode",

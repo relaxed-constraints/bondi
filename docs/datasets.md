@@ -100,7 +100,7 @@ Couchbase keys hash the type-aware source ID. Integer `123` and string `"123"` t
 The document body retains `_id`, subject to Couchbase type conversion.
 The loader does not rewrite references to metadata keys or repair missing foreign keys.
 
-## Write modes and ownership
+## Write modes
 
 The default `mode="create"` refuses nonempty target collections.
 `mode="upsert"` inserts new IDs and replaces whole documents with matching IDs.
@@ -108,13 +108,9 @@ It leaves documents absent from the new source untouched.
 Duplicate IDs within the incoming data are errors in every mode.
 
 `mode="replace"` clears only the selected collections. It preserves their indexes.
-A nonempty collection must have a matching BONDI ownership marker, or you must pass `allow_unowned=True`.
-Use that override only when you intend to remove the existing documents.
-Upserting into an unowned nonempty collection does not claim ownership.
-
-BONDI stores markers in a separate `bondi_load_metadata` collection in each database or scope.
-This name is reserved. It is not part of your dataset.
-BONDI checks destination access, contents and ownership before clearing any selected collection.
+Selecting `mode="replace"` explicitly permits deleting the existing documents,
+including documents loaded outside BONDI. No ownership metadata is stored.
+BONDI checks destination access and contents before clearing any selected collection.
 These checks do not lock collections or guarantee later write permissions. Do not run concurrent writers during a load.
 
 ## Splits

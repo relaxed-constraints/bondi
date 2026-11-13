@@ -1,7 +1,5 @@
 """Native database writers. Only explicitly selected collections are cleared."""
 
-import hashlib
-import json
 import re
 from datetime import timedelta
 
@@ -9,14 +7,10 @@ from pymongo import MongoClient
 
 from ._types import CouchbaseConnection, MongoConnection
 
-METADATA = "bondi_load_metadata"
-
 
 def name(value):
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_-]{0,62}", value):
         raise ValueError("Destination names require 1-63 letters, digits, underscores or hyphens")
-    if value == METADATA:
-        raise ValueError("The metadata collection name is reserved")
     return value
 
 
@@ -30,10 +24,6 @@ def connection(target):
     if target.backend == "mongodb":
         return MongoConnection(target.uri)
     return CouchbaseConnection(target.uri, target.username, target.password)
-
-
-def marker_key(destination):
-    return hashlib.sha256(json.dumps(destination).encode()).hexdigest()
 
 
 class MongoWriter:
@@ -51,20 +41,13 @@ class MongoWriter:
         database, _, collection = dest
         db = self.client[database]
         existing = db[collection].find_one({}, {"_id": 1}) is not None
-        marker = db[METADATA].find_one({"_id": marker_key(dest)})
-        return existing, marker
+        return existing
 
-    def prepare(self, dest, mode, namespace, *, claim=True):
+    def prepare(self, dest, mode):
         database, _, collection = dest
         db = self.client[database]
         if collection not in db.list_collection_names():
             db.create_collection(collection)
-        if claim:
-            db[METADATA].replace_one(
-                {"_id": marker_key(dest)},
-                {"_id": marker_key(dest), "namespace": namespace, "loader": 1},
-                upsert=True,
-            )
         if mode == "replace":
             db[collection].delete_many({})
 
@@ -124,7 +107,6 @@ class CouchbaseWriter:
         from couchbase.exceptions import (
             BucketDoesNotExistException,
             BucketNotFoundException,
-            DocumentNotFoundException,
         )
 
         try:
@@ -134,33 +116,20 @@ class CouchbaseWriter:
                 raise ValueError(
                     "A missing Couchbase bucket requires bucket_memory_mb >= 100"
                 ) from None
-            return False, None
+            return False
         scopes = self._bucket(dest[0]).collections().get_all_scopes()
         scope = next((s for s in scopes if s.name == dest[1]), None)
         exists = scope is not None and any(c.name == dest[2] for c in scope.collections)
-        marker_exists = scope is not None and any(c.name == METADATA for c in scope.collections)
-        marker = None
-        if marker_exists:
-            try:
-                marker = (
-                    self._bucket(dest[0])
-                    .scope(dest[1])
-                    .collection(METADATA)
-                    .get(marker_key(dest))
-                    .content_as[dict]
-                )
-            except DocumentNotFoundException:
-                pass
         if not exists:
-            return False, marker
+            return False
         scan = self._scan(dest)
         try:
             occupied = next(iter(scan), None) is not None
         finally:
             scan.cancel_scan()
-        return occupied, marker
+        return occupied
 
-    def prepare(self, dest, mode, namespace, quota=None, *, claim=True):
+    def prepare(self, dest, mode, quota=None):
         from couchbase.exceptions import BucketDoesNotExistException, BucketNotFoundException
         from couchbase.management.buckets import CreateBucketSettings
 
@@ -177,14 +146,9 @@ class CouchbaseWriter:
         if current is None:
             manager.create_scope(dest[1])
         names = {c.name for c in current.collections} if current else set()
-        for collection in (dest[2], METADATA) if claim else (dest[2],):
-            if collection not in names:
-                manager.create_collection(dest[1], collection)
+        if dest[2] not in names:
+            manager.create_collection(dest[1], dest[2])
         # SDK retries collection-map refresh during ordinary KV operations.
-        if claim:
-            bucket.scope(dest[1]).collection(METADATA).upsert(
-                marker_key(dest), {"namespace": namespace, "loader": 1}
-            )
         if mode == "replace":
             scan = self._scan(dest)
             try:

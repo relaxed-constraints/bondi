@@ -29,7 +29,6 @@ def load_data(
     id_field: str | None = None,
     namespace: str | None = None,
     mode: Literal["create", "replace", "upsert"] = "create",
-    allow_unowned: bool = False,
     split: str | Sequence[str] | None = None,
     splits: Literal["preserve", "merge"] = "preserve",
     json_mode: Literal["plain", "extended"] = "plain",
@@ -53,8 +52,8 @@ def load_data(
         bucket_memory_mb: Required quota for a missing Couchbase bucket.
         id_field: Source ID field. Otherwise preserve _id or generate stable IDs.
         namespace: Stable source identity. Required to generate IDs for anonymous inputs.
-        mode: create refuses nonempty targets. replace clears documents. upsert replaces by ID.
-        allow_unowned: Explicit permission to replace nonempty, unowned collections.
+        mode: create refuses nonempty targets. replace explicitly permits clearing
+            selected collections. upsert replaces by ID.
         split: Split name or list. None selects all available splits.
         splits: preserve adds split suffixes. merge concatenates into one collection.
         json_mode: plain preserves wrappers. extended uses loads_query_json.
@@ -87,8 +86,6 @@ def load_data(
             raise ValueError(f"Invalid {label}")
     if type(batch_size) is not int or batch_size <= 0:
         raise ValueError("batch_size must be a positive integer")
-    if type(allow_unowned) is not bool:
-        raise TypeError("allow_unowned must be boolean")
     if namespace is not None and (not isinstance(namespace, str) or not namespace):
         raise ValueError("namespace must be a nonempty string")
     if on_progress is not None and not callable(on_progress):
@@ -125,7 +122,6 @@ def load_data(
             raise ValueError("Two logical sources map to the same destination")
         destinations[dest] = dict(
             logical_key=logical_key,
-            namespace=plan["namespace"],
             quota=spec.get("bucket_memory_mb", bucket_memory_mb),
         )
     bucket_quotas = {}
@@ -191,20 +187,12 @@ def load_data(
     try:
         writer = CouchbaseWriter(conn) if backend == "couchbase" else MongoWriter(conn)
         for dest, options in destinations.items():
-            occupied, marker = writer.preflight(dest, options["quota"])
-            owned = (
-                marker
-                and marker.get("loader") == 1
-                and marker.get("namespace") == options["namespace"]
-            )
-            options["claim"] = not occupied or bool(owned) or (mode == "replace" and allow_unowned)
+            occupied = writer.preflight(dest, options["quota"])
             if occupied and mode == "create":
                 raise ValueError("create requires absent or empty collections")
-            if occupied and mode == "replace" and not owned and not allow_unowned:
-                raise ValueError("replace requires matching ownership or allow_unowned=True")
         for dest, options in destinations.items():
             args = {"quota": options["quota"]} if backend == "couchbase" else {}
-            writer.prepare(dest, mode, options["namespace"], claim=options["claim"], **args)
+            writer.prepare(dest, mode, **args)
             result.destinations["/".join(x for x in dest if x)] = 0
         with tempfile.TemporaryDirectory(prefix="bondi-load-") as temporary:
             seen = sqlite3.connect(Path(temporary) / "ids.sqlite")

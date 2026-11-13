@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Remove dataset ownership tracking and the `allow_unowned` option.
+  `mode="replace"` explicitly permits clearing selected collections.
+  The loader no longer creates or uses a metadata collection.
+
 - Explain how to supply a missing MongoDB database name when loading datasets.
 
 - Start the dataset-loading notebook with a single-file business collection example.
@@ -32,7 +36,7 @@
   MongoDB CLI connection files can read passwords through password_env.
 
 - Add dataset loading for MongoDB and Couchbase with local files, Hub sources,
-  Python iterables, split handling, stable IDs, write modes and ownership checks.
+  Python iterables, split handling, stable IDs, write modes.
   Add explicit Extended JSON conversion, bucket creation, optional index profiles,
   progress reports, `bondi datasets` commands and a demo notebook.
 

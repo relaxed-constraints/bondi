@@ -291,7 +291,6 @@ def test_click_repeated_splits_and_load_options(monkeypatch):
             "25",
             "--mode",
             "replace",
-            "--allow-unowned",
             "--split",
             "train",
             "--split",
@@ -310,7 +309,7 @@ def test_click_repeated_splits_and_load_options(monkeypatch):
     args = SimpleNamespace(**captured)
     assert args.source is None and args.manifest == "data.json"
     assert args.split == ["train", "test"]
-    assert args.allow_unowned and args.batch_size == 25 and args.bucket_memory_mb == 256
+    assert args.batch_size == 25 and args.bucket_memory_mb == 256
     assert (args.database, args.bucket, args.scope, args.collection) == (
         "travel",
         "travel",

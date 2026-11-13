@@ -32,6 +32,38 @@ def test_loader_live(backend, live_deployments):
     )
     assert sum(result.destinations.values()) == 1
 
+    load_data(
+        [{"_id": "replacement"}],
+        target=deployment,
+        collection="items",
+        mode="replace",
+        namespace="different-dataset",
+        **options,
+    )
+    if backend == "mongodb":
+        from pymongo import MongoClient
+
+        with MongoClient(deployment.uri) as client:
+            assert client[unique].list_collection_names() == ["items"]
+            assert list(client[unique].items.find({})) == [{"_id": "replacement"}]
+    else:
+        from bondi.data._values import document_key
+        from bondi.data._writers import CouchbaseWriter, connection
+
+        writer = CouchbaseWriter(connection(deployment))
+        try:
+            scopes = writer._bucket(deployment.bucket).collections().get_all_scopes()
+            scope = next(scope for scope in scopes if scope.name == unique)
+            assert [collection.name for collection in scope.collections] == ["items"]
+            dest = (deployment.bucket, unique, "items")
+            scan = writer._scan(dest)
+            try:
+                assert [row.id for row in scan] == [document_key("replacement")]
+            finally:
+                scan.cancel_scan()
+        finally:
+            writer.close()
+
 
 def test_couchbase_new_bucket_and_native_indexes(live_deployments):
     from datetime import timedelta

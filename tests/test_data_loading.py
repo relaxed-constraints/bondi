@@ -15,7 +15,6 @@ def writer(monkeypatch):
     class MemoryWriter:
         backend = "mongodb"
         data = {}
-        markers = {}
         index_defs = []
         fail_on = None
 
@@ -23,13 +22,11 @@ def writer(monkeypatch):
             pass
 
         def preflight(self, dest, quota):
-            return bool(self.data.get(dest)), self.markers.get(dest)
+            return bool(self.data.get(dest))
 
-        def prepare(self, dest, mode, namespace, *, claim=True):
+        def prepare(self, dest, mode):
             if mode == "replace" or dest not in self.data:
                 self.data[dest] = {}
-            if claim:
-                self.markers[dest] = {"namespace": namespace, "loader": 1}
 
         def write_one(self, dest, key, document, mode):
             if document.get("fail"):
@@ -56,17 +53,14 @@ def load(source=None, **kwargs):
     )
 
 
-def test_modes_ownership_and_whole_document_upsert(writer):
+def test_modes_and_whole_document_upsert(writer):
     load([{"_id": "a", "old": 1}])
     with pytest.raises(LoadDataError, match="empty"):
         load([{"_id": "b"}])
     load([{"_id": "a", "new": 2}], mode="upsert")
     docs = writer.data[("test", None, "items")]
     assert list(docs.values()) == [{"_id": "a", "new": 2}]
-    writer.markers.clear()
-    with pytest.raises(LoadDataError, match="ownership"):
-        load([{"_id": "b"}], mode="replace")
-    load([{"_id": "b"}], mode="replace", allow_unowned=True)
+    load([{"_id": "b"}], mode="replace")
     assert list(docs.values()) == [{"_id": "a", "new": 2}]  # old map was replaced
     assert list(writer.data[("test", None, "items")].values()) == [{"_id": "b"}]
 
@@ -98,11 +92,18 @@ def test_ids_and_partial_results(writer):
     assert "secret" not in str(error.value)
 
 
-def test_preflight_all_destinations_before_replace(writer):
+def test_preflight_all_destinations_before_replace(writer, monkeypatch):
     load_data(
         {"a": [{"_id": "a"}], "b": [{"_id": "b"}]}, target=MongoConnection("x"), database="test"
     )
-    writer.markers.pop(("test", None, "b"))
+    original = writer.preflight
+
+    def preflight(self, dest, quota):
+        if dest[2] == "b":
+            raise RuntimeError("Destination unavailable")
+        return original(self, dest, quota)
+
+    monkeypatch.setattr(writer, "preflight", preflight)
     with pytest.raises(LoadDataError):
         load_data({"a": [], "b": []}, target=MongoConnection("x"), database="test", mode="replace")
     assert writer.data[("test", None, "a")]
@@ -152,7 +153,7 @@ def test_formats(tmp_path, writer):
     paths[1].write_text('[{"_id":"a","x":1}]')
     pq.write_table(pa.Table.from_pylist([{"_id": "a", "x": 1}]), paths[2])
     for path in paths:
-        assert load(path, mode="replace", allow_unowned=True).destinations["test/items"] == 1
+        assert load(path, mode="replace").destinations["test/items"] == 1
 
 
 def test_couchbase_conversion():
@@ -181,13 +182,13 @@ def test_cli_catalog(capsys):
     assert "origami-ml/jsynth-data" in capsys.readouterr().out
 
 
-def test_upsert_does_not_claim_existing_unowned_data(writer):
+def test_replace_clears_manually_populated_collection(writer):
     dest = ("test", None, "items")
     writer.data[dest] = {"old": {"_id": "old"}}
     load([{"_id": "new"}], mode="upsert")
-    assert dest not in writer.markers
-    with pytest.raises(LoadDataError, match="ownership"):
-        load([], mode="replace")
+    assert {doc["_id"] for doc in writer.data[dest].values()} == {"old", "new"}
+    load([], mode="replace")
+    assert writer.data[dest] == {}
 
 
 @pytest.mark.parametrize("extension", ["json", "jsonl"])
