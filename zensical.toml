@@ -63,6 +63,7 @@ nav = [
         { "Contributing" = "contributing.md" },
         { "Architecture and design" = "architecture.md" },
         { "Building the documentation" = "documentation.md" },
+        { "Uploading datasets to Hugging Face" = "uploading-datasets-to-hugging-face.md" },
         { "Roadmap" = "roadmap.md" },
         { "Releases" = "releases.md" },
     ] },

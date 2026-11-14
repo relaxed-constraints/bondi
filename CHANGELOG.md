@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document how to upload and verify Hugging Face dataset repositories for BONDI.
+
 ## 0.3.1 — 2026-11-14
 
 - Allow deployment ports to be reused after shutdown when only TCP TIME_WAIT
