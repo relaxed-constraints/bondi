@@ -3,6 +3,7 @@
 import csv
 import hashlib
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from importlib import import_module
 from pathlib import Path
@@ -68,16 +69,34 @@ def decode(text, mode):
     return json.loads(text, object_pairs_hook=pairs, parse_constant=constant)
 
 
+@dataclass(frozen=True)
+class HubJsonLines:
+    paths: tuple[str, ...]
+
+    def records(self, mode):
+        fs = import_module("huggingface_hub").HfFileSystem()
+        for path in self.paths:
+            with fs.open(path, "rt", encoding="utf-8", compression="infer") as handle:
+                yield from json_lines(handle, mode)
+
+
+def json_lines(handle, mode):
+    for line in handle:
+        if line.strip():
+            yield decode(line, mode)
+
+
 def records(source, mode):
+    if isinstance(source, HubJsonLines):
+        yield from source.records(mode)
+        return
     if not isinstance(source, (str, Path)):
         yield from source
         return
     path = Path(source)
     if path.suffix.lower() == ".jsonl":
         with path.open() as handle:
-            for line in handle:
-                if line.strip():
-                    yield decode(line, mode)
+            yield from json_lines(handle, mode)
     elif path.suffix.lower() == ".json":
         # Arrays are streamed. Single JSON objects are one document.
         ijson = import_module("ijson")
@@ -147,11 +166,20 @@ def hf_plans(repo_id, dataset, revision, split, namespace):
     if any(part not in available for part in selected):
         raise ValueError(f"{dataset}: requested split is absent. Available splits: {available}")
     namespace = namespace or f"hf:{repo_id}:{dataset}"
+    builder = library.load_dataset_builder(repo_id, name=dataset, revision=revision)
+    data_files = getattr(builder.config, "data_files", None) or {}
     plans = []
     for part in sorted(selected):
-        source = library.load_dataset(
-            repo_id, name=dataset, revision=revision, split=part, streaming=True
-        )
+        paths = tuple(data_files.get(part, ()))
+        if paths and all(
+            path.startswith("hf://datasets/") and path.lower().endswith((".jsonl", ".jsonl.gz"))
+            for path in paths
+        ):
+            source = HubJsonLines(paths)
+        else:
+            source = library.load_dataset(
+                repo_id, name=dataset, revision=revision, split=part, streaming=True
+            )
         plans.append(
             source_plan(
                 source,

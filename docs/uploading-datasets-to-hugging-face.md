@@ -82,7 +82,8 @@ The repository loader combines all splits of each configuration by default.
 When you select a split for the entire repository, it must exist in every
 configuration. Pin a commit with `--revision` for reproducible imports.
 
-Hugging Face readers can normalise records to a shared schema, for example by
-filling missing fields with nulls. If those distinctions matter, download the
-original files and use BONDI's file loader. See the
-[dataset loading guide](datasets.md) for both loaders and Extended JSON options.
+When a split uses only Hub JSONL files (`.jsonl` or `.jsonl.gz`), BONDI
+streams the original records and preserves missing fields and explicit nulls.
+Use `--json-mode extended` for MongoDB Extended JSON exports. Other formats
+use Hugging Face readers, which can normalise records to a shared schema.
+See the [dataset loading guide](datasets.md) for details.

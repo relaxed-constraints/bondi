@@ -223,9 +223,11 @@ Use those source details with `load-hf`.
 The suggestion name itself is not a source alias.
 Add `--json` to the list command for machine-readable metadata.
 
-Hugging Face readers can adjust documents to a shared schema.
-For example, they can fill missing fields with nulls.
-Load original JSONL files when missing fields must remain absent.
+BONDI streams the original files for splits backed entirely by Hub JSONL
+(`.jsonl` or `.jsonl.gz`). Missing fields stay absent and explicit nulls
+stay null. Use `--json-mode extended` or `json_mode="extended"` to decode
+MongoDB Extended JSON types. Other splits use Hugging Face readers, which
+can adjust documents to a shared schema.
 
 ## Load a Hugging Face repository
 

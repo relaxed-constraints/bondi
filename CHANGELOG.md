@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Stream original Hugging Face JSONL splits to preserve missing fields, explicit
+  nulls and Extended JSON types.
+
 - Document how to upload and verify Hugging Face dataset repositories for BONDI.
 
 ## 0.3.1 — 2026-11-14

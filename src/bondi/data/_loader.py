@@ -12,7 +12,15 @@ from bondi.couchbase.collection import CouchbaseCollectionRef
 from bondi.deployment import Deployment
 from bondi.mongodb import MongoCollectionRef
 
-from ._sources import decode_document, hf_configs, hf_plans, hf_revision, records, source_plan
+from ._sources import (
+    HubJsonLines,
+    decode_document,
+    hf_configs,
+    hf_plans,
+    hf_revision,
+    records,
+    source_plan,
+)
 from ._types import CouchbaseConnection, LoadDataError, LoadDataResult, MongoConnection
 from ._values import convert, document_key, generated_id, identity
 from ._writers import CouchbaseWriter, MongoWriter, connection, name
@@ -151,8 +159,9 @@ def load_hf_dataset(
     Returns:
         Load counts, original split counts and the resolved source commit.
 
-    Uses Hugging Face streaming readers, which can normalize rows to a shared
-    schema. Generated IDs include the original split; explicit duplicate IDs fail.
+    Streams original Hub JSONL files when available. Other sources use Hugging
+    Face readers, which can normalize rows to a shared schema. Generated IDs
+    include the original split; explicit duplicate IDs fail.
     """
     _destination(target, collection)
     commit = hf_revision(repo_id, revision)
@@ -193,6 +202,7 @@ def load_hf_repository(
     Returns:
         Results keyed by configuration name.
 
+    Hub JSONL splits are streamed directly to preserve the original fields.
     Names and split selections are checked before any writes. Collections load
     sequentially in sorted name order. On failure, earlier writes remain.
     LoadDataError.result includes completed collections and the failed collection.
@@ -340,7 +350,9 @@ def _load(
                         context = f"{origin}, shard {plan['shard']}, row {row}"
                         if not isinstance(document, dict):
                             raise ValueError("Each source row must be a document object")
-                        if json_mode == "extended" and not isinstance(plan["source"], (str, Path)):
+                        if json_mode == "extended" and not isinstance(
+                            plan["source"], (str, Path, HubJsonLines)
+                        ):
                             document = decode_document(document)
                         field = id_field
                         if field is not None:
@@ -371,8 +383,13 @@ def _load(
                             result.settings,
                             result.conversions,
                             decoded=json_mode == "extended"
-                            and isinstance(plan["source"], (str, Path))
-                            and Path(plan["source"]).suffix.lower() in (".json", ".jsonl"),
+                            and (
+                                isinstance(plan["source"], HubJsonLines)
+                                or (
+                                    isinstance(plan["source"], (str, Path))
+                                    and Path(plan["source"]).suffix.lower() in (".json", ".jsonl")
+                                )
+                            ),
                         )
                         batch.append((document_key(source_id), converted))
                         if len(batch) >= batch_size:

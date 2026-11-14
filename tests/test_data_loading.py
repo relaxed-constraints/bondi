@@ -400,6 +400,7 @@ def hub(monkeypatch):
     library = SimpleNamespace(
         get_dataset_config_names=lambda *a, **k: list(data),
         get_dataset_split_names=lambda repo, config, **k: list(data[config]),
+        load_dataset_builder=lambda *a, **k: SimpleNamespace(config=SimpleNamespace()),
         load_dataset=rows,
     )
     api = SimpleNamespace(HfApi=lambda: SimpleNamespace(dataset_info=resolve))
@@ -651,3 +652,44 @@ def test_couchbase_destination_labels_in_progress_and_errors(writer, monkeypatch
         )
     assert progress[0].destinations == {"bucket.scope.items": 1}
     assert error.value.result.destinations == {"bucket.scope.items": 1}
+
+
+def test_hf_jsonl_preserves_missing_null_and_extended_types(writer, hub, monkeypatch):
+    from io import StringIO
+    from types import SimpleNamespace
+
+    from bson.int64 import Int64
+
+    from bondi.data import _sources, load_hf_repository
+
+    library = _sources.import_module("datasets")
+    api = _sources.import_module("huggingface_hub")
+    path = "hf://datasets/org/forum@fixed-commit/users.jsonl"
+    rows = (
+        '{"_id":"missing","when":{"$date":"2024-01-02T03:04:05Z"}}\n'
+        '{"_id":"null","optional":null,"count":{"$numberLong":"9007199254740993"}}\n'
+    )
+    library.load_dataset_builder = lambda *a, **k: SimpleNamespace(
+        config=SimpleNamespace(data_files={"train": [path]})
+    )
+
+    def open_file(filename, mode, **options):
+        assert filename == path
+        assert mode == "rt"
+        return StringIO(rows)
+
+    monkeypatch.setattr(api, "HfFileSystem", lambda: SimpleNamespace(open=open_file), raising=False)
+    monkeypatch.setattr(library, "get_dataset_config_names", lambda *a, **k: ["users"])
+    load_hf_repository(
+        "org/forum",
+        target=MongoConnection("x"),
+        database="db",
+        split="train",
+        json_mode="extended",
+    )
+    docs = {row["_id"]: row for row in writer.data[("db", None, "users")].values()}
+    assert "optional" not in docs["missing"]
+    assert docs["null"]["optional"] is None
+    assert docs["missing"]["when"].isoformat() == "2024-01-02T03:04:05+00:00"
+    assert isinstance(docs["null"]["count"], Int64)
+    assert docs["null"]["count"] == 9007199254740993
