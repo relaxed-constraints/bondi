@@ -1,21 +1,20 @@
 """Opt-in read-only Docker smoke tests from an already-running caller loop."""
 
 import asyncio
-import os
-import signal
-from threading import Event, Thread
+from threading import Event
 
 import pytest
 
 from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
 from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
 from bondi.workload import Workload, WorkloadEntry
+from tests._interrupt import interrupt_sync_wait
 
 pytestmark = pytest.mark.live
 
 
 @pytest.mark.parametrize("backend", ["mongo", "community", "enterprise"])
-def test_notebook_live(backend, live_deployments):
+def test_notebook_live(backend, live_deployments, monkeypatch):
     db = live_deployments("mongodb" if backend == "mongo" else backend)
 
     async def notebook():
@@ -60,23 +59,10 @@ def test_notebook_live(backend, live_deployments):
                     await asyncio.sleep(0.01)
                     cleaned.set()
 
-            def interrupt():
-                if started.wait(15):
-                    os.kill(os.getpid(), signal.SIGINT)
-
-            sender = Thread(target=interrupt)
-            sender.start()
-            try:
-                # A notebook kernel delivers KeyboardInterrupt on its caller thread.
-                # Override asyncio.run's SIGINT task-cancellation handler for this simulation.
-                previous = signal.signal(signal.SIGINT, signal.default_int_handler)
-                try:
-                    with pytest.raises(KeyboardInterrupt):
-                        executor._submit(controlled_operation)
-                finally:
-                    signal.signal(signal.SIGINT, previous)
-            finally:
-                sender.join()
+            with monkeypatch.context() as interrupt:
+                interrupt_sync_wait(interrupt, started, ready_timeout=15)
+                with pytest.raises(KeyboardInterrupt):
+                    executor._submit(controlled_operation)
             assert cleaned.is_set()
             assert executor.run(query).row_count == 3
         finally:

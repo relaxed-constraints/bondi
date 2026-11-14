@@ -349,9 +349,8 @@ def test_sync_rejects_async_callback_before_execution(backend, method):
 
 
 @pytest.mark.parametrize("in_callback", [False, True])
-def test_sync_interrupt_drains_background_workers(backend, in_callback):
-    import os
-    import signal
+def test_sync_interrupt_drains_background_workers(backend, in_callback, monkeypatch):
+    from queue import Queue
 
     workload = work(backend, 3)
     interrupt_ready = threading.Event()
@@ -381,21 +380,19 @@ def test_sync_interrupt_drains_background_workers(backend, in_callback):
 
     def callback(index, entry, result):
         seen.append(index)
-        interrupt_ready.set()
-        threading.Event().wait(5)
+        raise KeyboardInterrupt
 
-    def interrupt():
-        if interrupt_ready.wait(3):
-            os.kill(os.getpid(), signal.SIGINT)
+    class InterruptibleQueue(Queue):
+        def get(self):
+            assert interrupt_ready.wait(3)
+            raise KeyboardInterrupt
 
     with backend[1]._create(factory) as executor:
-        sender = threading.Thread(target=interrupt)
-        sender.start()
-        try:
+        with monkeypatch.context() as interrupt:
+            if not in_callback:
+                interrupt.setattr("bondi._sync.Queue", InterruptibleQueue)
             with pytest.raises(KeyboardInterrupt):
                 executor.run_workload(workload, on_result=callback)
-        finally:
-            sender.join()
         assert cleaned.is_set()
         assert seen == ([0] if in_callback else [])
         assert executor.run_workload(Workload()) == []

@@ -2,13 +2,14 @@
 
 import asyncio
 import inspect
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 
 import pytest
 
 from bondi.couchbase import AsyncCouchbaseExecutor, CouchbaseExecutor
 from bondi.mongodb import AsyncMongoExecutor, MongoExecutor
+from tests._interrupt import interrupt_sync_wait
 
 PAIRS = [
     (MongoExecutor, AsyncMongoExecutor, {}),
@@ -132,18 +133,6 @@ def test_failed_factory_closes_loop(sync, asynchronous, options, monkeypatch):
     assert loops[0].is_closed()
 
 
-def interrupt_wait(monkeypatch, started):
-    class InterruptibleFuture(Future):
-        def result(self, timeout=None):
-            if timeout is None and not self.done():
-                assert started.wait(3)
-                raise KeyboardInterrupt
-            return super().result(timeout)
-
-    # Interrupt the caller after the operation starts, without OS signal delivery.
-    monkeypatch.setattr("bondi._sync.Future", InterruptibleFuture)
-
-
 @pytest.mark.parametrize("during_close", [False, True])
 def test_interrupt_waits_for_cleanup(adapter, monkeypatch, during_close):
     sync, options, created = adapter
@@ -161,7 +150,7 @@ def test_interrupt_waits_for_cleanup(adapter, monkeypatch, during_close):
 
     try:
         with monkeypatch.context() as interrupt:
-            interrupt_wait(interrupt, started)
+            interrupt_sync_wait(interrupt, started)
             with pytest.raises(KeyboardInterrupt):
                 if during_close:
                     interrupt.setattr(executor._executor, "close", slow)
@@ -193,7 +182,7 @@ def test_interrupted_factory_unwinds(sync, asynchronous, options, monkeypatch):
 
     # Both adapter factories await their private connect coroutine. Mongo's public
     # factory is synchronous, so exercise the common bridge directly for this case.
-    interrupt_wait(monkeypatch, started)
+    interrupt_sync_wait(monkeypatch, started)
     with pytest.raises(KeyboardInterrupt):
         sync._create(factory)
     assert cleaned.is_set()
