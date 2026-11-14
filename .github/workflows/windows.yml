@@ -1,0 +1,26 @@
+name: Windows compatibility
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    name: Windows offline tests
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.13.6"
+          python-version: "3.12"
+      - run: uv sync --locked --extra couchbase
+      - name: Check CLI entry points
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          uv run bondi --help
+          uv run bondi deployment create mongodb --help
+          uv run bondi dataset load-hf-repository --help
+      - run: uv run pytest -m 'not live'

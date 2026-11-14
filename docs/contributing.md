@@ -98,3 +98,11 @@ default. Tutorials point to the maintained notebooks rather than duplicating the
 contents. Every public API object should have one reference home. Update navigation
 and local links when moving a page; execute changed examples as well as building
 the site.
+
+## Windows compatibility checks
+
+Use **Actions → Windows compatibility → Run workflow** on GitHub to check BONDI
+on Windows with Python 3.12. The workflow installs the Couchbase extra, checks
+the CLI entry points from PowerShell, and runs the non-live test suite. To
+verify managed deployments on Windows, run the live tests from PowerShell on a
+machine with Docker Desktop running in Linux container mode.
