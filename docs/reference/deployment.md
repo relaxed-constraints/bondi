@@ -57,3 +57,7 @@ warnings, manual-override limitations and CLI examples.
     options:
       show_root_heading: true
       heading_level: 3
+
+Deployment port checks allow recently closed TCP connections (`TIME_WAIT`).
+An active listener still prevents a new deployment from using that port.
+Docker performs the final port binding; the check does not reserve the port.

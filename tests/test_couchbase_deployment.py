@@ -103,7 +103,13 @@ def test_initialization_and_restarts(setup, edition, storage, existing):
         responses.append(None)  # clusterInit
     responses.extend([{}, None, [{"name": "demo"}] if existing else []])
     if not existing:
-        responses.append(None)  # bucket creation
+        responses.extend(
+            [
+                {"nodes": [{"status": "healthy"}]},
+                {"status": "success", "results": [1]},
+                None,  # bucket creation
+            ]
+        )
     responses.append(
         {
             "nodesExt": [
@@ -257,3 +263,62 @@ def test_cli_memory_limit(setup, capsys):
     assert get_deployment("couchbase").memory_limit_mb == 16384
     assert main(["deployment", "create", "couchbase", "--memory-limit-mb", "0"]) == 1
     assert "memory_limit_mb" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("failure", ["nodes", "query", "connection", "auth", "timeout"])
+def test_bucket_creation_waits_for_cluster_readiness(setup, failure):
+    db = deploy_couchbase()
+    clock = [0.0]
+    probes = []
+    created = []
+    bucket_listed = []
+
+    def request(db, path, data=None, **kwargs):
+        if path == "/pools":
+            return {"pools": [{}]}
+        if path == "/pools/default/buckets":
+            if data is not None:
+                created.append(data)
+                assert probes[-1] == "success"
+                return None
+            bucket_listed.append(True)
+            return []
+        if path == "/pools/default":
+            if failure == "nodes" and bucket_listed and not probes:
+                probes.append("unhealthy")
+                return {"nodes": []}
+            return {"nodes": [{"status": "healthy"}]}
+        if path == "/query/service":
+            if failure == "auth":
+                raise ValueError("authentication failed")
+            if failure == "timeout":
+                raise RuntimeError("service unavailable")
+            if not probes and failure == "connection":
+                probes.append("connection")
+                raise RuntimeError("service unavailable")
+            if not probes and failure == "query":
+                probes.append("query")
+                return {"status": "errors", "results": [1]}
+            probes.append("success")
+            return {"status": "success", "results": [1]}
+        return None
+
+    def sleep(seconds):
+        clock[0] += seconds
+
+    with (
+        patch.object(_couchbase, "request", side_effect=request),
+        patch.object(_couchbase, "ready") as ready,
+        patch.object(_couchbase.time, "monotonic", side_effect=lambda: clock[0]),
+        patch.object(_couchbase.time, "sleep", side_effect=sleep),
+    ):
+        if failure in {"auth", "timeout"}:
+            error = ValueError if failure == "auth" else RuntimeError
+            with pytest.raises(error):
+                ORIGINAL_INITIALIZE(db, deadline=2)
+            assert not created
+            ready.assert_not_called()
+        else:
+            ORIGINAL_INITIALIZE(db, deadline=2)
+            assert len(created) == 1
+            ready.assert_called_once()

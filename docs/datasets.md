@@ -408,6 +408,16 @@ For repository loading, the mode applies to each selected collection.
 It does not clear unrelated collections in the database.
 Create indexes separately through the database APIs.
 
+### Replacing Couchbase collections
+
+If a collection is missing, the loader creates it and writes the documents.
+It does not scan a collection it just created to delete old documents.
+If another process creates the collection first, the creation conflict fails the load.
+
+For an existing collection, replacement scans and deletes its documents before writing.
+A scan cleanup failure does not hide the original scan or deletion error.
+Loads are not atomic. Do not write to the destination concurrently.
+
 ## Type conversion
 
 Plain JSON is the default.

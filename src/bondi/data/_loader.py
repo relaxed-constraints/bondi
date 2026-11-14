@@ -71,6 +71,8 @@ def load_documents(
 
     Loads are non-atomic. No rollback or automatic retries occur. Duplicate IDs
     within the input fail, including in upsert mode. Do not write concurrently.
+    Couchbase replacement skips deletion only after this call creates a collection.
+    Creation conflicts fail. Scan cleanup errors do not mask an existing error.
     """
     if isinstance(documents, (str, Path, Mapping)) or not isinstance(documents, Iterable):
         raise TypeError("documents must be an iterable of dictionaries, not a file or mapping")

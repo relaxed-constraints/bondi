@@ -1,6 +1,7 @@
 """Native database writers. Only explicitly selected collections are cleared."""
 
 import re
+from contextlib import contextmanager, suppress
 from datetime import timedelta
 
 from pymongo import MongoClient
@@ -95,6 +96,20 @@ class CouchbaseWriter:
             RangeScan(), ScanOptions(ids_only=True, timeout=timedelta(seconds=30))
         )
 
+    @contextmanager
+    def _managed_scan(self, dest):
+        scan = self._scan(dest)
+        try:
+            yield scan
+        except BaseException:
+            # SDK cancellation can fail if the scan never started. Keep the
+            # original scan or deletion error, including interruption.
+            with suppress(Exception):
+                scan.cancel_scan()
+            raise
+        else:
+            scan.cancel_scan()
+
     def preflight(self, dest, quota):
         from couchbase.exceptions import (
             BucketDoesNotExistException,
@@ -114,12 +129,8 @@ class CouchbaseWriter:
         exists = scope is not None and any(c.name == dest[2] for c in scope.collections)
         if not exists:
             return False
-        scan = self._scan(dest)
-        try:
-            occupied = next(iter(scan), None) is not None
-        finally:
-            scan.cancel_scan()
-        return occupied
+        with self._managed_scan(dest) as scan:
+            return next(iter(scan), None) is not None
 
     def prepare(self, dest, mode, quota=None):
         from couchbase.exceptions import BucketDoesNotExistException, BucketNotFoundException
@@ -138,16 +149,16 @@ class CouchbaseWriter:
         if current is None:
             manager.create_scope(dest[1])
         names = {c.name for c in current.collections} if current else set()
-        if dest[2] not in names:
+        created = dest[2] not in names
+        if created:
+            # A creation conflict must fail, not be treated as an empty collection.
             manager.create_collection(dest[1], dest[2])
-        # SDK retries collection-map refresh during ordinary KV operations.
-        if mode == "replace":
-            scan = self._scan(dest)
-            try:
+        # New collections have no old documents to delete. SDK writes retry
+        # collection-map refresh; do not start a range scan immediately after creation.
+        if mode == "replace" and not created:
+            with self._managed_scan(dest) as scan:
                 for item in scan:
                     self._collection(dest).remove(item.id)
-            finally:
-                scan.cancel_scan()
 
     def write_one(self, dest, key, document, mode):
         collection = self._collection(dest)

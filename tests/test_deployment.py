@@ -210,3 +210,30 @@ def test_remove_requires_boolean(compose, keep_data):
     with pytest.raises(ValueError, match="keep_data must be a boolean"):
         db.remove(keep_data=keep_data)
     compose.assert_not_called()
+
+
+def test_port_check_allows_time_wait():
+    from bondi.deployment._deployment import _check_port
+
+    with socket.socket() as listener:
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        port = listener.getsockname()[1]
+        with socket.create_connection(("127.0.0.1", port), timeout=2) as client:
+            connection, _ = listener.accept()
+            connection.close()  # The server closes first and enters TIME_WAIT.
+            assert client.recv(1) == b""
+    _check_port(port)
+
+
+@pytest.mark.parametrize("reuse", [False, True])
+def test_port_check_rejects_active_listener(reuse):
+    from bondi.deployment._deployment import _check_port
+
+    with socket.socket() as listener:
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, int(reuse))
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        with pytest.raises(RuntimeError, match="Cannot bind localhost port"):
+            _check_port(listener.getsockname()[1])

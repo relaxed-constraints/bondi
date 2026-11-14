@@ -231,6 +231,11 @@ They are optional host tools. BONDI does not need them to deploy MongoDB.
 
 ## Couchbase deployments
 
+Before creating a missing bucket, BONDI waits for healthy nodes and a successful
+`SELECT RAW 1` query. The checks share the startup timeout and use no fixed delay.
+This avoids the first-bucket startup issue reproduced with Community 8.0.0.
+It does not repair existing bucket directories that already conflict.
+
 The default name is `couchbase`. Community is the default edition.
 New deployments use version `7.6.2` unless you select another version.
 They enable the Data, Query and Index services.
@@ -465,3 +470,7 @@ CLI errors go to stderr:
 | 130 | Interrupted |
 
 For method signatures, see the [deployment API reference](reference/deployment.md).
+
+Deployment port checks allow recently closed TCP connections (`TIME_WAIT`).
+An active listener still prevents a new deployment from using that port.
+Docker performs the final port binding; the check does not reserve the port.

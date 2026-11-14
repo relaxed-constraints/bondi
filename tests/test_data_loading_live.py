@@ -217,3 +217,52 @@ def test_couchbase_type_conversion_round_trip(live_deployments, tmp_path, source
         assert type(stored["nested"]["values"][6]) is bool
     finally:
         cluster.close()
+
+
+@pytest.mark.parametrize("new_scope", [False, True])
+def test_couchbase_replace_new_collection_live(live_deployments, new_scope):
+    from datetime import timedelta
+    from unittest.mock import patch
+
+    from couchbase.auth import PasswordAuthenticator
+    from couchbase.cluster import Cluster
+    from couchbase.exceptions import DocumentNotFoundException
+    from couchbase.options import ClusterOptions
+
+    from bondi.data._values import document_key
+    from bondi.data._writers import CouchbaseWriter
+
+    deployment = live_deployments("community")
+    scope = "replace_" + uuid4().hex[:10] if new_scope else "_default"
+    collection = "replace_" + uuid4().hex[:10]
+    ref = CouchbaseCollectionRef(deployment.bucket, scope, collection)
+    label = f"{deployment.bucket}.{scope}.{collection}"
+    # Fresh destinations must not use a range scan before their first writes.
+    with patch.object(CouchbaseWriter, "_scan", side_effect=AssertionError("unexpected scan")):
+        result = load_documents(
+            [{"_id": "old", "value": 1}],
+            target=deployment,
+            collection=ref,
+            mode="replace",
+        )
+    assert result.destinations == {label: 1}
+    cluster = Cluster(
+        deployment.uri,
+        ClusterOptions(PasswordAuthenticator(deployment.username, deployment.password)),
+    )
+    try:
+        cluster.wait_until_ready(timedelta(seconds=30))
+        stored = cluster.bucket(deployment.bucket).scope(scope).collection(collection)
+        assert stored.get(document_key("old")).content_as[dict] == {"_id": "old", "value": 1}
+        # Existing collections still need deletion on replacement.
+        load_documents(
+            [{"_id": "new", "value": 2}],
+            target=deployment,
+            collection=ref,
+            mode="replace",
+        )
+        with pytest.raises(DocumentNotFoundException):
+            stored.get(document_key("old"))
+        assert stored.get(document_key("new")).content_as[dict] == {"_id": "new", "value": 2}
+    finally:
+        cluster.close()

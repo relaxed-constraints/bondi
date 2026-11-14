@@ -116,6 +116,18 @@ def initialize(db, *, deadline):
     )
     buckets = call("/pools/default/buckets")
     if not any(bucket["name"] == db.bucket for bucket in buckets):
+
+        def cluster_ready():
+            # HTTP availability alone does not mean cluster services are ready.
+            # Check before creating the first bucket, not only after creation.
+            nodes = call("/pools/default").get("nodes", [])
+            if not nodes or any(node.get("status") != "healthy" for node in nodes):
+                raise RuntimeError("Couchbase node is not ready for bucket creation")
+            result = call("/query/service", {"statement": "SELECT RAW 1"}, query=True)
+            if result.get("status") != "success" or result.get("results") != [1]:
+                raise RuntimeError("Couchbase query service is not ready for bucket creation")
+
+        wait(cluster_ready)
         call(
             "/pools/default/buckets",
             {
