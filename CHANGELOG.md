@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Reject ports with active listeners on Windows and make synchronous executor
+  interrupt tests portable.
+
 - Default Hugging Face loaders to automatic JSON mode selection using the
   dataset card’s `mongodb-extended-json` tag. Explicit modes override the tag.
 

@@ -212,6 +212,10 @@ def test_remove_requires_boolean(compose, keep_data):
     compose.assert_not_called()
 
 
+@pytest.mark.skipif(
+    hasattr(socket, "SO_EXCLUSIVEADDRUSE"),
+    reason="Windows exclusive binds can reject ports in TIME_WAIT",
+)
 def test_port_check_allows_time_wait():
     from bondi.deployment._deployment import _check_port
 

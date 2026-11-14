@@ -471,6 +471,7 @@ CLI errors go to stderr:
 
 For method signatures, see the [deployment API reference](reference/deployment.md).
 
-Deployment port checks allow recently closed TCP connections (`TIME_WAIT`).
-An active listener still prevents a new deployment from using that port.
+Deployment port checks reject ports with active listeners. On Windows, the
+exclusive bind check can also reject a port while a recently closed connection
+is still in `TIME_WAIT`.
 Docker performs the final port binding; the check does not reserve the port.

@@ -31,9 +31,11 @@ def _check_port(port: int) -> None:
     # Advisory only: another process can acquire the port before Docker binds it.
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # A stopped server can leave TIME_WAIT connections on its port.
-            # Allow these, but still reject an active listener.
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # Windows address reuse can allow binding over an active listener.
+            # On POSIX, reuse permits rebinding after TIME_WAIT.
+            exclusive = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)
+            bind_option = socket.SO_REUSEADDR if exclusive is None else exclusive
+            sock.setsockopt(socket.SOL_SOCKET, bind_option, 1)
             sock.bind(("127.0.0.1", port))
     except OSError as exc:
         raise RuntimeError(

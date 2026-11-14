@@ -2,7 +2,8 @@
 
 import asyncio
 import inspect
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
+from threading import Event
 
 import pytest
 
@@ -131,12 +132,20 @@ def test_failed_factory_closes_loop(sync, asynchronous, options, monkeypatch):
     assert loops[0].is_closed()
 
 
+def interrupt_wait(monkeypatch, started):
+    class InterruptibleFuture(Future):
+        def result(self, timeout=None):
+            if timeout is None and not self.done():
+                assert started.wait(3)
+                raise KeyboardInterrupt
+            return super().result(timeout)
+
+    # Interrupt the caller after the operation starts, without OS signal delivery.
+    monkeypatch.setattr("bondi._sync.Future", InterruptibleFuture)
+
+
 @pytest.mark.parametrize("during_close", [False, True])
 def test_interrupt_waits_for_cleanup(adapter, monkeypatch, during_close):
-    import os
-    import signal
-    from threading import Event, Thread
-
     sync, options, created = adapter
     executor = sync.from_uri("unused", **options)
     started = Event()
@@ -150,24 +159,19 @@ def test_interrupt_waits_for_cleanup(adapter, monkeypatch, during_close):
             await asyncio.sleep(0.02)
             cleaned.set()
 
-    def interrupt():
-        assert started.wait(3)
-        os.kill(os.getpid(), signal.SIGINT)
-
-    sender = Thread(target=interrupt)
-    sender.start()
     try:
-        with pytest.raises(KeyboardInterrupt):
-            if during_close:
-                monkeypatch.setattr(executor._executor, "close", slow)
-                executor.close()
-            else:
-                executor._submit(slow)
+        with monkeypatch.context() as interrupt:
+            interrupt_wait(interrupt, started)
+            with pytest.raises(KeyboardInterrupt):
+                if during_close:
+                    interrupt.setattr(executor._executor, "close", slow)
+                    executor.close()
+                else:
+                    executor._submit(slow)
         assert cleaned.is_set()
         if not during_close:
             assert executor.run("after interrupt")[0] == "run"
     finally:
-        sender.join()
         executor.close()
     assert not executor._worker.is_alive()
     assert executor._loop.is_closed()
@@ -175,10 +179,6 @@ def test_interrupt_waits_for_cleanup(adapter, monkeypatch, during_close):
 
 @pytest.mark.parametrize("sync,asynchronous,options", PAIRS)
 def test_interrupted_factory_unwinds(sync, asynchronous, options, monkeypatch):
-    import os
-    import signal
-    from threading import Event, Thread
-
     started, cleaned = Event(), Event()
     loops = []
 
@@ -193,17 +193,9 @@ def test_interrupted_factory_unwinds(sync, asynchronous, options, monkeypatch):
 
     # Both adapter factories await their private connect coroutine. Mongo's public
     # factory is synchronous, so exercise the common bridge directly for this case.
-    def interrupt():
-        if started.wait(3):
-            os.kill(os.getpid(), signal.SIGINT)
-
-    sender = Thread(target=interrupt)
-    sender.start()
-    try:
-        with pytest.raises(KeyboardInterrupt):
-            sync._create(factory)
-    finally:
-        sender.join()
+    interrupt_wait(monkeypatch, started)
+    with pytest.raises(KeyboardInterrupt):
+        sync._create(factory)
     assert cleaned.is_set()
     assert loops[0].is_closed()
 
