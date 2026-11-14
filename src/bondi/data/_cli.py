@@ -3,6 +3,7 @@
 import json
 import os
 from dataclasses import asdict
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -44,7 +45,7 @@ def info(name):
     return _dispatch(dataset_command="info", name=name)
 
 
-def _load_options(function):
+def _load_options(function, *, hub=False):
     """Common destination and write options for dataset source commands."""
     decorators = [
         click.option("--deployment", help="Saved deployment name."),
@@ -62,7 +63,12 @@ def _load_options(function):
             default="create",
             show_default=True,
         ),
-        click.option("--json-mode", type=click.Choice(["plain", "extended"]), default="plain"),
+        click.option(
+            "--json-mode",
+            type=click.Choice(["auto", "plain", "extended"] if hub else ["plain", "extended"]),
+            default="auto" if hub else "plain",
+            show_default=True,
+        ),
         click.option("--naive-datetimes", type=click.Choice(["error", "utc"]), default="error"),
         click.option("--decimal-mode", type=click.Choice(["error", "string"]), default="error"),
     ]
@@ -96,7 +102,7 @@ def file_command(**options):
 @click.option("--split", multiple=True, help="Select splits. Default: combine all splits.")
 @click.option("--revision", help="Hub branch, tag or commit.")
 @click.option("--collection", required=True, help="Exact collection name. No suffix is added.")
-@_load_options
+@partial(_load_options, hub=True)
 def hf_command(**options):
     """Load one Hugging Face dataset into one collection."""
     return _load_dispatch("load-hf", options)
@@ -106,7 +112,7 @@ def hf_command(**options):
 @click.argument("source")
 @click.option("--split", multiple=True, help="Select splits in every dataset. Default: all.")
 @click.option("--revision", help="Hub branch, tag or commit.")
-@_load_options
+@partial(_load_options, hub=True)
 def repository_command(**options):
     """Load all HF configurations, using their names as collection names."""
     return _load_dispatch("load-hf-repository", options)

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Default Hugging Face loaders to automatic JSON mode selection using the
+  dataset card’s `mongodb-extended-json` tag. Explicit modes override the tag.
+
 - Stream original Hugging Face JSONL splits to preserve missing fields, explicit
   nulls and Extended JSON types.
 

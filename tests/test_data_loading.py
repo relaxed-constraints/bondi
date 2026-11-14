@@ -391,7 +391,7 @@ def hub(monkeypatch):
 
     def resolve(repo, revision):
         resolutions.append((repo, revision))
-        return SimpleNamespace(sha="fixed-commit")
+        return SimpleNamespace(sha="fixed-commit", card_data=None)
 
     def rows(repo, *, name, revision, split, streaming):
         calls.append((name, revision, split, streaming))
@@ -654,7 +654,19 @@ def test_couchbase_destination_labels_in_progress_and_errors(writer, monkeypatch
     assert error.value.result.destinations == {"bucket.scope.items": 1}
 
 
-def test_hf_jsonl_preserves_missing_null_and_extended_types(writer, hub, monkeypatch):
+@pytest.mark.parametrize(
+    ("tagged", "mode", "effective"),
+    [
+        (True, None, "extended"),
+        (True, "auto", "extended"),
+        (True, "plain", "plain"),
+        (False, None, "plain"),
+        (False, "extended", "extended"),
+    ],
+)
+def test_hf_jsonl_preserves_missing_null_and_extended_types(
+    writer, hub, monkeypatch, tagged, mode, effective
+):
     from io import StringIO
     from types import SimpleNamespace
 
@@ -680,16 +692,23 @@ def test_hf_jsonl_preserves_missing_null_and_extended_types(writer, hub, monkeyp
 
     monkeypatch.setattr(api, "HfFileSystem", lambda: SimpleNamespace(open=open_file), raising=False)
     monkeypatch.setattr(library, "get_dataset_config_names", lambda *a, **k: ["users"])
-    load_hf_repository(
-        "org/forum",
-        target=MongoConnection("x"),
-        database="db",
-        split="train",
-        json_mode="extended",
+    api.HfApi = lambda: SimpleNamespace(
+        dataset_info=lambda *a, **k: SimpleNamespace(
+            sha="fixed-commit", card_data={"tags": ["mongodb-extended-json"]} if tagged else None
+        )
     )
+    options = {} if mode is None else {"json_mode": mode}
+    result = load_hf_repository(
+        "org/forum", target=MongoConnection("x"), database="db", split="train", **options
+    )
+    assert result["users"].settings["json_mode"] == effective
     docs = {row["_id"]: row for row in writer.data[("db", None, "users")].values()}
     assert "optional" not in docs["missing"]
     assert docs["null"]["optional"] is None
-    assert docs["missing"]["when"].isoformat() == "2024-01-02T03:04:05+00:00"
-    assert isinstance(docs["null"]["count"], Int64)
-    assert docs["null"]["count"] == 9007199254740993
+    if effective == "extended":
+        assert docs["missing"]["when"].isoformat() == "2024-01-02T03:04:05+00:00"
+        assert isinstance(docs["null"]["count"], Int64)
+        assert docs["null"]["count"] == 9007199254740993
+    else:
+        assert docs["missing"]["when"] == {"$date": "2024-01-02T03:04:05Z"}
+        assert docs["null"]["count"] == {"$numberLong": "9007199254740993"}

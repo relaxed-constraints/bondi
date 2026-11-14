@@ -84,6 +84,17 @@ configuration. Pin a commit with `--revision` for reproducible imports.
 
 When a split uses only Hub JSONL files (`.jsonl` or `.jsonl.gz`), BONDI
 streams the original records and preserves missing fields and explicit nulls.
-Use `--json-mode extended` for MongoDB Extended JSON exports. Other formats
-use Hugging Face readers, which can normalise records to a shared schema.
+If all configurations use MongoDB Extended JSON, add this tag alongside
+`configs` in the card's YAML front matter:
+
+```yaml
+tags:
+  - mongodb-extended-json
+```
+
+BONDI's Hugging Face loaders default to `auto`, which reads this tag from
+the selected revision and enables Extended JSON decoding for raw Hub JSONL
+splits. Use `--json-mode extended` for an untagged Extended JSON export.
+Other formats use Hugging Face readers, which can normalise records to a
+shared schema.
 See the [dataset loading guide](datasets.md) for details.

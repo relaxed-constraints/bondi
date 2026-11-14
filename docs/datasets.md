@@ -229,6 +229,15 @@ stay null. Use `--json-mode extended` or `json_mode="extended"` to decode
 MongoDB Extended JSON types. Other splits use Hugging Face readers, which
 can adjust documents to a shared schema.
 
+Both Hugging Face loaders default to `json_mode="auto"` (`--json-mode auto`).
+If the dataset card at the selected revision has the `mongodb-extended-json`
+tag, BONDI decodes Extended JSON from the original Hub JSONL splits.
+Without the tag, auto uses plain JSON. If a tagged selection includes a split
+that cannot be read as raw Hub JSONL, auto reports an error before writing.
+Specify `plain` or `extended` explicitly to override auto. Load results record
+the effective mode under `settings["json_mode"]`. Local file loads default to
+plain JSON.
+
 ## Load a Hugging Face repository
 
 Use `load_hf_repository` to load every configuration into a collection with the same name.

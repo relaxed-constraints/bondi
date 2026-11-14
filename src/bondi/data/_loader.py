@@ -17,7 +17,7 @@ from ._sources import (
     decode_document,
     hf_configs,
     hf_plans,
-    hf_revision,
+    hf_source,
     records,
     source_plan,
 )
@@ -142,6 +142,7 @@ def load_hf_dataset(
     dataset: str | None = None,
     split: str | list[str] | None = None,
     revision: str | None = None,
+    json_mode: Literal["auto", "plain", "extended"] = "auto",
     **options: Any,
 ) -> LoadDataResult:
     """Load one Hugging Face configuration into one exact collection.
@@ -153,18 +154,22 @@ def load_hf_dataset(
         dataset: Configuration name. May be omitted only for a single-config repo.
         split: Split name or list. None combines all splits in sorted name order.
         revision: Branch, tag or commit. Resolved to a commit before loading.
+        json_mode: Auto reads the Hub card tag. Plain and extended override it.
         **options: Shared options from load_documents. Namespace defaults to the
             repository and configuration identity.
 
     Returns:
         Load counts, original split counts and the resolved source commit.
 
+    The mongodb-extended-json dataset card tag defaults Hub JSONL to
+    Extended JSON decoding. Pass json_mode explicitly to override it.
+
     Streams original Hub JSONL files when available. Other sources use Hugging
     Face readers, which can normalize rows to a shared schema. Generated IDs
     include the original split; explicit duplicate IDs fail.
     """
     _destination(target, collection)
-    commit = hf_revision(repo_id, revision)
+    commit, extended_json = hf_source(repo_id, revision)
     configs = hf_configs(repo_id, commit)
     if dataset is None:
         if len(configs) != 1:
@@ -173,7 +178,8 @@ def load_hf_dataset(
     if dataset not in configs:
         raise ValueError(f"Unknown dataset {dataset!r}. Available datasets: {configs}")
     plans = hf_plans(repo_id, dataset, commit, split, options.get("namespace"))
-    return _load(plans, target=target, collection=collection, **options)
+    mode = _hf_json_mode(json_mode, plans, extended_json)
+    return _load(plans, target=target, collection=collection, json_mode=mode, **options)
 
 
 def load_hf_repository(
@@ -185,6 +191,7 @@ def load_hf_repository(
     scope: str = "_default",
     split: str | list[str] | None = None,
     revision: str | None = None,
+    json_mode: Literal["auto", "plain", "extended"] = "auto",
     **options: Any,
 ) -> dict[str, LoadDataResult]:
     """Load every HF configuration into a collection with the same name.
@@ -203,6 +210,8 @@ def load_hf_repository(
         Results keyed by configuration name.
 
     Hub JSONL splits are streamed directly to preserve the original fields.
+    The mongodb-extended-json dataset card tag enables Extended JSON decoding
+    by default for Hub JSONL. Explicit json_mode overrides the tag.
     Names and split selections are checked before any writes. Collections load
     sequentially in sorted name order. On failure, earlier writes remain.
     LoadDataError.result includes completed collections and the failed collection.
@@ -229,20 +238,21 @@ def load_hf_repository(
         def make_ref(value):
             return CouchbaseCollectionRef(bucket, scope, value)
 
-    commit = hf_revision(repo_id, revision)
+    commit, extended_json = hf_source(repo_id, revision)
     configs = hf_configs(repo_id, commit)
     if not configs:
         raise ValueError("Repository contains no datasets")
     prepared = []
     for config in configs:
         ref = make_ref(name(config))
-        prepared.append(
-            (config, ref, hf_plans(repo_id, config, commit, split, options.get("namespace")))
-        )
+        plans = hf_plans(repo_id, config, commit, split, options.get("namespace"))
+        prepared.append((config, ref, plans, _hf_json_mode(json_mode, plans, extended_json)))
     results = {}
-    for config, ref, plans in prepared:
+    for config, ref, plans, effective_mode in prepared:
         try:
-            results[config] = _load(plans, target=target, collection=ref, **options)
+            results[config] = _load(
+                plans, target=target, collection=ref, json_mode=effective_mode, **options
+            )
         except LoadDataError as error:
             for previous in results.values():
                 error.result.destinations.update(previous.destinations)
@@ -253,6 +263,19 @@ def load_hf_repository(
                     error.result.conversions[key] = error.result.conversions.get(key, 0) + value
             raise
     return results
+
+
+def _hf_json_mode(json_mode, plans, extended_json):
+    if json_mode != "auto":
+        return json_mode
+    if not extended_json:
+        return "plain"
+    if not all(isinstance(plan["source"], HubJsonLines) for plan in plans):
+        raise ValueError(
+            "The mongodb-extended-json tag requires Hub JSONL splits. "
+            "Specify json_mode explicitly to override it."
+        )
+    return "extended"
 
 
 def _load(

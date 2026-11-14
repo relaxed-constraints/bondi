@@ -143,14 +143,13 @@ def file_info(source):
     return {"kind": "file", "file": path.name, "sha256": digest.hexdigest()}
 
 
-def hf_revision(repo_id, revision):
-    """Resolve a repository revision once before loading its configurations."""
-    return (
-        import_module("huggingface_hub")
-        .HfApi()
-        .dataset_info(repo_id, revision=revision or "main")
-        .sha
+def hf_source(repo_id, revision):
+    """Resolve a Hub revision and read its publisher-declared encoding."""
+    info = (
+        import_module("huggingface_hub").HfApi().dataset_info(repo_id, revision=revision or "main")
     )
+    tags = info.card_data.get("tags") or () if info.card_data else ()
+    return info.sha, "mongodb-extended-json" in tags
 
 
 def hf_configs(repo_id, revision):
