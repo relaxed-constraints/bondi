@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.1 — 2026-11-14
+
 - Allow deployment ports to be reused after shutdown when only TCP TIME_WAIT
   connections remain. Continue to reject ports with active listeners.
 
