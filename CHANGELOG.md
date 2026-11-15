@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use shared light/dark diagram colours from relcon-docs.
+
 - Inherit callouts, collapsible notes and Mermaid support from relcon-docs.
 
 - Inherit Markdown-export defaults from relcon-docs while retaining BONDI

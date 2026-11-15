@@ -165,4 +165,5 @@ The theme affects documentation only; installing the toolkit does not install it
 
 Callouts (`!!! note`), collapsible notes (`??? tip`) and Mermaid fenced blocks
 are enabled by relcon-docs. No project-level Markdown extension settings are
-needed for them. Project-specific diagram styles remain local.
+needed for them. Light/dark diagram colours also come from the shared stylesheet.
+See the [diagram examples](https://relaxed-constraints.github.io/relcon-docs/diagrams/).

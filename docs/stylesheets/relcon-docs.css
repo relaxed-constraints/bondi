@@ -20,3 +20,49 @@
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
+
+/* Diagram roles inherit into Zensical's Mermaid shadow roots. */
+:root,
+[data-md-color-scheme="default"] {
+  --relcon-diagram-frame-bg: #f5f7fa;
+  --relcon-diagram-frame-border: #758399;
+  --relcon-diagram-node-bg: #e8eff7;
+  --relcon-diagram-node-border: #59718f;
+  --relcon-diagram-text: #223248;
+  --relcon-diagram-edge: #526780;
+}
+
+[data-md-color-scheme="slate"] {
+  --relcon-diagram-frame-bg: #202a38;
+  --relcon-diagram-frame-border: #778ba4;
+  --relcon-diagram-node-bg: #293c53;
+  --relcon-diagram-node-border: #8eaacb;
+  --relcon-diagram-text: #eef3f9;
+  --relcon-diagram-edge: #94a9c2;
+}
+
+:root,
+[data-md-color-scheme] {
+  /* Native flowcharts need no per-diagram style declarations. */
+  --md-mermaid-node-bg-color: var(--relcon-diagram-node-bg);
+  --md-mermaid-node-fg-color: var(--relcon-diagram-node-border);
+  --md-mermaid-label-fg-color: var(--relcon-diagram-text);
+  --md-mermaid-label-bg-color: var(--md-default-bg-color);
+  --md-mermaid-edge-color: var(--relcon-diagram-edge);
+  --md-mermaid-sequence-actor-bg-color: var(--relcon-diagram-node-bg);
+  --md-mermaid-sequence-actor-border-color: var(--relcon-diagram-node-border);
+  --md-mermaid-sequence-actor-fg-color: var(--relcon-diagram-text);
+  --md-mermaid-sequence-actor-line-color: var(--relcon-diagram-edge);
+  --md-mermaid-sequence-message-fg-color: var(--relcon-diagram-text);
+  --md-mermaid-sequence-message-line-color: var(--relcon-diagram-edge);
+  --md-mermaid-sequence-note-bg-color: var(--relcon-diagram-frame-bg);
+  --md-mermaid-sequence-note-border-color: var(--relcon-diagram-frame-border);
+  --md-mermaid-sequence-note-fg-color: var(--relcon-diagram-text);
+
+  /* Compatibility with diagrams authored before relcon-docs. */
+  --jb-frame-bg: var(--relcon-diagram-frame-bg);
+  --jb-frame-border: var(--relcon-diagram-frame-border);
+  --jb-node-bg: var(--relcon-diagram-node-bg);
+  --jb-node-border: var(--relcon-diagram-node-border);
+  --jb-diagram-text: var(--relcon-diagram-text);
+}

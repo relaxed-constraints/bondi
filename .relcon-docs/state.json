@@ -1,7 +1,7 @@
 {
   "files": {
     ".relcon-docs/base.yml": "110cfc240db982facfed2030a106fcb19127643e7cf29faeb0e21a5b7a700765",
-    "docs/stylesheets/relcon-docs.css": "34571a61550b69b6eeb5d8ca46c101f8b5b9c9c40ae322c0fc6f67efe04260fd"
+    "docs/stylesheets/relcon-docs.css": "e4246dd8db10f15a90ea04bbde99d0804b2ed925d1c9ee819d4e3325f3cc9669"
   },
   "package_version": "0.1.0",
   "schema": 1
