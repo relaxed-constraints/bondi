@@ -10,8 +10,9 @@ Hugging Face loaders now use Hugging Face-managed disk caches by default.
 Use `streaming=True` or `--streaming` to retain remote streaming. JSONL and
 gzip JSONL preserve original document fields and Extended JSON decoding.
 
-See the [changelog](changelog.md) for details. Version 0.3.4 has been built
-and verified locally; it has not yet been published.
+See the [changelog](changelog.md) for details.
+Release artifacts are available on [PyPI](https://pypi.org/project/bondi/0.3.4/)
+and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.4).
 
 ## 0.3.4 verification
 
