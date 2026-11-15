@@ -101,6 +101,9 @@ def file_command(**options):
 @click.option("--dataset", help="HF configuration name. Required for multi-config repositories.")
 @click.option("--split", multiple=True, help="Select splits. Default: combine all splits.")
 @click.option("--revision", help="Hub branch, tag or commit.")
+@click.option(
+    "--streaming", is_flag=True, help="Stream remotely instead of using Hugging Face disk caches."
+)
 @click.option("--collection", required=True, help="Exact collection name. No suffix is added.")
 @partial(_load_options, hub=True)
 def hf_command(**options):
@@ -112,6 +115,9 @@ def hf_command(**options):
 @click.argument("source")
 @click.option("--split", multiple=True, help="Select splits in every dataset. Default: all.")
 @click.option("--revision", help="Hub branch, tag or commit.")
+@click.option(
+    "--streaming", is_flag=True, help="Stream remotely instead of using Hugging Face disk caches."
+)
 @partial(_load_options, hub=True)
 def repository_command(**options):
     """Load all HF configurations, using their names as collection names."""
@@ -209,6 +215,7 @@ def run(args):
             scope=args.scope,
             split=args.split,
             revision=args.revision,
+            streaming=args.streaming,
             **options,
         )
         payload = {key: asdict(value) for key, value in result.items()}
@@ -230,6 +237,7 @@ def run(args):
                 dataset=args.dataset,
                 split=args.split,
                 revision=args.revision,
+                streaming=args.streaming,
                 **options,
             )
         payload = asdict(result)

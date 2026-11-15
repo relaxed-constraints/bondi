@@ -19,6 +19,11 @@ for partial failure behavior.
       show_root_heading: true
       heading_level: 2
 
+Both Hugging Face loaders default to `streaming=False` and use Hugging Face's
+disk caches. Pass `streaming=True` to read remotely instead. See
+[caching and streaming](../datasets.md#hugging-face-caching-and-streaming)
+for cache locations, CLI flags and storage tradeoffs.
+
 ::: bondi.data.load_hf_dataset
     options:
       show_root_heading: true

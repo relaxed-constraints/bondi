@@ -1,6 +1,7 @@
 """Source plans and streaming readers. No database operations occur here."""
 
 import csv
+import gzip
 import hashlib
 import json
 from dataclasses import dataclass
@@ -72,11 +73,27 @@ def decode(text, mode):
 @dataclass(frozen=True)
 class HubJsonLines:
     paths: tuple[str, ...]
+    streaming: bool = False
 
     def records(self, mode):
-        fs = import_module("huggingface_hub").HfFileSystem()
+        hub = import_module("huggingface_hub")
+        fs = hub.HfFileSystem()
         for path in self.paths:
-            with fs.open(path, "rt", encoding="utf-8", compression="infer") as handle:
+            if self.streaming:
+                with fs.open(path, "rt", encoding="utf-8", compression="infer") as handle:
+                    yield from json_lines(handle, mode)
+                continue
+
+            # Hugging Face owns the cache; read its returned path without modifying it.
+            resolved = fs.resolve_path(path)
+            cached = hub.hf_hub_download(
+                repo_id=resolved.repo_id,
+                filename=resolved.path_in_repo,
+                repo_type=resolved.repo_type,
+                revision=resolved.revision,
+            )
+            opener = gzip.open if resolved.path_in_repo.lower().endswith(".gz") else open
+            with opener(cached, "rt", encoding="utf-8") as handle:
                 yield from json_lines(handle, mode)
 
 
@@ -156,7 +173,7 @@ def hf_configs(repo_id, revision):
     return sorted(import_module("datasets").get_dataset_config_names(repo_id, revision=revision))
 
 
-def hf_plans(repo_id, dataset, revision, split, namespace):
+def hf_plans(repo_id, dataset, revision, split, namespace, *, streaming=False):
     library = import_module("datasets")
     available = library.get_dataset_split_names(repo_id, dataset, revision=revision)
     selected = available if split is None else ([split] if isinstance(split, str) else list(split))
@@ -174,10 +191,10 @@ def hf_plans(repo_id, dataset, revision, split, namespace):
             path.startswith("hf://datasets/") and path.lower().endswith((".jsonl", ".jsonl.gz"))
             for path in paths
         ):
-            source = HubJsonLines(paths)
+            source = HubJsonLines(paths, streaming=streaming)
         else:
             source = library.load_dataset(
-                repo_id, name=dataset, revision=revision, split=part, streaming=True
+                repo_id, name=dataset, revision=revision, split=part, streaming=streaming
             )
         plans.append(
             source_plan(

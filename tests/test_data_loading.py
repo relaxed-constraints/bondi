@@ -478,7 +478,8 @@ def hub(monkeypatch):
     return data, calls, resolutions
 
 
-def test_hf_combines_splits_into_exact_destination(writer, hub):
+@pytest.mark.parametrize("streaming", [False, True])
+def test_hf_combines_splits_into_exact_destination(writer, hub, streaming):
     from bondi.data import load_hf_dataset
 
     result = load_hf_dataset(
@@ -486,12 +487,14 @@ def test_hf_combines_splits_into_exact_destination(writer, hub):
         dataset="users",
         target=MongoConnection("x"),
         collection=MongoCollectionRef("test", "chosen"),
+        streaming=streaming,
     )
     assert result.destinations == {"test.chosen": 2}
     assert result.source_counts == {"users:test": 1, "users:train": 1}
     assert all(source["revision"] == "fixed-commit" for source in result.sources)
     assert {row[1] for row in hub[1]} == {"fixed-commit"}
     assert len(hub[2]) == 1
+    assert all(call[3] is streaming for call in hub[1])
     before = dict(writer.data[("test", None, "chosen")])
     load_hf_dataset(
         "org/forum",
@@ -499,6 +502,7 @@ def test_hf_combines_splits_into_exact_destination(writer, hub):
         split="train",
         target=MongoConnection("x"),
         collection=MongoCollectionRef("test", "chosen"),
+        streaming=streaming,
         mode="replace",
     )
     after = writer.data[("test", None, "chosen")]
@@ -590,7 +594,8 @@ def test_extended_json_documents(writer):
 
 
 @pytest.mark.parametrize("command", ["load-hf", "load-hf-repository"])
-def test_cli_hf_dispatch(writer, hub, monkeypatch, capsys, command):
+@pytest.mark.parametrize("streaming", [False, True])
+def test_cli_hf_dispatch(writer, hub, monkeypatch, capsys, command, streaming):
     import json
 
     from bondi._cli import main
@@ -601,7 +606,10 @@ def test_cli_hf_dispatch(writer, hub, monkeypatch, capsys, command):
     args = ["dataset", command, "org/forum", "--deployment", "db", "--database", "demo"]
     if command == "load-hf":
         args += ["--dataset", "users", "--collection", "exact", "--split", "train"]
+    if streaming:
+        args += ["--streaming"]
     assert main(args) == 0
+    assert all(call[3] is streaming for call in hub[1])
     payload = json.loads(capsys.readouterr().out)
     if command == "load-hf":
         assert payload["destinations"] == {"demo.exact": 1}
@@ -732,8 +740,10 @@ def test_couchbase_destination_labels_in_progress_and_errors(writer, monkeypatch
         (False, "extended", "extended"),
     ],
 )
+@pytest.mark.parametrize("streaming", [False, True])
+@pytest.mark.parametrize("compressed", [False, True])
 def test_hf_jsonl_preserves_missing_null_and_extended_types(
-    writer, hub, monkeypatch, tagged, mode, effective
+    writer, hub, monkeypatch, tmp_path, tagged, mode, effective, streaming, compressed
 ):
     from io import StringIO
     from types import SimpleNamespace
@@ -744,7 +754,8 @@ def test_hf_jsonl_preserves_missing_null_and_extended_types(
 
     library = _sources.import_module("datasets")
     api = _sources.import_module("huggingface_hub")
-    path = "hf://datasets/org/forum@fixed-commit/users.jsonl"
+    filename = "data/users.jsonl.gz" if compressed else "data/users.jsonl"
+    path = f"hf://datasets/org/forum@fixed-commit/{filename}"
     rows = (
         '{"_id":"missing","when":{"$date":"2024-01-02T03:04:05Z"}}\n'
         '{"_id":"null","optional":null,"count":{"$numberLong":"9007199254740993"}}\n'
@@ -758,7 +769,29 @@ def test_hf_jsonl_preserves_missing_null_and_extended_types(
         assert mode == "rt"
         return StringIO(rows)
 
-    monkeypatch.setattr(api, "HfFileSystem", lambda: SimpleNamespace(open=open_file), raising=False)
+    import gzip
+    from unittest.mock import Mock
+
+    # Cache paths need not retain the source extension.
+    cached = tmp_path / "cached-blob"
+    cached.write_bytes(gzip.compress(rows.encode()) if compressed else rows.encode())
+    download = Mock(return_value=str(cached))
+    remote_open = Mock(side_effect=open_file)
+    resolve = Mock(
+        return_value=SimpleNamespace(
+            repo_id="org/forum",
+            repo_type="dataset",
+            revision="fixed-commit",
+            path_in_repo=filename,
+        )
+    )
+    monkeypatch.setattr(api, "hf_hub_download", download, raising=False)
+    monkeypatch.setattr(
+        api,
+        "HfFileSystem",
+        lambda: SimpleNamespace(open=remote_open, resolve_path=resolve),
+        raising=False,
+    )
     monkeypatch.setattr(library, "get_dataset_config_names", lambda *a, **k: ["users"])
     api.HfApi = lambda: SimpleNamespace(
         dataset_info=lambda *a, **k: SimpleNamespace(
@@ -767,8 +800,23 @@ def test_hf_jsonl_preserves_missing_null_and_extended_types(
     )
     options = {} if mode is None else {"json_mode": mode}
     result = load_hf_repository(
-        "org/forum", target=MongoConnection("x"), database="db", split="train", **options
+        "org/forum",
+        target=MongoConnection("x"),
+        database="db",
+        split="train",
+        streaming=streaming,
+        **options,
     )
+    if streaming:
+        download.assert_not_called()
+        resolve.assert_not_called()
+        remote_open.assert_called_once()
+    else:
+        remote_open.assert_not_called()
+        resolve.assert_called_once_with(path)
+        download.assert_called_once_with(
+            repo_id="org/forum", filename=filename, repo_type="dataset", revision="fixed-commit"
+        )
     assert result["users"].settings["json_mode"] == effective
     docs = {row["_id"]: row for row in writer.data[("db", None, "users")].values()}
     assert "optional" not in docs["missing"]

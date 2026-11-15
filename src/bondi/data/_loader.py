@@ -143,6 +143,7 @@ def load_hf_dataset(
     dataset: str | None = None,
     split: str | list[str] | None = None,
     revision: str | None = None,
+    streaming: bool = False,
     json_mode: Literal["auto", "plain", "extended"] = "auto",
     **options: Any,
 ) -> LoadDataResult:
@@ -155,6 +156,7 @@ def load_hf_dataset(
         dataset: Configuration name. May be omitted only for a single-config repo.
         split: Split name or list. None combines all splits in sorted name order.
         revision: Branch, tag or commit. Resolved to a commit before loading.
+        streaming: Stream remote records instead of using Hugging Face disk caches.
         json_mode: Auto reads the Hub card tag. Plain and extended override it.
         **options: Shared options from load_documents. Namespace defaults to the
             repository and configuration identity.
@@ -165,9 +167,11 @@ def load_hf_dataset(
     The mongodb-extended-json dataset card tag defaults Hub JSONL to
     Extended JSON decoding. Pass json_mode explicitly to override it.
 
-    Streams original Hub JSONL files when available. Other sources use Hugging
-    Face readers, which can normalize rows to a shared schema. Generated IDs
-    include the original split; explicit duplicate IDs fail.
+    Reads original Hub JSONL files when available. By default Hugging Face caches
+    source files on disk; other formats also use its prepared dataset cache.
+    Set streaming=True to read remotely without preparing these disk caches.
+    Other sources use Hugging Face readers, which can normalize rows to a shared
+    schema. Generated IDs include the original split; explicit duplicate IDs fail.
     """
     _destination(target, collection)
     commit, extended_json = hf_source(repo_id, revision)
@@ -178,7 +182,7 @@ def load_hf_dataset(
         dataset = configs[0]
     if dataset not in configs:
         raise ValueError(f"Unknown dataset {dataset!r}. Available datasets: {configs}")
-    plans = hf_plans(repo_id, dataset, commit, split, options.get("namespace"))
+    plans = hf_plans(repo_id, dataset, commit, split, options.get("namespace"), streaming=streaming)
     mode = _hf_json_mode(json_mode, plans, extended_json)
     return _load(plans, target=target, collection=collection, json_mode=mode, **options)
 
@@ -192,6 +196,7 @@ def load_hf_repository(
     scope: str = "_default",
     split: str | list[str] | None = None,
     revision: str | None = None,
+    streaming: bool = False,
     json_mode: Literal["auto", "plain", "extended"] = "auto",
     **options: Any,
 ) -> dict[str, LoadDataResult]:
@@ -205,12 +210,15 @@ def load_hf_repository(
         scope: Couchbase scope, default _default.
         split: Selection applied to every configuration. None combines all splits.
         revision: Resolve once so all configurations use the same commit.
+        streaming: Stream remote records instead of using Hugging Face disk caches.
+        json_mode: Auto reads the Hub card tag. Plain and extended override it.
         **options: Shared options from load_documents, applied to each collection.
 
     Returns:
         Results keyed by configuration name.
 
-    Hub JSONL splits are streamed directly to preserve the original fields.
+    Hub JSONL splits preserve the original fields. Hugging Face manages the disk
+    caches by default; streaming=True reads remotely without preparing these caches.
     The mongodb-extended-json dataset card tag enables Extended JSON decoding
     by default for Hub JSONL. Explicit json_mode overrides the tag.
     Names and split selections are checked before any writes. Collections load
@@ -246,7 +254,9 @@ def load_hf_repository(
     prepared = []
     for config in configs:
         ref = make_ref(name(config))
-        plans = hf_plans(repo_id, config, commit, split, options.get("namespace"))
+        plans = hf_plans(
+            repo_id, config, commit, split, options.get("namespace"), streaming=streaming
+        )
         prepared.append((config, ref, plans, _hf_json_mode(json_mode, plans, extended_json)))
     results = {}
     for config, ref, plans, effective_mode in prepared:

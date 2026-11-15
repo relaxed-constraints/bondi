@@ -223,7 +223,7 @@ Use those source details with `load-hf`.
 The suggestion name itself is not a source alias.
 Add `--json` to the list command for machine-readable metadata.
 
-BONDI streams the original files for splits backed entirely by Hub JSONL
+BONDI reads the original files for splits backed entirely by Hub JSONL
 (`.jsonl` or `.jsonl.gz`). Missing fields stay absent and explicit nulls
 stay null. Use `--json-mode extended` or `json_mode="extended"` to decode
 MongoDB Extended JSON types. Other splits use Hugging Face readers, which
@@ -237,6 +237,60 @@ that cannot be read as raw Hub JSONL, auto reports an error before writing.
 Specify `plain` or `extended` explicitly to override auto. Load results record
 the effective mode under `settings["json_mode"]`. Local file loads default to
 plain JSON.
+
+### Hugging Face caching and streaming
+
+Both `load_hf_dataset` and `load_hf_repository` default to `streaming=False`.
+Hugging Face manages downloads and cache reuse; BONDI does not keep a separate
+cache or copy cached files.
+
+For Hub JSONL and gzip-compressed JSONL, BONDI uses `hf_hub_download()` and reads
+the returned local file with its original JSON decoder. Other formats use
+`datasets.load_dataset(..., streaming=False)`, which also prepares a disk-backed
+Arrow dataset. Repeated loads reuse cached files for the selected revision,
+including matching files downloaded by `hf download` into the same Hub cache.
+They still parse documents and write them to the database.
+
+The first load needs disk space for source files and, where applicable, prepared
+Arrow data. A JSONL file downloads before its records are read; other formats
+may need dataset preparation before loading starts. BONDI iterates the local
+records rather than reading the entire dataset into Python memory.
+
+To retain remote streaming, pass `streaming=True` to either Python loader or
+`--streaming` to either CLI command:
+
+```sh
+bondi dataset load-hf origami-ml/jsynth-data \
+  --dataset adult --deployment notebook-datasets --database demo \
+  --collection adult --streaming
+
+bondi dataset load-hf-repository our-org/forum-data \
+  --deployment notebook-datasets --database forum --streaming
+```
+
+```python
+result = load_hf_dataset(
+    "origami-ml/jsynth-data",
+    dataset="adult",
+    target=deployment,
+    collection=MongoCollectionRef("demo", "adult"),
+    streaming=True,
+)
+```
+
+Streaming avoids preparing complete source-file and Arrow caches, so repeated
+loads can transfer the data again. Hugging Face may still cache metadata.
+
+Cache locations follow Hugging Face's standard environment variables:
+`HF_HOME` relocates both caches, `HF_HUB_CACHE` controls downloaded Hub files,
+and `HF_DATASETS_CACHE` controls prepared datasets. Defaults are
+`~/.cache/huggingface/hub` and `~/.cache/huggingface/datasets`.
+Manage them with Hugging Face's tools; see
+[Hugging Face cache management](https://huggingface.co/docs/datasets/en/cache).
+
+Caching does not make BONDI's loader fully offline: it still resolves repository
+metadata and pins a commit before loading. Split selection, document IDs,
+Extended JSON decoding and database write modes are unchanged.
 
 ## Load a Hugging Face repository
 

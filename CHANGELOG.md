@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Use Hugging Face's disk caches by default for dataset and repository loaders.
+  Preserve original JSONL and Extended JSON decoding, including gzip files.
+  Add `streaming=True` and CLI `--streaming` to opt into remote streaming.
+
 - Add Image and Created columns to deployment list and bulk lifecycle previews.
   Persist a UTC creation timestamp for new deployments; display — for older ones.
 
