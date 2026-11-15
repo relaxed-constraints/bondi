@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Simplify the database deployment API reference to member documentation; keep
+  usage and configuration guidance in the deployment guide.
+
 - Accept explicit Couchbase Data Service, Index Service and bucket memory quotas
   at deployment creation. Default Data and Index to 512 MiB each and the bucket
   to the Data quota. Save and verify resolved quotas at startup, preserving
