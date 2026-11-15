@@ -263,7 +263,7 @@ dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.9" },
 ]
-docs = [{ name = "relcon-docs", git = "https://github.com/relaxed-constraints/relcon-docs.git?rev=ea4aa3ded66f09a8963a5f12655f9e601e286400" }]
+docs = [{ name = "relcon-docs", git = "https://github.com/relaxed-constraints/relcon-docs.git?rev=7a65409737b9e17086232b87ac95160ae58b2199" }]
 
 [[package]]
 name = "certifi"
@@ -1963,7 +1963,7 @@ wheels = [
 [[package]]
 name = "relcon-docs"
 version = "0.1.0"
-source = { git = "https://github.com/relaxed-constraints/relcon-docs.git?rev=ea4aa3ded66f09a8963a5f12655f9e601e286400#ea4aa3ded66f09a8963a5f12655f9e601e286400" }
+source = { git = "https://github.com/relaxed-constraints/relcon-docs.git?rev=7a65409737b9e17086232b87ac95160ae58b2199#7a65409737b9e17086232b87ac95160ae58b2199" }
 dependencies = [
     { name = "mkdocstrings-python" },
     { name = "pyyaml" },

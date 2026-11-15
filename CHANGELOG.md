@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Update relcon-docs to inherit alphabetical API members and exclude private members.
+
 - Update relcon-docs defaults and deployment workflow; inherit equation rendering,
   diagram accent colours and dark-mode Markdown copy controls.
 

@@ -52,6 +52,8 @@ plugins:
       python:
         options:
           docstring_style: google
+          members_order: alphabetical
+          filters: ["!^_"]
           show_signature_annotations: true
           separate_signature: true
           signature_crossrefs: true
