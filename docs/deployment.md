@@ -401,14 +401,23 @@ bondi deployment create couchbase --name cb-large --memory-limit-mb 16384
 
 These are alternative ways to create the same deployment.
 The value must be a positive integer in MiB.
-It limits the container, not individual Couchbase service or bucket quotas.
-Initialization still uses small demo allocations.
+The container cap covers Couchbase and its overhead. Python callers can also
+set the Data Service, Index Service and bucket quotas at creation:
 
-Configure experiment-specific quotas separately.
-Leave room for Query and other services.
-For example, 8192 MiB for Data plus 1024 MiB for Index exceeds a 4096 MiB container cap.
-Docker also needs enough memory for other running databases.
-Increasing Docker Desktop's allocation alone does not change the container cap.
+```python
+database = deploy_couchbase(
+    name="cb-benchmark",
+    memory_limit_mb=16384,
+    data_memory_mb=8192,
+    index_memory_mb=1024,
+    bucket_memory_mb=8192,
+)
+```
+
+A new deployment defaults to 512 MiB for Data, 512 MiB for Index and 256 MiB for
+the bucket. The bucket quota comes from the Data Service allocation. Leave room
+in the container for Query Service and process overhead. BONDI checks explicit
+quotas at startup and reports drift on existing deployments without resizing them.
 
 Conflicting Couchbase memory requests fail before contacting Docker.
 Repeat the saved limit when calling `deploy_couchbase`.

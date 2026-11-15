@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Accept explicit Couchbase Data Service, Index Service and bucket memory quotas
+  at deployment creation. Verify saved explicit quotas at startup.
+
 - Install relcon-docs 0.1.0 from PyPI and enable shared heading permalinks.
 
 - Update relcon-docs to inherit alphabetical API members and exclude private members.

@@ -96,8 +96,10 @@ def test_initialize_failure_rolls_back(setup):
 
 @pytest.mark.parametrize("edition,storage", [("community", "forestdb"), ("enterprise", "plasma")])
 @pytest.mark.parametrize("existing", [False, True])
-def test_initialization_and_restarts(setup, edition, storage, existing):
-    db = deploy_couchbase(edition=edition)
+@pytest.mark.parametrize("custom", [False, True])
+def test_initialization_and_restarts(setup, edition, storage, existing, custom):
+    quotas = {"data_memory_mb": 768, "index_memory_mb": 256, "bucket_memory_mb": 512}
+    db = deploy_couchbase(edition=edition, **(quotas if custom else {}))
     responses = [{"pools": [{}] if existing else []}]
     if not existing:
         responses.append(None)  # clusterInit
@@ -126,6 +128,10 @@ def test_initialization_and_restarts(setup, edition, storage, existing):
         }
     )
     responses.extend([{"nodes": [{"status": "healthy"}]}, {"status": "success", "results": [1]}])
+    if custom:
+        responses.extend(
+            [{"memoryQuota": 768, "indexMemoryQuota": 256}, {"quota": {"ram": 512 * 1024**2}}]
+        )
     with patch.object(_couchbase, "request", side_effect=responses) as req:
         ORIGINAL_INITIALIZE(db, deadline=time.monotonic() + 10)
     calls = req.call_args_list
@@ -133,11 +139,42 @@ def test_initialization_and_restarts(setup, edition, storage, existing):
     assert bool(init) is not existing
     if init:
         assert init[0].args[2]["indexerStorageMode"] == storage
+        assert init[0].args[2]["memoryQuota"] == (768 if custom else 512)
+        assert init[0].args[2]["indexMemoryQuota"] == (256 if custom else 512)
+        create = next(
+            c
+            for c in calls
+            if c.args[1] == "/pools/default/buckets" and len(c.args) > 2 and c.args[2]
+        )
+        assert create.args[2]["ramQuotaMB"] == (512 if custom else 256)
+    else:
+        assert not any(
+            c.args[1] in {"/pools/default", "/pools/default/buckets/demo"}
+            and len(c.args) > 2
+            and c.args[2]
+            for c in calls
+        )
     alternate = next(c for c in calls if "setupAlternateAddresses" in c.args[1])
     assert alternate.args[2] == {"hostname": "127.0.0.1", "mgmt": 8091, "n1ql": 8093, "kv": 11210}
 
 
 ORIGINAL_INITIALIZE = _couchbase.initialize
+
+
+@pytest.mark.parametrize("drift", ["service", "bucket"])
+def test_saved_quota_drift_does_not_resize(setup, drift):
+    db = deploy_couchbase(data_memory_mb=768, bucket_memory_mb=512)
+    service = {"memoryQuota": 512 if drift == "service" else 768}
+    bucket = {"quota": {"ram": (256 if drift == "bucket" else 512) * 1024**2}}
+    responses = [{"pools": [{}]}, {}, None, [{"name": "demo"}], service, bucket]
+    with (
+        patch.object(_couchbase, "ready"),
+        patch.object(_couchbase, "request", side_effect=responses) as request,
+        pytest.raises(RuntimeError, match="expected 768 MiB|bucket quota"),
+    ):
+        ORIGINAL_INITIALIZE(db, deadline=time.monotonic() + 10)
+    writes = [call.args[1] for call in request.call_args_list if call.args[2] is not None]
+    assert writes == ["/node/controller/setupAlternateAddresses/external"]
 
 
 def test_http_error_hides_body_and_credentials(setup):
@@ -229,6 +266,35 @@ def test_memory_conflict_preserves_existing_deployment(setup):
         deploy_couchbase(memory_limit_mb=16384)
     run.assert_not_called()
     assert {p.name: p.read_bytes() for p in db._path.iterdir()} == before
+
+
+def test_quota_metadata_reuse_and_conflict(setup):
+    _, run, _ = setup
+    db = deploy_couchbase(data_memory_mb=1024, index_memory_mb=256, bucket_memory_mb=768)
+    assert (db.data_memory_mb, db.index_memory_mb, db.bucket_memory_mb) == (1024, 256, 768)
+    assert deploy_couchbase(bucket_memory_mb=768) == db
+    assert deploy_couchbase() == db
+    run.reset_mock()
+    with pytest.raises(ValueError, match="bucket_memory_mb"):
+        deploy_couchbase(bucket_memory_mb=512)
+    run.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"data_memory_mb": True},
+        {"index_memory_mb": 255},
+        {"bucket_memory_mb": 99},
+        {"bucket_memory_mb": 513},
+    ],
+)
+def test_invalid_quotas_fail_before_docker(setup, options):
+    port, run, _ = setup
+    with pytest.raises(ValueError, match="memory_mb"):
+        deploy_couchbase(**options)
+    port.assert_not_called()
+    run.assert_not_called()
 
 
 def test_legacy_memory_metadata_preserves_compose(setup):
