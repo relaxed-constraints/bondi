@@ -28,8 +28,14 @@ theme:
       icon: lucide/moon
       name: Switch to system preference
 markdown_extensions:
+  admonition: {}
+  pymdownx.details: {}
   pymdownx.highlight: {}
-  pymdownx.superfences: {}
+  pymdownx.superfences:
+    custom_fences:
+    - name: mermaid
+      class: mermaid
+      format: pymdownx.superfences.fence_code_format
   pymdownx.tabbed:
     alternate_style: true
 plugins:

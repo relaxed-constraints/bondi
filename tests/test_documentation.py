@@ -12,6 +12,10 @@ def test_project_overrides_preserve_shared_documentation_defaults():
     config = zensical_config.parse_config(str(root / "mkdocs.yml"))
 
     # Local source paths must not replace the inherited API-rendering options.
+    assert "admonition" in config["markdown_extensions"]
+    assert "pymdownx.details" in config["markdown_extensions"]
+    fences = config["mdx_configs"]["pymdownx.superfences"]["custom_fences"]
+    assert any(fence["name"] == "mermaid" for fence in fences)
     python = config["plugins"]["mkdocstrings"]["config"]["handlers"]["python"]
     assert python["paths"] == ["src"]
     assert python["options"]["signature_crossrefs"] is True

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Inherit callouts, collapsible notes and Mermaid support from relcon-docs.
+
 - Inherit Markdown-export defaults from relcon-docs while retaining BONDI
   documentation and API-reference index sections.
 

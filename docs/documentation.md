@@ -160,3 +160,9 @@ Code-copy buttons are enabled. `font: false` uses system fonts without fetching 
 After a dependency or theme change, [restart the preview server](#4-preview-locally).
 
 The theme affects documentation only; installing the toolkit does not install it.
+
+## Shared authoring features
+
+Callouts (`!!! note`), collapsible notes (`??? tip`) and Mermaid fenced blocks
+are enabled by relcon-docs. No project-level Markdown extension settings are
+needed for them. Project-specific diagram styles remain local.
