@@ -129,8 +129,23 @@ It does not prove the examples are correct or execute ordinary Markdown code
 blocks. Pytest runs our contract tests and, with the configured `--doctest-modules`
 option, the `>>>` examples in the Python source.
 
-Building is local; it does not publish the documentation. Hosting can be chosen
-later.
+Building is local; it does not publish the documentation.
+
+## Deployment
+
+`.github/workflows/docs.yml` calls the reusable relcon-docs Pages workflow at a
+pinned Git commit. BONDI deploys only when a GitHub release is **published**.
+Pushes to `main` run CI checks but do not publish the site, and the deployment
+workflow has no manual trigger.
+
+The shared workflow checks out the release revision, installs the locked docs
+dependencies, checks managed configuration, builds in strict mode and deploys
+`site/` to GitHub Pages. The caller owns the trigger and workflow revision;
+`relcon-docs configure` leaves it unchanged. Update the workflow pin separately
+when adopting changes to deployment tooling.
+
+GitHub Pages must use the GitHub Actions source, and the `github-pages`
+environment must permit deployment from release tags.
 
 
 ## Documentation theme

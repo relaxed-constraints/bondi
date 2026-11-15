@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Use the pinned relcon-docs Pages workflow for deployments triggered only by
+  published GitHub releases; remove the manual deployment trigger.
+
 - Adopt relcon-docs as documentation tooling, with managed shared defaults and
   styling, a pinned Git dependency, and configuration-drift checks in CI.
 

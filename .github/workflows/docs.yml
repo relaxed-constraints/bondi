@@ -1,0 +1,14 @@
+# Project-owned: deploy only when a GitHub release is published.
+name: Documentation
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  docs:
+    uses: relaxed-constraints/relcon-docs/.github/workflows/deploy-docs.yml@1914d3c4486c6baa3a1b9beb5936f9797dd0fa5b
