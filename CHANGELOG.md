@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Install relcon-docs 0.1.0 from PyPI and enable shared heading permalinks.
+
 - Update relcon-docs to inherit alphabetical API members and exclude private members.
 
 - Update relcon-docs defaults and deployment workflow; inherit equation rendering,

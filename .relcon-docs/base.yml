@@ -30,6 +30,9 @@ theme:
       icon: lucide/moon
       name: Switch to system preference
 markdown_extensions:
+  toc:
+    permalink: true
+    permalink_title: Link to this section
   pymdownx.arithmatex:
     generic: true
   admonition: {}

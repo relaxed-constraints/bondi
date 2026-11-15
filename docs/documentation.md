@@ -48,8 +48,8 @@ The Python handler puts signatures in separate code blocks and links documented
 types. Ruff formats long signatures. The `docs` dependency group supplies the
 shared tooling package, which supplies the site builder, Python handler, and formatter.
 It is a documentation dependency: ordinary BONDI installations do not install it.
-Until a PyPI release is adopted, the group pins relcon-docs to an exact Git commit;
-installation requires Git but no local checkout of that repository.
+The docs group installs relcon-docs 0.1.0 from PyPI; no Git dependency or sibling
+checkout is needed for the documentation tooling.
 
 ### Shared defaults and project overrides
 
@@ -59,7 +59,7 @@ Keep BONDI-specific settings in `mkdocs.yml`. Do not edit the managed
 `.relcon-docs/state.json` files. The state file records the applied package version
 and asset hashes so the tool can detect manual changes.
 
-When upgrading relcon-docs, update the pinned Git revision in `pyproject.toml`,
+When upgrading relcon-docs, update the version requirement in `pyproject.toml`,
 refresh `uv.lock` with `uv lock`, and install the updated docs group. Then review
 and apply its configuration changes:
 
@@ -174,3 +174,6 @@ math configuration and managed `docs/javascripts/relcon-docs-math.js` loader.
 The loader fetches MathJax from jsDelivr only on pages containing equations.
 The shared stylesheet also supplies dark-mode copy controls and diagram accent
 colours; see the [shared feature examples](https://relaxed-constraints.github.io/relcon-docs/).
+
+Heading permalinks are inherited from relcon-docs. Hover over a heading to reveal
+the ¶ link to that section.

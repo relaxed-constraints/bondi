@@ -47,7 +47,7 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.9"]
 docs = [
-    "relcon-docs @ git+https://github.com/relaxed-constraints/relcon-docs.git@7a65409737b9e17086232b87ac95160ae58b2199",
+    "relcon-docs==0.1.0",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -263,7 +263,7 @@ dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.9" },
 ]
-docs = [{ name = "relcon-docs", git = "https://github.com/relaxed-constraints/relcon-docs.git?rev=7a65409737b9e17086232b87ac95160ae58b2199" }]
+docs = [{ name = "relcon-docs", specifier = "==0.1.0" }]
 
 [[package]]
 name = "certifi"
@@ -1963,12 +1963,16 @@ wheels = [
 [[package]]
 name = "relcon-docs"
 version = "0.1.0"
-source = { git = "https://github.com/relaxed-constraints/relcon-docs.git?rev=7a65409737b9e17086232b87ac95160ae58b2199#7a65409737b9e17086232b87ac95160ae58b2199" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "mkdocstrings-python" },
     { name = "pyyaml" },
     { name = "ruff" },
     { name = "zensical" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0d/ba/da9e252572ccff543afc135469fd26f594cc92e053be8bb2a20594afad65/relcon_docs-0.1.0.tar.gz", hash = "sha256:80761a987fe626fd4419f3d18e8336e077a11d8d565fcd8435c3a2acd0dee8f8", size = 60281 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/36/b30b041fc3acddff842e870b9b06f66ba890efd55982fc21fdd0f3d9c1de/relcon_docs-0.1.0-py3-none-any.whl", hash = "sha256:0c2d62ab14cc2768870c256e1535ef61040e204f049c4a70fb9fe884ab823d34", size = 12867 },
 ]
 
 [[package]]
