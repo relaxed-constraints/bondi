@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.3 — 2026-11-15
+
 - Simplify the database deployment API reference to member documentation; keep
   usage and configuration guidance in the deployment guide.
 
