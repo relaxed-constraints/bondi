@@ -461,11 +461,17 @@ def test_glob_lifecycle(command, pattern, yes, capsys):
     deployments = [MagicMock(name=name) for name in names]
     for db, name in zip(deployments, names):
         db.name = name
+        db.status.return_value = "stopped"
+        db.uri = "mongodb://localhost:27019/"
 
     def confirm(prompt):
         output = capsys.readouterr().out
         assert output.index("js-pair1") < output.index("js-pair3")
         assert "other" not in output and "JS-pair2" not in output
+        assert all(
+            value in output
+            for value in ("Name", "Status", "URI", "stopped", "mongodb://localhost:27019/")
+        )
         assert "[y/N]" in prompt
         for db in deployments:
             getattr(db, command).assert_not_called()
@@ -552,3 +558,30 @@ def test_glob_stops_after_failure(capsys):
     deployments[0].stop.assert_called_once()
     deployments[2].stop.assert_not_called()
     assert "demo2: Docker unavailable" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("command", ["start", "stop", "remove"])
+def test_glob_preview_matches_list_rows(command, capsys):
+    from bondi._terminal import table
+
+    deployments = [MagicMock(), MagicMock()]
+    for db, name, state in zip(deployments, ["demo1", "demo2"], ["running", "removed"]):
+        db.name = name
+        db.status.return_value = state
+        db.uri = "mongodb://localhost:27019/"
+    deployments[1]._data_volume_exists.return_value = True
+
+    with (
+        patch("bondi._cli.list_deployments", return_value=deployments),
+        patch("bondi._cli.table", wraps=table) as render,
+        patch("builtins.input", return_value="n"),
+    ):
+        assert main(["deployment", "list"]) == 0
+        list_columns, list_rows = render.call_args.args[1:]
+        assert main(["deployment", command, "demo*"]) == 1
+        assert render.call_args.args == (f"Deployments to {command}", list_columns, list_rows)
+    assert list_rows == [
+        ("demo1", "running", "mongodb://localhost:27019/"),
+        ("demo2", "removed (data retained)", "mongodb://localhost:27019/"),
+    ]
+    assert "removed (data retained)" in capsys.readouterr().out

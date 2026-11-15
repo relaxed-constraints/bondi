@@ -2,6 +2,8 @@
 
 The CLI supports name globs for start, stop and remove; see
 [selection and confirmation semantics](../deployment.md#select-deployments-by-name-glob).
+Multiple matches display the same Name, Status and URI rows and colors as
+`bondi deployment list` before confirmation.
 Python deployment lookups continue to take exact names.
 
 ::: bondi.deployment.deploy_mongodb

@@ -144,7 +144,8 @@ bondi deployment stop "js-pair*" --yes
 match a set or range (for example, `[123]`, `[1-3]`, or `[!1-3]` for a negated
 range). Matching covers the whole name.
 
-When multiple deployments match, BONDI lists their names and asks once for
+When multiple deployments match, BONDI shows the same Name, Status and URI table
+with the same colors as `deployment list`, then asks once for
 confirmation with a default of No (`y/N`). No deployment is changed before
 confirmation. `--yes` (or `-y`) skips the prompt but still lists the targets.
 A single match behaves like an exact name: start and stop need no confirmation;

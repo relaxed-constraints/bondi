@@ -153,9 +153,11 @@ def _run_lifecycle(args):
         deployments = [get_deployment(args.name)]
 
     if len(deployments) > 1:
-        message(f"Deployments to {args.command}:")
-        for db in deployments:
-            message(f"  {db.name}")
+        table(
+            f"Deployments to {args.command}",
+            ("Name", "Status", "URI"),
+            [(db.name, _display_status(db), db.uri) for db in deployments],
+        )
 
     if not args.yes and (len(deployments) > 1 or args.command == "remove"):
         action = args.command

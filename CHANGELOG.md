@@ -3,7 +3,8 @@
 ## Unreleased
 
 - Support case-sensitive name globs in deployment start, stop and remove commands.
-  List multiple matches and confirm once before acting; add `--yes` / `-y` to
+  Show multiple matches with the same full, colored table as deployment list
+  and confirm once before acting; add `--yes` / `-y` to
   start and stop as well as remove.
 
 ## 0.3.3 — 2026-11-15
