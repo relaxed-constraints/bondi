@@ -28,6 +28,13 @@ jobs:
         shell: pwsh
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
+          $service = Get-Service -Name docker -ErrorAction SilentlyContinue
+          if ($service) {
+            $service | Format-Table Name, Status, StartType
+            if ($service.Status -ne "Running") {
+              Start-Service -Name docker
+            }
+          }
           docker info --format '{{.OSType}}'
           docker compose version
           docker run --rm --platform linux alpine:3.22 uname -s
