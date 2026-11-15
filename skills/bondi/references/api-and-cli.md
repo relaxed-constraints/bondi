@@ -42,6 +42,32 @@ Use the managed API/CLI rather than legacy repository Compose scripts.
 
 [Deployment guide](https://relaxed-constraints.github.io/bondi/deployment/)
 
+### Deployment selection and creation time (0.3.4+)
+
+Start, stop and remove accept case-sensitive name globs such as
+`bondi deployment stop "lesson-*"`. Quote patterns to avoid shell expansion.
+Multiple matches are listed before one default-No confirmation; `--yes` / `-y`
+skips it. Removal still confirms a single match. Operations run in name order
+and stop at the first failure without rolling back earlier operations.
+`--keep-data` applies to every matched removal.
+
+List and preview tables include Image and Created. New deployments save
+`Deployment.created_at` as a UTC datetime; older deployments return None and
+display —. Reuse and restart preserve the timestamp.
+
+### Hugging Face cache defaults (0.3.4+)
+
+`load_hf_dataset` and `load_hf_repository` use Hugging Face-managed disk caches
+by default. JSONL and gzip JSONL use `hf_hub_download` and BONDI's original decoder;
+other formats use `load_dataset(streaming=False)` and the HF prepared dataset cache.
+Pass `streaming=True` in Python or `--streaming` to `bondi dataset load-hf` or
+`load-hf-repository` to stream remotely instead. This can transfer data again on
+each load. Cache locations follow `HF_HOME`, `HF_HUB_CACHE` and
+`HF_DATASETS_CACHE`; BONDI does not manage its own cache.
+Metadata resolution still contacts the Hub, so caching is not an offline guarantee.
+
+[Dataset guide](https://relaxed-constraints.github.io/bondi/datasets/)
+
 ### Database versions
 
 BONDI 0.1.8 adds version selection: pass `version="8.0.16"` to

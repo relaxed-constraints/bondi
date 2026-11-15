@@ -19,7 +19,7 @@ it is not a query translator or an experiment-tracking framework.
 
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
-and dependency constraints before using an API. This skill describes the 0.3.3 API.
+and dependency constraints before using an API. This skill describes the 0.3.4 API.
 It includes sustained load generation, pattern selection, workload callbacks,
 MongoDB memory limits and executor health checks. Check installed signatures before
 using these features. Online documentation can be newer than the installed package.
@@ -73,7 +73,9 @@ See `docs/load-generation.md` in the source checkout.
 Use `load_file`, `load_documents`, `load_hf_dataset` or `load_hf_repository`
 from `bondi.data`. Single-source calls require an exact CollectionRef.
 Hub calls combine all splits by default; select a split explicitly when needed.
-Hub-hosted JSONL splits stream original records. For Hugging Face loads, the
+Hugging Face manages disk caches by default. Pass `streaming=True` or
+`--streaming` to read remotely instead. Hub-hosted JSONL preserves original records,
+including missing fields and Extended JSON; other formats use HF's prepared cache. For Hugging Face loads, the
 default `json_mode="auto"` uses Extended JSON for raw JSONL when the selected
 dataset card has the `mongodb-extended-json` tag. For an untagged Extended JSON
 export, pass `json_mode="extended"` or `--json-mode extended` explicitly.
@@ -86,6 +88,10 @@ See `docs/datasets.md` and `notebooks/dataset_loading.ipynb` in the source check
 
 Use `bondi deployment create` to create a deployment. Use
 `bondi deployment list|status|start|stop|logs|remove` to manage deployments.
+Lifecycle start, stop and remove accept quoted name globs (`*`, `?`, brackets).
+Multiple matches show a full table and ask once with default No; `--yes` skips
+confirmation. Single-deployment removal still asks. List and preview tables show
+Image and Created; older deployments have no creation timestamp and display —.
 Use `bondi dataset` for dataset commands. Python deployment creation still uses
 `deploy_mongodb()` and `deploy_couchbase()`.
 

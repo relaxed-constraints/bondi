@@ -2,17 +2,31 @@
 
 ## Current release
 
-Version 0.3.3 adds Couchbase Data Service, Index Service and bucket quotas at
-deployment creation. Data and Index default to 512 MiB each, and the bucket
-defaults to the Data budget. Resolved quotas are saved and checked on restart;
-existing deployments are not resized.
+Version 0.3.4 adds deployment name globs with bulk confirmation, Image and
+Created columns in deployment tables, and UTC creation timestamps for new
+deployments. Existing deployments display — for unknown creation times.
 
-This release also batches dataset inserts and updates shared documentation
-tooling, styling and the database deployment API reference.
+Hugging Face loaders now use Hugging Face-managed disk caches by default.
+Use `streaming=True` or `--streaming` to retain remote streaming. JSONL and
+gzip JSONL preserve original document fields and Extended JSON decoding.
 
-See the [changelog](changelog.md) for details.
-Release artifacts are available on [PyPI](https://pypi.org/project/bondi/0.3.3/)
-and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.3).
+See the [changelog](changelog.md) for details. Version 0.3.4 has been built
+and verified locally; it has not yet been published.
+
+## 0.3.4 verification
+
+On 2026-11-15, all 1,462 offline tests and all 195 Docker integration tests
+passed, covering MongoDB and both Couchbase editions. The isolated test
+deployments were cleaned up after the run.
+
+Ruff, documentation configuration checks, the strict documentation build,
+wheel/source builds and Twine validation passed. A fresh wheel installation
+with the Couchbase extra passed dependency, API, CLI and query-serialization
+checks. A real Hub JSONL source was read repeatedly through the cached reader.
+
+The bundled skill was updated for deployment globs, creation timestamps and
+Hugging Face cache defaults. Local installer discovery and installation into a
+disposable project passed; behavior in other coding agents was not tested.
 
 ## 0.3.3 verification
 
@@ -127,10 +141,10 @@ reference were checked for the new metrics.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.3.3` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.3.4` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.3.3` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.3.4` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.

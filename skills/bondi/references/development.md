@@ -9,8 +9,9 @@ student-readable, runtime dependencies minimal, and research algorithms and
 experiment pipelines downstream. Do not depend on sibling checkouts.
 Use the `Mongo` class prefix for MongoDB implementations, retaining the
 `mongodb` module name. Inspect and preserve unrelated edits. The repository
-workflow uses a `codex/` feature branch, then commits and merges to `main`
-after checks pass; it does not imply pushing or publishing a release.
+workflow uses a `codex/` feature branch. After checks pass, commit and leave it
+for user review; merge into `main` only after explicit approval. This does not
+imply pushing or publishing a release.
 
 ## Code and verification
 

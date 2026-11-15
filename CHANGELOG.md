@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.4 — 2026-11-15
+
 - Use Hugging Face's disk caches by default for dataset and repository loaders.
   Preserve original JSONL and Extended JSON decoding, including gzip files.
   Add `streaming=True` and CLI `--streaming` to opt into remote streaming.
