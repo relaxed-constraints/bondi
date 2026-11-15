@@ -19,7 +19,7 @@ it is not a query translator or an experiment-tracking framework.
 
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
-and dependency constraints before using an API. This skill describes the 0.3.1 API.
+and dependency constraints before using an API. This skill describes the 0.3.2 API.
 It includes sustained load generation, pattern selection, workload callbacks,
 MongoDB memory limits and executor health checks. Check installed signatures before
 using these features. Online documentation can be newer than the installed package.
@@ -73,6 +73,10 @@ See `docs/load-generation.md` in the source checkout.
 Use `load_file`, `load_documents`, `load_hf_dataset` or `load_hf_repository`
 from `bondi.data`. Single-source calls require an exact CollectionRef.
 Hub calls combine all splits by default; select a split explicitly when needed.
+Hub-hosted JSONL splits stream original records. For Hugging Face loads, the
+default `json_mode="auto"` uses Extended JSON for raw JSONL when the selected
+dataset card has the `mongodb-extended-json` tag. For an untagged Extended JSON
+export, pass `json_mode="extended"` or `--json-mode extended` explicitly.
 Sources can be files, Hub datasets or document iterables. Use a namespace when anonymous sources lack IDs.
 Create mode refuses nonempty collections. Replacement explicitly permits clearing the selected collection.
 Do not change a user's write mode to bypass a refusal. Report partial writes if a load fails.

@@ -2,17 +2,16 @@
 
 ## Current release
 
-Version 0.3.1 fixes Couchbase dataset loading and deployment startup.
-Replacement loads skip the deletion scan when the collection was just created.
-Scan failures keep their original error when cancellation also fails.
+Version 0.3.2 streams original Hugging Face JSONL records to preserve missing
+fields and explicit nulls. The Hugging Face loaders default to automatic JSON
+mode selection based on the dataset card's `mongodb-extended-json` tag.
 
-Couchbase preparation waits for healthy nodes and a successful query before
-creating a missing bucket. Port checks allow recently closed TCP connections
-while still rejecting active listeners. These changes preserve the 0.3.0 API.
+This release also adds a manual Windows compatibility workflow, fixes Windows
+port checks, and makes executor interrupt tests portable.
 
 See the [changelog](changelog.md) for details.
-Release artifacts: [PyPI](https://pypi.org/project/bondi/0.3.1/) and
-[GitHub v0.3.1](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.1).
+Release artifacts are available on [PyPI](https://pypi.org/project/bondi/0.3.2/)
+and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.2).
 
 ## 0.3.1 verification
 
@@ -106,10 +105,10 @@ reference were checked for the new metrics.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.3.1` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.3.2` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.3.1` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.3.2` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.2 — 2026-11-15
+
 - Reject ports with active listeners on Windows and make synchronous executor
   interrupt tests portable.
 
