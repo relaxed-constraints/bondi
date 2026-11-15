@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.3.3 — 2026-11-15
+
+- Simplify the database deployment API reference to member documentation; keep
+  usage and configuration guidance in the deployment guide.
+
+- Accept explicit Couchbase Data Service, Index Service and bucket memory quotas
+  at deployment creation. Default Data and Index to 512 MiB each and the bucket
+  to the Data quota. Save and verify resolved quotas at startup, preserving
+  existing deployment settings. Reject new budgets with no container headroom.
+
 - Install relcon-docs 0.1.0 from PyPI and enable shared heading permalinks.
 
 - Update relcon-docs to inherit alphabetical API members and exclude private members.

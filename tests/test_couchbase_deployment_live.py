@@ -13,6 +13,7 @@ pytestmark = pytest.mark.live
 @pytest.mark.parametrize("edition", ["community", "enterprise"])
 def test_couchbase_lifecycle(tmp_path, monkeypatch, edition, live_ports):
     from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
+    from bondi.deployment._couchbase import request
 
     monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
     ports = live_ports.claim("couchbase")
@@ -23,8 +24,16 @@ def test_couchbase_lifecycle(tmp_path, monkeypatch, edition, live_ports):
             query_port=ports[1],
             kv_port=ports[2],
             edition=edition,
+            data_memory_mb=768,
+            index_memory_mb=256,
+            bucket_memory_mb=512,
         )
         assert db.status() == "running"
+        cluster = request(db, "/pools/default")
+        bucket = request(db, "/pools/default/buckets/demo")
+        assert cluster["memoryQuota"] == 768
+        assert cluster["indexMemoryQuota"] == 256
+        assert bucket["quota"]["ram"] == 512 * 1024**2
         command = subprocess.run(
             [
                 sys.executable,

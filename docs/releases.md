@@ -2,16 +2,24 @@
 
 ## Current release
 
-Version 0.3.2 streams original Hugging Face JSONL records to preserve missing
-fields and explicit nulls. The Hugging Face loaders default to automatic JSON
-mode selection based on the dataset card's `mongodb-extended-json` tag.
+Version 0.3.3 adds Couchbase Data Service, Index Service and bucket quotas at
+deployment creation. Data and Index default to 512 MiB each, and the bucket
+defaults to the Data budget. Resolved quotas are saved and checked on restart;
+existing deployments are not resized.
 
-This release also adds a manual Windows compatibility workflow, fixes Windows
-port checks, and makes executor interrupt tests portable.
+This release also batches dataset inserts and updates shared documentation
+tooling, styling and the database deployment API reference.
 
 See the [changelog](changelog.md) for details.
-Release artifacts are available on [PyPI](https://pypi.org/project/bondi/0.3.2/)
-and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.2).
+Release artifacts are available on [PyPI](https://pypi.org/project/bondi/0.3.3/)
+and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.3).
+
+## 0.3.3 verification
+
+All 1,396 offline tests passed locally on 2026-11-15. Ruff, the strict
+documentation build, distribution checks and a fresh wheel installation with
+the Couchbase extra passed. Installed-package checks covered dependencies,
+CLI help, deployment API arguments and query serialization.
 
 ## 0.3.2 verification
 
@@ -114,10 +122,10 @@ reference were checked for the new metrics.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.3.2` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.3.3` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.3.2` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.3.3` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.
@@ -126,9 +134,7 @@ The library is an early research release: record its version with experiment art
 ## Documentation
 
 GitHub Pages builds on published releases, so student documentation follows released
-code. The Documentation workflow also supports manual dispatch for the initial
-pre-release site or an explicitly reviewed documentation correction. Pull requests
-build the documentation without deploying it.
+code. Pull requests build the documentation without deploying it.
 
 ## CI and local integration tests
 

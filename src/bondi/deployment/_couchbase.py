@@ -7,6 +7,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+DEFAULT_DATA_MEMORY_MB = 512
+DEFAULT_INDEX_MEMORY_MB = 512
+# Used only when recreating a missing bucket on legacy metadata without saved quotas.
+DEFAULT_BUCKET_MEMORY_MB = 256
+
 
 class CouchbaseHTTPError(RuntimeError):
     """HTTP failure with a status code, without server bodies or credentials."""
@@ -96,8 +101,8 @@ def initialize(db, *, deadline):
                 "password": db.password,
                 "clusterName": db.name,
                 "services": "kv,n1ql,index",
-                "memoryQuota": 512,
-                "indexMemoryQuota": 512,
+                "memoryQuota": db.data_memory_mb or DEFAULT_DATA_MEMORY_MB,
+                "indexMemoryQuota": db.index_memory_mb or DEFAULT_INDEX_MEMORY_MB,
                 "indexerStorageMode": "plasma" if db.edition == "enterprise" else "forestdb",
                 "port": "SAME",
             },
@@ -133,10 +138,30 @@ def initialize(db, *, deadline):
             {
                 "name": db.bucket,
                 "bucketType": "couchbase",
-                "ramQuotaMB": 256,
+                "ramQuotaMB": db.bucket_memory_mb or DEFAULT_BUCKET_MEMORY_MB,
                 "replicaNumber": 0,
                 "storageBackend": "couchstore",
                 "flushEnabled": 0,
             },
         )
     wait(lambda: ready(db, timeout=max(0.1, min(5, deadline - time.monotonic()))))
+
+    service_quotas = {
+        key: value
+        for key, value in (
+            ("memoryQuota", db.data_memory_mb),
+            ("indexMemoryQuota", db.index_memory_mb),
+        )
+        if value is not None
+    }
+    if service_quotas:
+        actual = call("/pools/default")
+        for key, value in service_quotas.items():
+            if actual.get(key) != value:
+                raise RuntimeError(
+                    f"Couchbase {key} is {actual.get(key)} MiB, expected {value} MiB"
+                )
+    if db.bucket_memory_mb is not None:
+        bucket = call(f"/pools/default/buckets/{db.bucket}")
+        if bucket.get("quota", {}).get("ram") != db.bucket_memory_mb * 1024**2:
+            raise RuntimeError(f"Couchbase bucket quota does not match {db.bucket_memory_mb} MiB")

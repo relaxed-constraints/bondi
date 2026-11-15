@@ -98,7 +98,7 @@ untouched and are not inferred or adopted into metadata, even when requested
 values match them. Do not remove a user's database to change memory settings.
 See the [memory guide](https://relaxed-constraints.github.io/bondi/deployment/#mongodb-memory-limits).
 
-### Couchbase container memory
+### Couchbase memory budgets (0.3.3+)
 
 BONDI 0.1.6 adds
 `deploy_couchbase(..., memory_limit_mb=16384)` and
@@ -110,7 +110,15 @@ Distinguish three limits when diagnosing quota failures: Docker VM memory,
 the container limit, and Couchbase Data/Index Service and bucket quotas.
 Increasing VM memory alone does not raise the container limit. This option does
 not change service or bucket quotas; leave room for other services and overhead.
-Experiment-specific quotas belong in the consumer project.
+Python callers can set `data_memory_mb`, `index_memory_mb` and `bucket_memory_mb`
+at creation. Data and Index default to 512 MiB each; the bucket defaults to Data
+and consumes that allocation, rather than adding to it. Data plus Index must be
+smaller than the container limit; the bucket must not exceed Data. New deployments
+save resolved defaults. Omitted quotas reuse existing saved values, explicit
+conflicts fail, and startup checks saved quotas without resizing. Legacy metadata
+without quotas remains unspecified; explicit quota requests conflict with it.
+The CLI exposes only the container limit. Consumer projects choose experiment
+budgets and pass them to BONDI rather than implementing their own REST helpers.
 
 The limit is persisted as `Deployment.memory_limit_mb`. Conflicting deploy
 requests fail before Docker access; use `get_deployment(name).start()` or
