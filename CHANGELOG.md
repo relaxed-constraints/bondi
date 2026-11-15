@@ -11,6 +11,8 @@
   at deployment creation. Default Data and Index to 512 MiB each and the bucket
   to the Data quota. Save and verify resolved quotas at startup, preserving
   existing deployment settings. Reject new budgets with no container headroom.
+  Document explicit bucket budgets for multi-bucket setups and reserve capacity
+  in live loader fixtures.
 
 - Install relcon-docs 0.1.0 from PyPI and enable shared heading permalinks.
 
