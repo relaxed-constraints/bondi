@@ -13,6 +13,15 @@ See the [changelog](changelog.md) for details.
 Release artifacts are available on [PyPI](https://pypi.org/project/bondi/0.3.2/)
 and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.2).
 
+## 0.3.2 verification
+
+All 1,564 tests passed locally on 2026-11-15, including 195 Docker-backed tests.
+The Windows compatibility fixes passed the hosted Windows offline suite and
+PowerShell CLI checks. Live Windows deployments remain unverified.
+
+Ruff, the strict documentation build, distribution checks, and fresh wheel
+installation with the Couchbase extra passed.
+
 ## 0.3.1 verification
 
 On 2026-11-14, all 1,364 offline tests and all 195 live tests passed.
