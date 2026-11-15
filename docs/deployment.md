@@ -432,6 +432,8 @@ Omitting only `bucket_memory_mb` gives the bucket the full Data budget. For
 example, `deploy_couchbase(data_memory_mb=1024)` creates a deployment with
 1024 MiB Data, 512 MiB Index and a 1024 MiB bucket inside a 4096 MiB container.
 Increasing the container limit alone does not increase service budgets.
+If you intend to create additional buckets, set a smaller `bucket_memory_mb`
+explicitly so the Data Service has capacity for them.
 
 Data and Index quotas must each be integer values of at least 256 MiB; the bucket
 quota must be at least 100 MiB and must not exceed Data. For new deployments,

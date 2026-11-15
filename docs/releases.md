@@ -21,6 +21,11 @@ documentation build, distribution checks and a fresh wheel installation with
 the Couchbase extra passed. Installed-package checks covered dependencies,
 CLI help, deployment API arguments and query serialization.
 
+All 195 live tests passed across sequential groups, including MongoDB and both
+Couchbase editions. The initial combined run exhausted Docker's local network
+address pools; splitting the tests avoided changing other deployments. The
+shared loader fixture explicitly reserves Data capacity for additional buckets.
+
 ## 0.3.2 verification
 
 All 1,564 tests passed locally on 2026-11-15, including 195 Docker-backed tests.

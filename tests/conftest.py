@@ -82,6 +82,8 @@ def deployment_pool(registry, live_ports):
                         management_port=management,
                         query_port=query,
                         kv_port=kv,
+                        # Loader tests create another bucket within the Data budget.
+                        bucket_memory_mb=256,
                     )
             # Register teardown before loading data/indexes, including setup failures.
             cleanup.callback(db.remove, keep_data=False)
