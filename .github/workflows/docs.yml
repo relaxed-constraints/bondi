@@ -11,4 +11,4 @@ permissions:
 
 jobs:
   docs:
-    uses: relaxed-constraints/relcon-docs/.github/workflows/deploy-docs.yml@1914d3c4486c6baa3a1b9beb5936f9797dd0fa5b
+    uses: relaxed-constraints/relcon-docs/.github/workflows/deploy-docs.yml@ea4aa3ded66f09a8963a5f12655f9e601e286400

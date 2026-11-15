@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Update relcon-docs defaults and deployment workflow; inherit equation rendering,
+  diagram accent colours and dark-mode Markdown copy controls.
+
 - Use shared light/dark diagram colours from relcon-docs.
 
 - Inherit callouts, collapsible notes and Mermaid support from relcon-docs.

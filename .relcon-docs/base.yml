@@ -2,6 +2,8 @@
 # Put project overrides in mkdocs.yml. Paths are relative to that file.
 extra_css:
 - stylesheets/relcon-docs.css
+extra_javascript:
+- javascripts/relcon-docs-math.js
 theme:
   variant: modern
   font: false
@@ -28,6 +30,8 @@ theme:
       icon: lucide/moon
       name: Switch to system preference
 markdown_extensions:
+  pymdownx.arithmatex:
+    generic: true
   admonition: {}
   pymdownx.details: {}
   pymdownx.highlight: {}

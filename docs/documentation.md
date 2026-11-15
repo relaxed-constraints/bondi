@@ -54,7 +54,8 @@ installation requires Git but no local checkout of that repository.
 ### Shared defaults and project overrides
 
 Keep BONDI-specific settings in `mkdocs.yml`. Do not edit the managed
-`.relcon-docs/base.yml`, `docs/stylesheets/relcon-docs.css` or
+`.relcon-docs/base.yml`, `docs/stylesheets/relcon-docs.css`,
+`docs/javascripts/relcon-docs-math.js` or
 `.relcon-docs/state.json` files. The state file records the applied package version
 and asset hashes so the tool can detect manual changes.
 
@@ -167,3 +168,9 @@ Callouts (`!!! note`), collapsible notes (`??? tip`) and Mermaid fenced blocks
 are enabled by relcon-docs. No project-level Markdown extension settings are
 needed for them. Light/dark diagram colours also come from the shared stylesheet.
 See the [diagram examples](https://relaxed-constraints.github.io/relcon-docs/diagrams/).
+
+Inline (`$...$`) and display (`$$...$$`) equations are supported by the shared
+math configuration and managed `docs/javascripts/relcon-docs-math.js` loader.
+The loader fetches MathJax from jsDelivr only on pages containing equations.
+The shared stylesheet also supplies dark-mode copy controls and diagram accent
+colours; see the [shared feature examples](https://relaxed-constraints.github.io/relcon-docs/).
