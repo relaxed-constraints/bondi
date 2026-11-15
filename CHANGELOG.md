@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Inherit Markdown-export defaults from relcon-docs while retaining BONDI
+  documentation and API-reference index sections.
+
 - Use the pinned relcon-docs Pages workflow for deployments triggered only by
   published GitHub releases; remove the manual deployment trigger.
 

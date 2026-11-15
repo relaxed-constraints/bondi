@@ -81,8 +81,10 @@ Lists replace inherited lists rather than extending them. Plugins and Markdown
 extensions use mapping syntax so a project can override one setting without
 dropping unrelated defaults. Paths are resolved relative to the root configuration.
 
-The `llmstxt` configuration generates `llms.txt` and per-page Markdown exports;
-the inherited `content.action.copy` feature and CSS provide the labeled copy button.
+Shared defaults enable `llms.txt` and per-page Markdown exports automatically.
+BONDI overrides the `Documentation` section and adds its API-reference grouping;
+section mappings merge rather than replace one another.
+The inherited `content.action.copy` feature and CSS provide the labeled copy button.
 The YAML filename does not change the builder: continue using Zensical commands.
 
 ## 4. Preview locally
