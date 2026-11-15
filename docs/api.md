@@ -2,7 +2,7 @@
 
 The reference documents public constructors, methods, parameters and return values
 from source docstrings. Rendering defaults are inherited from the shared documentation
-configuration; see [Building the documentation](documentation.md#3-configure-the-site). Start with the [user guide](workloads.md) for examples.
+configuration supplied by relcon-docs; see [Building the documentation](documentation.md#3-configure-the-site). Start with the [user guide](workloads.md) for examples.
 
 | Area | Reference |
 | --- | --- |

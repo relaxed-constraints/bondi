@@ -24,3 +24,9 @@ def test_project_overrides_preserve_shared_documentation_defaults():
     assert api_section["inputs"][0]["pattern"] == "reference/**/*.md"
     assert "content.action.copy" in config["theme"]["features"]
     assert config["theme"]["variant"] == "modern"
+
+
+def test_managed_documentation_files_match_installed_package():
+    cli = pytest.importorskip("relcon_docs.cli")
+    root = Path(__file__).resolve().parents[1]
+    assert cli.main(["configure", "--project", str(root), "--check"]) == 0

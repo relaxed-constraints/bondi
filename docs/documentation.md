@@ -39,19 +39,42 @@ we want to document; new classes are not automatically added to navigation.
 
 `mkdocs.yml` defines project metadata, navigation, API source paths and Markdown-export
 sections. It inherits shared theme, Markdown-extension and API-rendering defaults
-from `.relcon-docs/base.yml`. Both files are checked into this repository; no
-external package or configuration-generation step is required.
+from `.relcon-docs/base.yml`, managed by
+[relcon-docs](https://github.com/relaxed-constraints/relcon-docs). Both files are
+checked into this repository. Installing dependencies does not regenerate them.
 `paths: [src]` tells the handler where our package lives, and
 `docstring_style: google` selects the docstring convention.
 The Python handler puts signatures in separate code blocks and links documented
 types. Ruff formats long signatures. The `docs` dependency group supplies the
-site builder, Python handler, and formatter.
+shared tooling package, which supplies the site builder, Python handler, and formatter.
+It is a documentation dependency: ordinary BONDI installations do not install it.
+Until a PyPI release is adopted, the group pins relcon-docs to an exact Git commit;
+installation requires Git but no local checkout of that repository.
 
 ### Shared defaults and project overrides
 
-Edit `.relcon-docs/base.yml` for defaults intended to be shared with related
-projects. Keep BONDI-specific settings in `mkdocs.yml`. The base file is a
-prototype for a future shared package, not a generated file yet.
+Keep BONDI-specific settings in `mkdocs.yml`. Do not edit the managed
+`.relcon-docs/base.yml`, `docs/stylesheets/relcon-docs.css` or
+`.relcon-docs/state.json` files. The state file records the applied package version
+and asset hashes so the tool can detect manual changes.
+
+When upgrading relcon-docs, update the pinned Git revision in `pyproject.toml`,
+refresh `uv.lock` with `uv lock`, and install the updated docs group. Then review
+and apply its configuration changes:
+
+```sh
+uv run --group docs relcon-docs configure --dry-run
+uv run --group docs relcon-docs configure
+uv run --group docs relcon-docs configure --check
+uv run --group docs zensical build --strict
+```
+
+For pip, run the same commands without `uv run --group docs` after installing
+the docs group. Commit the dependency and generated-file changes together.
+Configuration conflicts stop the update without writing files. Move customizations
+to project overrides or a separate stylesheet; `--force` explicitly replaces
+conflicting managed files and should only be used after reviewing the diff.
+CI checks that managed files match the installed package.
 
 Zensical merges inherited mappings recursively; project values override defaults.
 Lists replace inherited lists rather than extending them. Plugins and Markdown
@@ -113,7 +136,8 @@ later.
 ## Documentation theme
 
 The site uses Zensical’s modern theme.
-Theme settings live in `.relcon-docs/base.yml`. Top-level tabs separate onboarding, guides, tutorials, reference and development.
+Shared theme settings come from relcon-docs through `.relcon-docs/base.yml`.
+Project overrides belong in `mkdocs.yml`. Top-level tabs separate onboarding, guides, tutorials, reference and development.
 Code-copy buttons are enabled. `font: false` uses system fonts without fetching Google Fonts.
 
 After a dependency or theme change, [restart the preview server](#4-preview-locally).

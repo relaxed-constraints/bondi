@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Adopt relcon-docs as documentation tooling, with managed shared defaults and
+  styling, a pinned Git dependency, and configuration-drift checks in CI.
+
 - Split documentation configuration into project-specific YAML and inherited shared
   defaults, preserving the modern theme, API rendering and Markdown exports.
 
