@@ -2,6 +2,7 @@
 
 import os
 import sys
+from datetime import UTC
 from fnmatch import fnmatchcase
 from types import SimpleNamespace
 
@@ -140,6 +141,25 @@ def _display_status(db):
     return state
 
 
+def _deployment_table(title, deployments):
+    table(
+        title,
+        ("Name", "Status", "URI", "Image", "Created"),
+        [
+            (
+                db.name,
+                _display_status(db),
+                db.uri,
+                db.image,
+                db.created_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+                if db.created_at is not None
+                else "—",
+            )
+            for db in deployments
+        ],
+    )
+
+
 def _run_lifecycle(args):
     # Exact names retain their direct lookup and existing missing-name errors.
     if any(character in args.name for character in "*?["):
@@ -153,11 +173,7 @@ def _run_lifecycle(args):
         deployments = [get_deployment(args.name)]
 
     if len(deployments) > 1:
-        table(
-            f"Deployments to {args.command}",
-            ("Name", "Status", "URI"),
-            [(db.name, _display_status(db), db.uri) for db in deployments],
-        )
+        _deployment_table(f"Deployments to {args.command}", deployments)
 
     if not args.yes and (len(deployments) > 1 or args.command == "remove"):
         action = args.command
@@ -252,11 +268,7 @@ def _run(args):
             if not deployments:
                 message("No saved deployments. Create one with: bondi deployment create mongodb")
             else:
-                table(
-                    "Saved deployments",
-                    ("Name", "Status", "URI"),
-                    [(db.name, _display_status(db), db.uri) for db in deployments],
-                )
+                _deployment_table("Saved deployments", deployments)
         elif args.command in {"start", "stop", "remove"}:
             return _run_lifecycle(args)
         else:

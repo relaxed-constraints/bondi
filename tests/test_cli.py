@@ -1,5 +1,6 @@
 """CLI parsing, API delegation and user-facing failure behavior."""
 
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +12,8 @@ from bondi._cli import main
 def db():
     value = MagicMock()
     value.name = "demo"
+    value.image = "mongo:8.0.16"
+    value.created_at = None
     value.uri = "mongodb://127.0.0.1:27019/"
     value.status.return_value = "stopped"
     return value
@@ -395,7 +398,7 @@ def test_removed_volume_label(db, command, retained, capsys):
         assert main(["deployment", command] + (["demo"] if command == "status" else [])) == 0
     output = capsys.readouterr().out
     assert "removed" in output
-    assert ("data retained" in output) == retained
+    assert ("retained" in output) == retained
     db._data_volume_exists.assert_called_once()
 
 
@@ -461,6 +464,8 @@ def test_glob_lifecycle(command, pattern, yes, capsys):
     deployments = [MagicMock(name=name) for name in names]
     for db, name in zip(deployments, names):
         db.name = name
+        db.image = "mongo:8.0.16"
+        db.created_at = None
         db.status.return_value = "stopped"
         db.uri = "mongodb://localhost:27019/"
 
@@ -511,6 +516,8 @@ def test_glob_cancel_changes_nothing(command, answer, code):
     deployments = [MagicMock(), MagicMock()]
     for db, name in zip(deployments, ["demo1", "demo2"]):
         db.name = name
+        db.image = "mongo:8.0.16"
+        db.created_at = None
     with (
         patch("bondi._cli.list_deployments", return_value=deployments),
         patch(
@@ -552,6 +559,8 @@ def test_glob_stops_after_failure(capsys):
     deployments = [MagicMock() for _ in range(3)]
     for db, name in zip(deployments, ["demo1", "demo2", "demo3"]):
         db.name = name
+        db.image = "mongo:8.0.16"
+        db.created_at = None
     deployments[1].stop.side_effect = RuntimeError("Docker unavailable")
     with patch("bondi._cli.list_deployments", return_value=deployments):
         assert main(["deployment", "stop", "demo*", "-y"]) == 1
@@ -567,9 +576,12 @@ def test_glob_preview_matches_list_rows(command, capsys):
     deployments = [MagicMock(), MagicMock()]
     for db, name, state in zip(deployments, ["demo1", "demo2"], ["running", "removed"]):
         db.name = name
+        db.image = "mongo:8.0.16"
+        db.created_at = None
         db.status.return_value = state
         db.uri = "mongodb://localhost:27019/"
     deployments[1]._data_volume_exists.return_value = True
+    deployments[0].created_at = datetime(2026, 11, 15, 1, 2, 3, tzinfo=UTC)
 
     with (
         patch("bondi._cli.list_deployments", return_value=deployments),
@@ -581,7 +593,13 @@ def test_glob_preview_matches_list_rows(command, capsys):
         assert main(["deployment", command, "demo*"]) == 1
         assert render.call_args.args == (f"Deployments to {command}", list_columns, list_rows)
     assert list_rows == [
-        ("demo1", "running", "mongodb://localhost:27019/"),
-        ("demo2", "removed (data retained)", "mongodb://localhost:27019/"),
+        (
+            "demo1",
+            "running",
+            "mongodb://localhost:27019/",
+            "mongo:8.0.16",
+            "2026-11-15 01:02:03 UTC",
+        ),
+        ("demo2", "removed (data retained)", "mongodb://localhost:27019/", "mongo:8.0.16", "—"),
     ]
-    assert "removed (data retained)" in capsys.readouterr().out
+    assert "Created" in capsys.readouterr().out

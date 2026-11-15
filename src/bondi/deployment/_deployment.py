@@ -11,6 +11,7 @@ import subprocess
 import time
 import warnings
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Literal
@@ -74,6 +75,7 @@ class Deployment:
         bucket: Default Couchbase bucket.
         edition: Couchbase community or enterprise.
         image: Pinned database Docker image.
+        created_at: UTC time when BONDI first saved the deployment; None for older deployments.
         memory_limit_mb: Saved container limit in MiB, or None if not explicitly saved.
         wiredtiger_cache_size_gb: Saved MongoDB cache size in GiB, or None.
         data_memory_mb: Saved Couchbase Data Service quota in MiB, or None.
@@ -98,6 +100,7 @@ class Deployment:
     data_memory_mb: int | None = None
     index_memory_mb: int | None = None
     bucket_memory_mb: int | None = None
+    created_at: datetime | None = None
 
     @property
     def uri(self) -> str:
@@ -270,6 +273,9 @@ def get_deployment(name: str) -> Deployment:
         for key in ("backend", "query_port", "kv_port", "username", "password", "bucket", "edition")
         if key in config
     }
+    extra["created_at"] = (
+        datetime.fromisoformat(config["created_at"]) if config.get("created_at") else None
+    )
     if config["backend"] == "couchbase":
         # Version-1 deployments predating this option used a 4 GiB template.
         extra["memory_limit_mb"] = config.get("memory_limit_mb", 4096)
@@ -553,7 +559,13 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
             "--wiredTigerCacheSizeGB",
             str(settings["wiredtiger_cache_size_gb"]),
         ]
-    config = {"format_version": 1, **settings, "image": service["image"], "project": project}
+    config = {
+        "format_version": 1,
+        **settings,
+        "image": service["image"],
+        "project": project,
+        "created_at": datetime.now(UTC).isoformat(),
+    }
     path.mkdir(parents=True, exist_ok=False, mode=0o700)
     try:
         (path / "compose.json").write_text(json.dumps(template, indent=2) + "\n")

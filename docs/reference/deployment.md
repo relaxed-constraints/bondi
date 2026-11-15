@@ -2,8 +2,10 @@
 
 The CLI supports name globs for start, stop and remove; see
 [selection and confirmation semantics](../deployment.md#select-deployments-by-name-glob).
-Multiple matches display the same Name, Status and URI rows and colors as
+Multiple matches display the same Name, Status, URI, Image and Created rows and colors as
 `bondi deployment list` before confirmation.
+`Deployment.created_at` is a UTC datetime for new deployments and `None` for
+older configurations; tables display `—` when it is unknown.
 Python deployment lookups continue to take exact names.
 
 ::: bondi.deployment.deploy_mongodb

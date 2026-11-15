@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add Image and Created columns to deployment list and bulk lifecycle previews.
+  Persist a UTC creation timestamp for new deployments; display — for older ones.
+
 - Support case-sensitive name globs in deployment start, stop and remove commands.
   Show multiple matches with the same full, colored table as deployment list
   and confirm once before acting; add `--yes` / `-y` to

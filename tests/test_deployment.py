@@ -3,6 +3,7 @@
 import json
 import socket
 import subprocess
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
@@ -241,3 +242,31 @@ def test_port_check_rejects_active_listener(reuse):
         listener.listen()
         with pytest.raises(RuntimeError, match="Cannot bind localhost port"):
             _check_port(listener.getsockname()[1])
+
+
+@pytest.mark.parametrize("backend", ["mongodb", "couchbase"])
+def test_created_at_persists_and_older_metadata_remains_unknown(compose, backend):
+    from bondi.deployment import Deployment, deploy_couchbase
+
+    deploy = deploy_mongodb if backend == "mongodb" else deploy_couchbase
+    before = datetime.now(UTC)
+    with patch.object(Deployment, "start"):
+        db = deploy("dated")
+        assert before <= db.created_at <= datetime.now(UTC)
+        assert db.created_at.utcoffset().total_seconds() == 0
+        metadata = db._path / "deployment.json"
+        config = json.loads(metadata.read_text())
+        assert datetime.fromisoformat(config["created_at"]) == db.created_at
+        assert get_deployment("dated").created_at == db.created_at
+        assert deploy("dated").created_at == db.created_at
+
+        db.stop()
+        db.remove(keep_data=True)
+        assert get_deployment("dated").created_at == db.created_at
+
+        # Reusing legacy configuration must not invent a creation date.
+        del config["created_at"]
+        metadata.write_text(json.dumps(config))
+        assert get_deployment("dated").created_at is None
+        assert deploy("dated").created_at is None
+        assert "created_at" not in json.loads(metadata.read_text())

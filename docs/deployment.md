@@ -144,7 +144,7 @@ bondi deployment stop "js-pair*" --yes
 match a set or range (for example, `[123]`, `[1-3]`, or `[!1-3]` for a negated
 range). Matching covers the whole name.
 
-When multiple deployments match, BONDI shows the same Name, Status and URI table
+When multiple deployments match, BONDI shows the same Name, Status, URI, Image and Created table
 with the same colors as `deployment list`, then asks once for
 confirmation with a default of No (`y/N`). No deployment is changed before
 confirmation. `--yes` (or `-y`) skips the prompt but still lists the targets.
@@ -551,3 +551,19 @@ Deployment port checks reject ports with active listeners. On Windows, the
 exclusive bind check can also reject a port while a recently closed connection
 is still in `TIME_WAIT`.
 Docker performs the final port binding; the check does not reserve the port.
+
+
+### Deployment creation time
+
+Deployment tables show the pinned Docker image and the creation time alongside
+Name, Status and URI. This applies to `deployment list` and the confirmation
+previews for multi-deployment start, stop and remove commands.
+
+New deployments save `created_at` when BONDI first writes their configuration.
+The timestamp is stored as ISO 8601 in UTC and displayed as
+`YYYY-MM-DD HH:MM:SS UTC`. Restarting or reusing a deployment, including after
+removal with `--keep-data`, preserves it. Existing configurations without this
+field display `—`; BONDI does not infer or backfill a creation date.
+
+In Python, `Deployment.created_at` is a timezone-aware `datetime`, or `None`
+for deployments created before this metadata was recorded.
