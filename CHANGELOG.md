@@ -3,7 +3,9 @@
 ## Unreleased
 
 - Accept explicit Couchbase Data Service, Index Service and bucket memory quotas
-  at deployment creation. Verify saved explicit quotas at startup.
+  at deployment creation. Default Data and Index to 512 MiB each and the bucket
+  to the Data quota. Save and verify resolved quotas at startup, preserving
+  existing deployment settings. Reject new budgets with no container headroom.
 
 - Install relcon-docs 0.1.0 from PyPI and enable shared heading permalinks.
 

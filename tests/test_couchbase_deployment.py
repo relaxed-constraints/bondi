@@ -128,10 +128,12 @@ def test_initialization_and_restarts(setup, edition, storage, existing, custom):
         }
     )
     responses.extend([{"nodes": [{"status": "healthy"}]}, {"status": "success", "results": [1]}])
-    if custom:
-        responses.extend(
-            [{"memoryQuota": 768, "indexMemoryQuota": 256}, {"quota": {"ram": 512 * 1024**2}}]
-        )
+    responses.extend(
+        [
+            {"memoryQuota": 768 if custom else 512, "indexMemoryQuota": 256 if custom else 512},
+            {"quota": {"ram": 512 * 1024**2}},
+        ]
+    )
     with patch.object(_couchbase, "request", side_effect=responses) as req:
         ORIGINAL_INITIALIZE(db, deadline=time.monotonic() + 10)
     calls = req.call_args_list
@@ -146,7 +148,7 @@ def test_initialization_and_restarts(setup, edition, storage, existing, custom):
             for c in calls
             if c.args[1] == "/pools/default/buckets" and len(c.args) > 2 and c.args[2]
         )
-        assert create.args[2]["ramQuotaMB"] == (512 if custom else 256)
+        assert create.args[2]["ramQuotaMB"] == 512
     else:
         assert not any(
             c.args[1] in {"/pools/default", "/pools/default/buckets/demo"}
@@ -164,7 +166,7 @@ ORIGINAL_INITIALIZE = _couchbase.initialize
 @pytest.mark.parametrize("drift", ["service", "bucket"])
 def test_saved_quota_drift_does_not_resize(setup, drift):
     db = deploy_couchbase(data_memory_mb=768, bucket_memory_mb=512)
-    service = {"memoryQuota": 512 if drift == "service" else 768}
+    service = {"memoryQuota": 512 if drift == "service" else 768, "indexMemoryQuota": 512}
     bucket = {"quota": {"ram": (256 if drift == "bucket" else 512) * 1024**2}}
     responses = [{"pools": [{}]}, {}, None, [{"name": "demo"}], service, bucket]
     with (
@@ -287,6 +289,9 @@ def test_quota_metadata_reuse_and_conflict(setup):
         {"index_memory_mb": 255},
         {"bucket_memory_mb": 99},
         {"bucket_memory_mb": 513},
+        {"memory_limit_mb": 1024},
+        {"data_memory_mb": 3584},
+        {"index_memory_mb": 3585},
     ],
 )
 def test_invalid_quotas_fail_before_docker(setup, options):
@@ -353,7 +358,13 @@ def test_bucket_creation_waits_for_cluster_readiness(setup, failure):
             if failure == "nodes" and bucket_listed and not probes:
                 probes.append("unhealthy")
                 return {"nodes": []}
-            return {"nodes": [{"status": "healthy"}]}
+            return {
+                "nodes": [{"status": "healthy"}],
+                "memoryQuota": 512,
+                "indexMemoryQuota": 512,
+            }
+        if path == "/pools/default/buckets/demo":
+            return {"quota": {"ram": 512 * 1024**2}}
         if path == "/query/service":
             if failure == "auth":
                 raise ValueError("authentication failed")
@@ -388,3 +399,41 @@ def test_bucket_creation_waits_for_cluster_readiness(setup, failure):
             ORIGINAL_INITIALIZE(db, deadline=2)
             assert len(created) == 1
             ready.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "options,expected",
+    [
+        ({}, (512, 512, 512)),
+        ({"data_memory_mb": 1024}, (1024, 512, 1024)),
+        ({"data_memory_mb": 256}, (256, 512, 256)),
+        ({"index_memory_mb": 768}, (512, 768, 512)),
+        ({"bucket_memory_mb": 100}, (512, 512, 100)),
+    ],
+)
+def test_new_quota_defaults_are_saved_and_reused(setup, options, expected):
+    db = deploy_couchbase(**options)
+    assert (db.data_memory_mb, db.index_memory_mb, db.bucket_memory_mb) == expected
+    assert get_deployment(db.name) == db
+    assert deploy_couchbase() == db
+    assert deploy_couchbase(bucket_memory_mb=expected[2]) == db
+
+
+def test_legacy_omitted_quotas_remain_unspecified(setup):
+    db = deploy_couchbase()
+    metadata = db._path / "deployment.json"
+    config = json.loads(metadata.read_text())
+    for key in ("data_memory_mb", "index_memory_mb", "bucket_memory_mb"):
+        del config[key]
+    metadata.write_text(json.dumps(config))
+    before = metadata.read_bytes()
+
+    reused = deploy_couchbase()
+    assert (reused.data_memory_mb, reused.index_memory_mb, reused.bucket_memory_mb) == (
+        None,
+        None,
+        None,
+    )
+    assert metadata.read_bytes() == before
+    with pytest.raises(ValueError, match="bucket_memory_mb"):
+        deploy_couchbase(bucket_memory_mb=512)

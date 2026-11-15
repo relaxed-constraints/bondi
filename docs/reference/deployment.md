@@ -19,7 +19,13 @@ for validation, defaults and legacy metadata behavior.
 `deploy_couchbase(memory_limit_mb=4096)` accepts a positive integer container
 limit in MiB and exposes it as `Deployment.memory_limit_mb` (also configurable for MongoDB).
 Set the internal quotas with `data_memory_mb`, `index_memory_mb`, and
-`bucket_memory_mb` when creating the deployment. See the
+`bucket_memory_mb` when creating the deployment. Data and Index each default to
+512 MiB; the bucket defaults to the resolved Data quota and consumes that budget
+rather than adding to it. New deployments persist these resolved defaults.
+Omitted quotas on existing deployments preserve saved settings; explicit
+conflicts are rejected, and startup verifies saved quotas without resizing.
+For new deployments, bucket must not exceed Data, and Data plus Index must be
+smaller than the container limit. See the
 [container memory guide](../deployment.md#container-memory) for saved-setting
 conflicts, legacy metadata and resizing existing deployments.
 

@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 
 DEFAULT_DATA_MEMORY_MB = 512
 DEFAULT_INDEX_MEMORY_MB = 512
+# Used only when recreating a missing bucket on legacy metadata without saved quotas.
 DEFAULT_BUCKET_MEMORY_MB = 256
 
 

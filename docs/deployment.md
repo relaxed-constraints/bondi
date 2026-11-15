@@ -241,7 +241,7 @@ New deployments use version `7.6.2` unless you select another version.
 They enable the Data, Query and Index services.
 
 Startup waits for management access, cluster initialization, a healthy bucket and a successful SQL++ query.
-It creates an empty `demo` bucket with a 256 MiB quota and no replicas.
+It creates an empty `demo` bucket with a 512 MiB quota and no replicas.
 The bucket contains its default scope and collection.
 Deployment does not insert sample data or create indexes.
 Use `bucket="research"` or `--bucket research` to select another bucket at creation.
@@ -414,10 +414,44 @@ database = deploy_couchbase(
 )
 ```
 
-A new deployment defaults to 512 MiB for Data, 512 MiB for Index and 256 MiB for
-the bucket. The bucket quota comes from the Data Service allocation. Leave room
-in the container for Query Service and process overhead. BONDI checks explicit
-quotas at startup and reports drift on existing deployments without resizing them.
+### Couchbase memory budgets
+
+| Python argument | Purpose | Default for a new deployment |
+| --- | --- | --- |
+| `memory_limit_mb` | Docker container limit for all services and overhead | 4096 MiB |
+| `data_memory_mb` | Data Service budget for bucket data and metadata | 512 MiB |
+| `index_memory_mb` | Separate Index Service budget | 512 MiB |
+| `bucket_memory_mb` | This bucket's share of the Data Service budget | The resolved `data_memory_mb` |
+
+The bucket budget is **inside** the Data Service budget, not an additional
+allocation. In the example above, the 8192 MiB bucket uses the 8192 MiB Data
+budget. Data plus Index uses 9216 MiB of the 16384 MiB container limit, leaving
+7168 MiB for Query Service and other overhead.
+
+Omitting only `bucket_memory_mb` gives the bucket the full Data budget. For
+example, `deploy_couchbase(data_memory_mb=1024)` creates a deployment with
+1024 MiB Data, 512 MiB Index and a 1024 MiB bucket inside a 4096 MiB container.
+Increasing the container limit alone does not increase service budgets.
+
+Data and Index quotas must each be integer values of at least 256 MiB; the bucket
+quota must be at least 100 MiB and must not exceed Data. For new deployments,
+Data plus Index must be strictly smaller than the container limit. This check
+leaves some headroom, but does not guarantee enough memory for a particular
+workload: allow sufficient space for Query Service and process overhead.
+
+New deployments save the resolved quotas, including defaults. When reusing a
+deployment, omitted service and bucket quotas reuse saved settings; BONDI does
+not recompute defaults or resize existing services or buckets. Explicit quota
+arguments must match the saved values. Startup verifies saved quotas against
+Couchbase and reports drift.
+
+Older deployments without saved quotas retain their existing allocations when
+quotas are omitted. Supplying an explicit quota conflicts with their unspecified
+metadata, even if Couchbase already has that allocation; this API does not adopt
+or resize those older configurations.
+
+The three service and bucket quota options are Python API arguments. The CLI
+exposes `--memory-limit-mb` for the container limit only.
 
 Conflicting Couchbase memory requests fail before contacting Docker.
 Repeat the saved limit when calling `deploy_couchbase`.

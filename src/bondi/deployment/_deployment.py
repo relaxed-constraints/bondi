@@ -15,7 +15,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Literal
 
-from ._couchbase import DEFAULT_BUCKET_MEMORY_MB, DEFAULT_DATA_MEMORY_MB
+from ._couchbase import DEFAULT_DATA_MEMORY_MB, DEFAULT_INDEX_MEMORY_MB
 
 _COUCHBASE_QUOTA_KEYS = ("data_memory_mb", "index_memory_mb", "bucket_memory_mb")
 
@@ -76,9 +76,9 @@ class Deployment:
         image: Pinned database Docker image.
         memory_limit_mb: Saved container limit in MiB, or None if not explicitly saved.
         wiredtiger_cache_size_gb: Saved MongoDB cache size in GiB, or None.
-        data_memory_mb: Explicit Couchbase Data Service quota in MiB, or None.
-        index_memory_mb: Explicit Couchbase Index Service quota in MiB, or None.
-        bucket_memory_mb: Explicit Couchbase bucket quota in MiB, or None.
+        data_memory_mb: Saved Couchbase Data Service quota in MiB, or None.
+        index_memory_mb: Saved Couchbase Index Service quota in MiB, or None.
+        bucket_memory_mb: Saved Couchbase bucket quota in MiB, or None.
     """
 
     name: str
@@ -394,7 +394,9 @@ def deploy_couchbase(
         index_memory_mb: Index Service quota in MiB. Defaults to 512 for a new
             deployment when omitted.
         bucket_memory_mb: Bucket quota in MiB, drawn from the Data Service quota.
-            Defaults to 256 for a new deployment when omitted.
+            Defaults to the Data Service quota for a new deployment when omitted.
+            Must not exceed Data. Data plus Index must be smaller than the container
+            limit to leave room for Query Service and overhead.
         timeout: Total startup and initialization deadline in seconds.
 
     Returns:
@@ -408,6 +410,7 @@ def deploy_couchbase(
     Omitted quotas reuse saved settings. Saved deployments reject explicit quota
     requests that differ from their metadata. Startup verifies explicit saved
     quotas against Couchbase without resizing existing services or buckets.
+    New deployments save resolved defaults as well as explicitly supplied quotas.
     Calls managing the same deployment must be serialized by the caller.
     """
     if type(memory_limit_mb) is not int or memory_limit_mb <= 0:
@@ -519,10 +522,18 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
         cache = settings["wiredtiger_cache_size_gb"]
         if memory is not None and cache is not None and cache * 1024 >= memory:
             raise ValueError("wiredtiger_cache_size_gb must be smaller than memory_limit_mb")
-    elif (settings["bucket_memory_mb"] or DEFAULT_BUCKET_MEMORY_MB) > (
-        settings["data_memory_mb"] or DEFAULT_DATA_MEMORY_MB
-    ):
-        raise ValueError("bucket_memory_mb must not exceed data_memory_mb")
+    else:
+        # Resolve defaults only for new deployments; existing settings stay authoritative.
+        settings["data_memory_mb"] = settings["data_memory_mb"] or DEFAULT_DATA_MEMORY_MB
+        settings["index_memory_mb"] = settings["index_memory_mb"] or DEFAULT_INDEX_MEMORY_MB
+        settings["bucket_memory_mb"] = settings["bucket_memory_mb"] or settings["data_memory_mb"]
+        if settings["bucket_memory_mb"] > settings["data_memory_mb"]:
+            raise ValueError("bucket_memory_mb must not exceed data_memory_mb")
+        if settings["data_memory_mb"] + settings["index_memory_mb"] >= settings["memory_limit_mb"]:
+            raise ValueError(
+                "data_memory_mb + index_memory_mb must be smaller than memory_limit_mb "
+                "to leave room for Query Service and process overhead"
+            )
     for port in ports:
         _check_port(port)
     template = json.loads(files("bondi.deployment").joinpath(f"{backend}.compose.json").read_text())
