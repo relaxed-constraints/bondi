@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Batch MongoDB and Couchbase inserts across all dataset loaders, with confirmed
+  write counts and uncertainty reporting for partial failures.
+
 ## 0.3.2 — 2026-11-15
 
 - Reject ports with active listeners on Windows and make synchronous executor

@@ -5,8 +5,18 @@ from contextlib import contextmanager, suppress
 from datetime import timedelta
 
 from pymongo import MongoClient
+from pymongo.errors import BulkWriteError
 
 from ._types import CouchbaseConnection, MongoConnection
+
+
+class InsertBatchError(RuntimeError):
+    """A failed batch with its confirmed write count."""
+
+    def __init__(self, acknowledged, uncertain, reason):
+        super().__init__(reason)
+        self.acknowledged = acknowledged
+        self.uncertain = uncertain
 
 
 def name(value):
@@ -52,12 +62,21 @@ class MongoWriter:
         if mode == "replace":
             db[collection].delete_many({})
 
-    def write_one(self, dest, key, document, mode):
+    def insert_batch(self, dest, batch):
         collection = self.client[dest[0]][dest[2]]
-        if mode == "upsert":
-            result = collection.replace_one({"_id": document["_id"]}, document, upsert=True)
-        else:
-            result = collection.insert_one(document)
+        try:
+            result = collection.insert_many([document for _, document in batch], ordered=True)
+        except BulkWriteError as error:
+            details = error.details
+            if details.get("writeConcernErrors"):
+                raise InsertBatchError(0, True, "MongoDB write concern failed") from None
+            raise InsertBatchError(details["nInserted"], False, "MongoDB write failed") from None
+        if not result.acknowledged:
+            raise RuntimeError("MongoDB did not acknowledge the write")
+
+    def upsert_one(self, dest, key, document):
+        collection = self.client[dest[0]][dest[2]]
+        result = collection.replace_one({"_id": document["_id"]}, document, upsert=True)
         if not result.acknowledged:
             raise RuntimeError("MongoDB did not acknowledge the write")
 
@@ -160,12 +179,21 @@ class CouchbaseWriter:
                 for item in scan:
                     self._collection(dest).remove(item.id)
 
-    def write_one(self, dest, key, document, mode):
-        collection = self._collection(dest)
-        if mode == "upsert":
-            collection.upsert(key, document)
-        else:
-            collection.insert(key, document)
+    def insert_batch(self, dest, batch):
+        from couchbase.exceptions import DocumentExistsException
+
+        result = self._collection(dest).insert_multi(dict(batch), return_exceptions=True)
+        if result.all_ok:
+            return
+        acknowledged = len(result.results)
+        errors = result.exceptions
+        uncertain = acknowledged + len(errors) != len(batch) or any(
+            not isinstance(error, DocumentExistsException) for error in errors.values()
+        )
+        raise InsertBatchError(acknowledged, uncertain, "Couchbase write failed")
+
+    def upsert_one(self, dest, key, document):
+        self._collection(dest).upsert(key, document)
 
     def close(self):
         self.cluster.close()

@@ -1,5 +1,9 @@
 # Dataset loading
 
+All loaders share the same write path. Create and replace use batched inserts
+bounded by `batch_size`. See [progress and failures](../datasets.md#progress-and-failures)
+for partial failure behavior.
+
 ::: bondi.data.load_demo_data
     options:
       show_root_heading: true

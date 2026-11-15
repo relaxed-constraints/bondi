@@ -3,12 +3,15 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 from bson import ObjectId
 
 from bondi.data import LoadDataError, MongoConnection, load_documents, load_file
 from bondi.data._values import convert, document_key
+from bondi.data._writers import CouchbaseWriter, InsertBatchError
 from bondi.mongodb import MongoCollectionRef
 
 
@@ -30,10 +33,16 @@ def writer(monkeypatch):
             if mode == "replace" or dest not in self.data:
                 self.data[dest] = {}
 
-        def write_one(self, dest, key, document, mode):
+        def upsert_one(self, dest, key, document):
             if document.get("fail"):
                 raise RuntimeError("secret connection details")
             self.data[dest][key] = document
+
+        def insert_batch(self, dest, batch):
+            for count, (key, document) in enumerate(batch):
+                if document.get("fail"):
+                    raise InsertBatchError(count, True, "write failed")
+                self.data[dest][key] = document
 
         def indexes(self, dest, definitions):
             self.index_defs.extend(definitions)
@@ -92,6 +101,65 @@ def test_ids_and_partial_results(writer):
         load([{"_id": "b", "fail": True}], mode="upsert")
     assert error.value.result.uncertain_writes
     assert "secret" not in str(error.value)
+
+
+@pytest.mark.parametrize("write_concern_failure", [False, True])
+def test_mongo_partial_insert_counts(monkeypatch, write_concern_failure):
+    from pymongo.errors import BulkWriteError
+
+    client = MagicMock()
+    collection = client["test"]["items"]
+    collection.find_one.return_value = None
+    collection.insert_many.side_effect = BulkWriteError(
+        {
+            "nInserted": 1,
+            "writeErrors": [{"index": 1, "errmsg": "private details"}],
+            "writeConcernErrors": [{"code": 64}] if write_concern_failure else [],
+        }
+    )
+    monkeypatch.setattr("bondi.data._writers.MongoClient", lambda *args, **kwargs: client)
+
+    with pytest.raises(LoadDataError, match="rows 0-2: MongoDB write") as caught:
+        load([{"_id": i} for i in range(3)])
+
+    result = caught.value.result
+    assert "private" not in str(caught.value)
+    assert result.uncertain_writes is write_concern_failure
+    assert result.destinations == {"test.items": 0 if write_concern_failure else 1}
+    assert result.source_counts == ({} if write_concern_failure else {"items:unsplit": 1})
+
+
+@pytest.mark.parametrize("ambiguous", [False, True])
+def test_couchbase_partial_insert_counts(monkeypatch, ambiguous):
+    exceptions = pytest.importorskip("couchbase.exceptions")
+    from bondi.couchbase import CouchbaseCollectionRef
+    from bondi.data import CouchbaseConnection
+
+    collection = MagicMock()
+    error = (
+        exceptions.AmbiguousTimeoutException if ambiguous else exceptions.DocumentExistsException
+    )
+    collection.insert_multi.return_value = SimpleNamespace(
+        all_ok=False,
+        results={document_key("later"): object()},
+        exceptions={document_key("first"): error()},
+    )
+    monkeypatch.setattr(CouchbaseWriter, "__init__", lambda *args: None)
+    monkeypatch.setattr(CouchbaseWriter, "preflight", lambda *args: False)
+    monkeypatch.setattr(CouchbaseWriter, "prepare", lambda *args, **kwargs: None)
+    monkeypatch.setattr(CouchbaseWriter, "close", lambda *args: None)
+    monkeypatch.setattr(CouchbaseWriter, "_collection", lambda *args: collection)
+    with pytest.raises(LoadDataError, match="Couchbase write failed") as caught:
+        load_documents(
+            [{"_id": "first"}, {"_id": "later"}],
+            target=CouchbaseConnection("couchbase://unused", "user", "password"),
+            collection=CouchbaseCollectionRef("test", "scope", "items"),
+        )
+
+    result = caught.value.result
+    assert result.destinations == {"test.scope.items": 1}
+    assert result.source_counts == {"items:unsplit": 1}
+    assert result.uncertain_writes is ambiguous
 
 
 def test_extended_json_and_plain_wrappers(tmp_path, writer):

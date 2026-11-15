@@ -60,9 +60,9 @@ deployment = get_deployment("cb-demo")
 with CouchbaseExecutor.from_uri(
     deployment.uri, username=deployment.username, password=deployment.password
 ) as executor:
-    executor.run(CouchbaseQuery(
-        "CREATE PRIMARY INDEX IF NOT EXISTS ON `demo`.`_default`.`business`"
-    ))
+    executor.run(
+        CouchbaseQuery("CREATE PRIMARY INDEX IF NOT EXISTS ON `demo`.`_default`.`business`")
+    )
 ```
 
 See [the API reference](reference/data.md#bondi.data.load_demo_data) for details.
@@ -478,13 +478,16 @@ result = load_file(
 )
 ```
 
-`batch_size` limits buffered documents.
-The writer waits for acknowledgement of each document separately.
-After each batch, the callback receives an independent result snapshot.
+`batch_size` limits buffered documents and the number submitted per insert batch.
+Create and replace loads use ordered MongoDB inserts or Couchbase multi-document
+inserts. Upsert writes one document at a time.
+After each successful batch, the callback receives an independent result snapshot.
 The callback must be synchronous and return `None`.
 
 Loads do not roll back or retry automatically.
 `LoadDataError.result` records acknowledged writes and any uncertain write outcome.
+A failed batch can contain successful inserts. Couchbase can acknowledge inserts
+after a failed key in the same batch.
 For repository loading, it includes completed collections and the failed collection.
 Repository progress callbacks describe only the current collection.
 

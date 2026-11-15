@@ -23,7 +23,7 @@ from ._sources import (
 )
 from ._types import CouchbaseConnection, LoadDataError, LoadDataResult, MongoConnection
 from ._values import convert, document_key, generated_id, identity
-from ._writers import CouchbaseWriter, MongoWriter, connection, name
+from ._writers import CouchbaseWriter, InsertBatchError, MongoWriter, connection, name
 
 
 def _destination(target, collection):
@@ -66,7 +66,7 @@ def load_documents(
         json_mode: extended decodes Extended JSON wrappers before conversion.
         naive_datetimes: error rejects naive datetimes; utc assumes UTC.
         decimal_mode: error rejects Couchbase decimals; string stores their text.
-        batch_size: Maximum buffered documents and progress interval.
+        batch_size: Maximum buffered documents, insert batch size and progress interval.
         on_progress: Synchronous callback receiving an independent progress snapshot.
 
     Returns:
@@ -78,7 +78,8 @@ def load_documents(
         LoadDataError: Loading failed. result contains partial progress.
 
     Loads are non-atomic. No rollback or automatic retries occur. Duplicate IDs
-    within the input fail, including in upsert mode. Do not write concurrently.
+    within the input fail, including in upsert mode. Create and replace insert in
+    batches. Upsert writes one document at a time. Do not write concurrently.
     Couchbase replacement skips deletion only after this call creates a collection.
     Creation conflicts fail. Scan cleanup errors do not mask an existing error.
     """
@@ -352,13 +353,31 @@ def _load(
                     origin = f"{plan['logical']}:{plan['split'] or 'unsplit'}"
                     batch = []
 
-                    def flush():
-                        for key, document in batch:
-                            result.uncertain_writes = True
-                            writer.write_one(dest, key, document, mode)
-                            result.uncertain_writes = False
-                            result.destinations[destination] += 1
-                            result.source_counts[origin] = result.source_counts.get(origin, 0) + 1
+                    def record_writes(count):
+                        if count:
+                            result.destinations[destination] += count
+                            result.source_counts[origin] = (
+                                result.source_counts.get(origin, 0) + count
+                            )
+
+                    def flush(last_row):
+                        nonlocal context
+                        start_row = last_row - len(batch) + 1
+                        context = f"{origin}, shard {plan['shard']}, rows {start_row}-{last_row}"
+                        result.uncertain_writes = True
+                        if mode == "upsert":
+                            for key, document in batch:
+                                writer.upsert_one(dest, key, document)
+                                record_writes(1)
+                        else:
+                            try:
+                                writer.insert_batch(dest, batch)
+                            except InsertBatchError as error:
+                                record_writes(error.acknowledged)
+                                result.uncertain_writes = error.uncertain
+                                raise
+                            record_writes(len(batch))
+                        result.uncertain_writes = False
                         batch.clear()
                         seen.commit()
                         result.elapsed_seconds = perf_counter() - start
@@ -416,9 +435,9 @@ def _load(
                         )
                         batch.append((document_key(source_id), converted))
                         if len(batch) >= batch_size:
-                            flush()
+                            flush(row)
                     if batch:
-                        flush()
+                        flush(row)
             finally:
                 seen.close()
         result.elapsed_seconds = perf_counter() - start
@@ -428,7 +447,7 @@ def _load(
         # Driver errors can contain URIs or credentials. Do not include their text.
         detail = (
             str(error)
-            if type(error) in (ValueError, TypeError, ImportError)
+            if type(error) in (ValueError, TypeError, ImportError, InsertBatchError)
             else type(error).__name__
         )
         raise LoadDataError(f"{context}: {detail}", result) from None
