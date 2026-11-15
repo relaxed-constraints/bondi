@@ -37,12 +37,30 @@ we want to document; new classes are not automatically added to navigation.
 
 ## 3. Configure the site
 
-`zensical.toml` defines navigation and enables mkdocstrings with the Python handler.
+`mkdocs.yml` defines project metadata, navigation, API source paths and Markdown-export
+sections. It inherits shared theme, Markdown-extension and API-rendering defaults
+from `.relcon-docs/base.yml`. Both files are checked into this repository; no
+external package or configuration-generation step is required.
 `paths: [src]` tells the handler where our package lives, and
 `docstring_style: google` selects the docstring convention.
 The Python handler puts signatures in separate code blocks and links documented
 types. Ruff formats long signatures. The `docs` dependency group supplies the
 site builder, Python handler, and formatter.
+
+### Shared defaults and project overrides
+
+Edit `.relcon-docs/base.yml` for defaults intended to be shared with related
+projects. Keep BONDI-specific settings in `mkdocs.yml`. The base file is a
+prototype for a future shared package, not a generated file yet.
+
+Zensical merges inherited mappings recursively; project values override defaults.
+Lists replace inherited lists rather than extending them. Plugins and Markdown
+extensions use mapping syntax so a project can override one setting without
+dropping unrelated defaults. Paths are resolved relative to the root configuration.
+
+The `llmstxt` configuration generates `llms.txt` and per-page Markdown exports;
+the inherited `content.action.copy` feature and CSS provide the labeled copy button.
+The YAML filename does not change the builder: continue using Zensical commands.
 
 ## 4. Preview locally
 
@@ -95,7 +113,7 @@ later.
 ## Documentation theme
 
 The site uses Zensical’s modern theme.
-Theme settings live in `zensical.toml`. Top-level tabs separate onboarding, guides, tutorials, reference and development.
+Theme settings live in `.relcon-docs/base.yml`. Top-level tabs separate onboarding, guides, tutorials, reference and development.
 Code-copy buttons are enabled. `font: false` uses system fonts without fetching Google Fonts.
 
 After a dependency or theme change, [restart the preview server](#4-preview-locally).

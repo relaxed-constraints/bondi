@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Split documentation configuration into project-specific YAML and inherited shared
+  defaults, preserving the modern theme, API rendering and Markdown exports.
+
 - Batch MongoDB and Couchbase inserts across all dataset loaders, with confirmed
   write counts and uncertainty reporting for partial failures.
 
