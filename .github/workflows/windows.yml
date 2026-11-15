@@ -24,3 +24,12 @@ jobs:
           uv run bondi deployment create mongodb --help
           uv run bondi dataset load-hf-repository --help
       - run: uv run pytest -m 'not live'
+      - name: Probe Linux containers and run live tests
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          docker info --format '{{.OSType}}'
+          docker compose version
+          docker run --rm --platform linux alpine:3.22 uname -s
+          $env:BONDI_LIVE = "1"
+          uv run --extra couchbase pytest -m live
