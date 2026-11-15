@@ -2,6 +2,7 @@
 
 import os
 import sys
+from fnmatch import fnmatchcase
 from types import SimpleNamespace
 
 import click
@@ -85,17 +86,19 @@ def couchbase(**options):
 
 @deployment.command("start")
 @click.argument("name")
+@click.option("-y", "--yes", is_flag=True, help="Skip confirmation for multiple deployments.")
 @click.option("--timeout", type=float, default=120, show_default=True)
 def start(**options):
-    """Start a saved deployment and wait for readiness."""
+    """Start saved deployments by exact name or glob and wait for readiness."""
     return _run(SimpleNamespace(command="start", **options))
 
 
 @deployment.command("stop")
 @click.argument("name")
+@click.option("-y", "--yes", is_flag=True, help="Skip confirmation for multiple deployments.")
 @click.option("--timeout", type=float, default=120, show_default=True)
 def stop(**options):
-    """Stop a deployment and retain its data."""
+    """Stop deployments by exact name or glob and retain their data."""
     return _run(SimpleNamespace(command="stop", **options))
 
 
@@ -105,7 +108,7 @@ def stop(**options):
 @click.option("--keep-data", is_flag=True, help="Retain data and configuration for a later start.")
 @click.option("-y", "--yes", is_flag=True, help="Skip the removal confirmation.")
 def remove(**options):
-    """Remove a deployment and its data. Ask for confirmation first."""
+    """Remove deployments by exact name or glob. Ask for confirmation first."""
     return _run(SimpleNamespace(command="remove", **options))
 
 
@@ -135,6 +138,59 @@ def _display_status(db):
     if state == "removed" and db._data_volume_exists():
         return "removed (data retained)"
     return state
+
+
+def _run_lifecycle(args):
+    # Exact names retain their direct lookup and existing missing-name errors.
+    if any(character in args.name for character in "*?["):
+        deployments = sorted(
+            (db for db in list_deployments() if fnmatchcase(db.name, args.name)),
+            key=lambda db: db.name,
+        )
+        if not deployments:
+            raise ValueError(f"No saved deployments match {args.name!r}")
+    else:
+        deployments = [get_deployment(args.name)]
+
+    if len(deployments) > 1:
+        message(f"Deployments to {args.command}:")
+        for db in deployments:
+            message(f"  {db.name}")
+
+    if not args.yes and (len(deployments) > 1 or args.command == "remove"):
+        action = args.command
+        if args.command == "remove":
+            action = (
+                "remove the container, keeping its data and configuration"
+                if args.keep_data
+                else "permanently delete the container, data and saved configuration"
+            )
+        target = deployments[0].name if len(deployments) == 1 else "all listed deployments"
+        try:
+            answer = input(f"{target}: {action}? [y/N] ")
+        except EOFError:
+            message("bondi: operation cancelled; use --yes for unattended operation.", error=True)
+            return 1
+        if answer.strip().lower() not in {"y", "yes"}:
+            message("Operation cancelled; nothing was changed.")
+            return 1
+
+    # Resolve and confirm the complete target set before changing any deployment.
+    for db in deployments:
+        try:
+            if args.command == "remove":
+                db.remove(keep_data=args.keep_data, timeout=args.timeout)
+                detail = "data retained" if args.keep_data else "data and configuration deleted"
+                message(f"{db.name}: removed ({detail})")
+            elif args.command == "start":
+                db.start(timeout=args.timeout)
+                status_line(db.name, "running", db.uri)
+            else:
+                db.stop(timeout=args.timeout)
+                message(f"{db.name}: stopped (data retained)")
+        except (ValueError, RuntimeError, OSError, ImportError) as exc:
+            raise RuntimeError(f"{db.name}: {exc}") from exc
+    return 0
 
 
 def _run(args):
@@ -199,6 +255,8 @@ def _run(args):
                     ("Name", "Status", "URI"),
                     [(db.name, _display_status(db), db.uri) for db in deployments],
                 )
+        elif args.command in {"start", "stop", "remove"}:
+            return _run_lifecycle(args)
         else:
             db = get_deployment(args.name)
             if args.command == "status":
@@ -218,33 +276,6 @@ def _run(args):
                     message(f"Saved WiredTiger cache size: {cache}")
             elif args.command == "logs":
                 sys.stdout.write(db.logs(tail=args.tail))
-            elif args.command == "remove":
-                if not args.yes:
-                    action = (
-                        "remove the container, keeping its data and configuration"
-                        if args.keep_data
-                        else "permanently delete the container, data and saved configuration"
-                    )
-                    try:
-                        answer = input(f"{db.name}: {action}? [y/N] ")
-                    except EOFError:
-                        message(
-                            "bondi: removal cancelled; use -y for unattended removal.",
-                            error=True,
-                        )
-                        return 1
-                    if answer.strip().lower() not in {"y", "yes"}:
-                        message("Removal cancelled; nothing was changed.")
-                        return 1
-                db.remove(keep_data=args.keep_data, timeout=args.timeout)
-                detail = "data retained" if args.keep_data else "data and configuration deleted"
-                message(f"{db.name}: removed ({detail})")
-            elif args.command == "start":
-                db.start(timeout=args.timeout)
-                status_line(db.name, "running", db.uri)
-            elif args.command == "stop":
-                db.stop(timeout=args.timeout)
-                message(f"{db.name}: stopped (data retained)")
     except FileNotFoundError as exc:
         message(f"bondi: saved deployment files not found: {exc.filename or exc}", error=True)
         return 1

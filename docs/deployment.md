@@ -126,6 +126,36 @@ bondi deployment stop mongo-demo
 bondi deployment start mongo-demo
 ```
 
+### Select deployments by name glob
+
+The `start`, `stop` and `remove` commands accept an exact name or a
+case-sensitive glob over saved deployment names, including stopped deployments
+and removed containers whose configuration was retained. Quote patterns so your
+shell passes them to BONDI:
+
+```sh
+bondi deployment stop "js-pair*"
+bondi deployment start "js-pair?"
+bondi deployment remove "js-pair[1-3]" --keep-data
+bondi deployment stop "js-pair*" --yes
+```
+
+`*` matches any number of characters, `?` matches one character, and brackets
+match a set or range (for example, `[123]`, `[1-3]`, or `[!1-3]` for a negated
+range). Matching covers the whole name.
+
+When multiple deployments match, BONDI lists their names and asks once for
+confirmation with a default of No (`y/N`). No deployment is changed before
+confirmation. `--yes` (or `-y`) skips the prompt but still lists the targets.
+A single match behaves like an exact name: start and stop need no confirmation;
+remove still asks unless `--yes` is supplied. Removal deletes data by default;
+`--keep-data` applies to every matched deployment.
+
+No matches return exit code 1. Operations run sequentially in name order, with
+`--timeout` applied to each deployment. A failure stops the command with exit
+code 1 and identifies the failed deployment; earlier changes are not rolled back.
+
+
 The Python API provides the same operations:
 
 ```python

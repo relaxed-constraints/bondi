@@ -1,5 +1,9 @@
 # Database deployment
 
+The CLI supports name globs for start, stop and remove; see
+[selection and confirmation semantics](../deployment.md#select-deployments-by-name-glob).
+Python deployment lookups continue to take exact names.
+
 ::: bondi.deployment.deploy_mongodb
     options:
       show_root_heading: true

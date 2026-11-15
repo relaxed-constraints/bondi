@@ -451,3 +451,104 @@ def test_old_root_commands_are_rejected(command):
     result = CliRunner().invoke(cli, [command])
     assert result.exit_code == 2
     assert "No such command" in result.output
+
+
+@pytest.mark.parametrize("command", ["start", "stop", "remove"])
+@pytest.mark.parametrize("pattern", ["js-pair*", "js-pair?", "js-pair[1-3]", "js-pair[!4]"])
+@pytest.mark.parametrize("yes", [False, True])
+def test_glob_lifecycle(command, pattern, yes, capsys):
+    names = ["js-pair3", "other", "js-pair1", "JS-pair2"]
+    deployments = [MagicMock(name=name) for name in names]
+    for db, name in zip(deployments, names):
+        db.name = name
+
+    def confirm(prompt):
+        output = capsys.readouterr().out
+        assert output.index("js-pair1") < output.index("js-pair3")
+        assert "other" not in output and "JS-pair2" not in output
+        assert "[y/N]" in prompt
+        for db in deployments:
+            getattr(db, command).assert_not_called()
+        return "y"
+
+    with (
+        patch("bondi._cli.list_deployments", return_value=deployments),
+        patch("builtins.input", side_effect=confirm) as prompt,
+    ):
+        options = ["--keep-data"] if command == "remove" else []
+        assert (
+            main(
+                ["deployment", command, pattern, "--timeout", "23"]
+                + options
+                + (["--yes"] if yes else [])
+            )
+            == 0
+        )
+    assert prompt.call_count == (0 if yes else 1)
+    if yes:
+        output = capsys.readouterr().out
+        assert output.index("js-pair1") < output.index("js-pair3")
+    for db in deployments:
+        operation = getattr(db, command)
+        if db.name in {"js-pair1", "js-pair3"}:
+            kwargs = {"keep_data": True} if command == "remove" else {}
+            operation.assert_called_once_with(timeout=23, **kwargs)
+        else:
+            operation.assert_not_called()
+
+
+@pytest.mark.parametrize("command", ["start", "stop", "remove"])
+@pytest.mark.parametrize(
+    "answer,code", [("", 1), ("n", 1), (EOFError(), 1), (KeyboardInterrupt(), 130)]
+)
+def test_glob_cancel_changes_nothing(command, answer, code):
+    deployments = [MagicMock(), MagicMock()]
+    for db, name in zip(deployments, ["demo1", "demo2"]):
+        db.name = name
+    with (
+        patch("bondi._cli.list_deployments", return_value=deployments),
+        patch(
+            "builtins.input",
+            side_effect=answer if isinstance(answer, BaseException) else None,
+            return_value=answer,
+        ),
+    ):
+        assert main(["deployment", command, "demo*"]) == code
+    for db in deployments:
+        getattr(db, command).assert_not_called()
+
+
+@pytest.mark.parametrize("command", ["start", "stop", "remove"])
+def test_glob_no_matches(command, db, capsys):
+    with (
+        patch("bondi._cli.list_deployments", return_value=[db]),
+        patch("builtins.input") as prompt,
+    ):
+        assert main(["deployment", command, "missing*", "--yes"]) == 1
+    prompt.assert_not_called()
+    getattr(db, command).assert_not_called()
+    assert "No saved deployments match" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("command", ["start", "stop", "remove"])
+def test_glob_single_match(command, db):
+    with (
+        patch("bondi._cli.list_deployments", return_value=[db]),
+        patch("builtins.input", return_value="yes") as prompt,
+    ):
+        assert main(["deployment", command, "dem?"]) == 0
+    assert prompt.call_count == (1 if command == "remove" else 0)
+    kwargs = {"keep_data": False} if command == "remove" else {}
+    getattr(db, command).assert_called_once_with(timeout=120, **kwargs)
+
+
+def test_glob_stops_after_failure(capsys):
+    deployments = [MagicMock() for _ in range(3)]
+    for db, name in zip(deployments, ["demo1", "demo2", "demo3"]):
+        db.name = name
+    deployments[1].stop.side_effect = RuntimeError("Docker unavailable")
+    with patch("bondi._cli.list_deployments", return_value=deployments):
+        assert main(["deployment", "stop", "demo*", "-y"]) == 1
+    deployments[0].stop.assert_called_once()
+    deployments[2].stop.assert_not_called()
+    assert "demo2: Docker unavailable" in capsys.readouterr().err
