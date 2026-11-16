@@ -553,28 +553,28 @@ See the [dataset API reference](reference/data.md) for signatures and return typ
 
 ## Load AptMQL databases
 
+[AptMQL-Bench](https://huggingface.co/datasets/MongoDB/AptMQL-Bench) provides 21 MongoDB databases for research and benchmarking, converted
+from the relational SQL databases in [BIRD](https://bird-bench.github.io/).
+The datasets span commerce, science, sports, and finance, with document schemas
+designed around expected access patterns rather than one-to-one table mappings.
+
 The AptMQL loaders read BSON dumps from
 [MongoDB/AptMQL-Bench](https://huggingface.co/datasets/MongoDB/AptMQL-Bench).
 An AptMQL **dataset** is a group of related collections, such as `beer_factory`.
 This differs from `load_hf_dataset`, which loads one HF configuration into one collection.
-The existing Hugging Face loaders retain their behavior.
 
 ```sh
-# Every beer_factory collection in a MongoDB database named beer_factory.
-bondi dataset load-aptmql beer_factory --deployment mongo-demo \
-  --revision 06ba1f0f29b1947e67a343c204e6a9b5eede6b17
+# Load every beer_factory collection into a MongoDB database named beer_factory.
+bondi dataset load-aptmql beer_factory --deployment mongo-demo
 
-# Every beer_factory collection in the beer_factory scope of bucket demo.
-bondi dataset load-aptmql beer_factory --deployment cb-demo --bucket demo \
-  --revision 06ba1f0f29b1947e67a343c204e6a9b5eede6b17
+# Load collections into a Couchbase scope named beer_factory in the demo bucket.
+bondi dataset load-aptmql beer_factory --deployment cb-demo --bucket demo
 
 # All source datasets, each in its own MongoDB database.
-bondi dataset load-aptmql-repository --deployment mongo-demo \
-  --revision 06ba1f0f29b1947e67a343c204e6a9b5eede6b17
+bondi dataset load-aptmql-repository --deployment mongo-demo
 
-# All source datasets, each in its own scope within bucket demo.
-bondi dataset load-aptmql-repository --deployment cb-demo --bucket demo \
-  --revision 06ba1f0f29b1947e67a343c204e6a9b5eede6b17
+# All source datasets, each in its own Couchbase scope within bucket demo.
+bondi dataset load-aptmql-repository --deployment cb-demo --bucket demo
 ```
 
 Run the single-dataset and entire-repository examples on separate empty destinations.
@@ -585,12 +585,10 @@ a later failure leaves earlier writes in place.
 from bondi.data import load_aptmql_dataset, load_aptmql_repository
 from bondi.deployment import get_deployment
 
-revision = "06ba1f0f29b1947e67a343c204e6a9b5eede6b17"
 results = load_aptmql_dataset(
     "beer_factory",
     target=get_deployment("mongo-demo"),
     database="beer_experiment",
-    revision=revision,
 )
 print(results["brands"].destinations)  # {"beer_experiment.brands": 24}
 
@@ -598,7 +596,6 @@ print(results["brands"].destinations)  # {"beer_experiment.brands": 24}
 all_results = load_aptmql_repository(
     target=get_deployment("cb-demo"),
     bucket="demo",
-    revision=revision,
 )
 print(all_results["beer_factory"]["brands"].destinations)
 # {"demo.beer_factory.brands": 24}
@@ -614,20 +611,17 @@ when creating a new bucket, as with the other loaders.
 
 - BONDI discovers the dataset under `train` or `dev`; no split option is needed.
   An ambiguous dataset name across splits is rejected.
-- A branch, tag, or commit resolves once per call. Omission selects the current `main`.
-  Pin a commit for reproducible experiments.
 - Only selected `.bson` files download to the standard Hugging Face cache.
   All selected files download before the first write. The entire-repository loader
   currently downloads about 2.55 GB of BSON data.
 - PyMongo decodes cached BSON incrementally. No clone, JSON conversion, or
-  `mongorestore` installation is required. These loaders do not expose a remote
-  streaming option; disk caching and bounded document batches are always used.
+  `mongorestore` installation is required.
 - Dates decode as timezone-aware UTC values. IDs and references follow BONDI's
   existing backend conversion rules. Unsupported Couchbase values fail explicitly;
   decimal strings require `decimal_mode="string"`.
 - Dump indexes and collection metadata are ignored. MongoDB creates its standard
   `_id` index. BONDI does not create secondary or Couchbase query indexes.
-- Results record the resolved source commit, dataset, split, source filename, and
+- Results record the dataset, split, source filename, and
   SHA256. The single-dataset result maps collection names to `LoadDataResult`.
   Repository results add an outer mapping keyed by dataset name.
 - Collections load sequentially in sorted dataset/collection order. Progress describes
@@ -636,9 +630,8 @@ when creating a new bucket, as with the other loaders.
 
 ### Available AptMQL datasets
 
-The following inventory is for revision
-`06ba1f0f29b1947e67a343c204e6a9b5eede6b17`: 21 datasets and 150 collections.
-The loader discovers files at the requested revision rather than hard-coding this list.
+The repository contains 21 datasets and 150 collections.
+The loader discovers available files rather than hard-coding this list.
 An unknown dataset error lists the available names.
 
 | Dataset | Split | Collections |
