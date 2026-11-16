@@ -2,18 +2,20 @@
 
 ## Unreleased
 
-- Move dataset loading to the first tutorial and clarify the schema inspection title.
+## 0.3.6 — 2026-11-16
 
-- Simplify index batches: IndexSet keys are collection names; create_indexes accepts
-  a MongoDB database or Couchbase bucket/scope instead of a target mapping.
-
-- Fix index API reference headings to show class names and nested method navigation.
+- Derive current-version documentation labels, links and install commands from
+  pyproject.toml instead of maintaining hardcoded release numbers.
 
 - Add shared `FieldIndex`, native `MongoIndex` / `CouchbaseIndex`, and ordered
   `IndexSet` definitions with versioned JSON persistence and config parsing.
 - Add synchronous single and batch index creation for deployments or connection
-  settings, with build readiness, explicit targets and partial failure reporting.
+  settings, with build readiness and partial failure reporting. IndexSet keys are
+  collection names; batches accept a MongoDB database or Couchbase bucket/scope.
 - Export connection settings from `bondi`, preserving `bondi.data` imports.
+- Document index definitions and creation, including nested API method navigation.
+- Move dataset loading to the first tutorial and clarify the schema inspection title.
+- Link the hosted demo and empty project documentation from the Projects page.
 
 ## 0.3.5 — 2026-11-16
 

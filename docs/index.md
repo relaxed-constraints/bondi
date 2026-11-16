@@ -1,3 +1,7 @@
+---
+render_macros: true
+---
+
 # BONDI
 
 *A Python toolkit for document database research.*
@@ -31,4 +35,4 @@ or use the [API reference](api.md) to look up a particular class or method.
 | **[Sampling estimation](mongodb-estimation.md)** | ✅ Supported | ❌ Planned/deferred |
 | **[Pattern-based workload generation](workload-generation.md)** | 🟡 Flat find queries; no logical expressions or aggregation pipelines | ❌ Not implemented |
 
-BONDI [0.3.0](https://pypi.org/project/bondi/0.3.0/) is available under the MIT license.
+BONDI [{{ bondi_version }}](https://pypi.org/project/bondi/{{ bondi_version }}/) is available under the MIT license.

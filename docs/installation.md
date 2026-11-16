@@ -1,6 +1,10 @@
+---
+render_macros: true
+---
+
 # Installation
 
-Install BONDI **0.3.2** from [PyPI](https://pypi.org/project/bondi/0.3.2/).
+Install BONDI **{{ bondi_version }}** from [PyPI](https://pypi.org/project/bondi/{{ bondi_version }}/).
 Use Python **3.11 or newer**. Choose a library installation for your own project,
 or a source checkout for notebooks and local demo databases.
 
@@ -35,7 +39,7 @@ if you need to execute Couchbase queries.
 
 PyMongo and its BSON codecs are installed automatically. Couchbase query descriptions
 and offline parsing work without the optional SDK; executing Couchbase queries needs it.
-For reproducible experiments, pin the release (`bondi==0.3.2`) and retain your project's
+For reproducible experiments, pin the release (`bondi=={{ bondi_version }}`) and retain your project's
 lockfile. The API is still evolving.
 
 
@@ -45,12 +49,12 @@ Educational Jupyter notebooks are included in the GitHub source, not in the inst
 Clone the matching release:
 
 ```sh
-git clone --branch v0.3.2 https://github.com/relaxed-constraints/bondi.git
+git clone --branch v{{ bondi_version }} https://github.com/relaxed-constraints/bondi.git
 cd bondi
 ```
 
 Alternatively, download and extract a source archive from the
-[0.3.2 GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.2),
+[{{ bondi_version }} GitHub release](https://github.com/relaxed-constraints/bondi/releases/tag/v{{ bondi_version }}),
 and open a terminal in the extracted folder. Git is only needed for cloning.
 Both options provide `notebooks/` and demo data.
 

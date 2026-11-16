@@ -10,6 +10,7 @@ Jupyter notebook. It combines BONDI with Yanex experiment tracking and includes
 step-by-step tutorials and a Markdown slide deck for progress updates.
 
 - Visit [BONDI Demo Project](https://github.com/relaxed-constraints/bondi-demo-project) on GitHub
+- Check the [documentation](https://relaxed-constraints.github.io/bondi-demo-project/) for details
 
 ### BONDI Empty Project
 
@@ -19,6 +20,7 @@ a small hello world function, CLI, Yanex experiment, notebook and test to show h
 pieces fit together. A Markdown slide deck is included for progress updates.
 
 - Visit [BONDI Empty Project](https://github.com/relaxed-constraints/bondi-empty-project) on GitHub
+- Check the [documentation](https://relaxed-constraints.github.io/bondi-empty-project/) for details
 
 ### BONDI JSON Bench
 

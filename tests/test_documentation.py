@@ -44,3 +44,36 @@ def test_deployment_is_limited_to_published_releases():
     assert not (root / ".github/workflows/pages.yml").exists()
     assert workflow["permissions"]["pages"] == "write"
     assert workflow["permissions"]["id-token"] == "write"
+
+
+def test_version_macros_follow_source_metadata(tmp_path):
+    import runpy
+    from types import SimpleNamespace
+
+    root = Path(__file__).resolve().parents[1]
+    namespace = runpy.run_path(str(root / "scripts/docs_macros.py"))
+    define_env = namespace["define_env"]
+    # Simulate a future source release without installing a matching distribution.
+    define_env.__globals__["__file__"] = str(tmp_path / "scripts/docs_macros.py")
+    metadata = tmp_path / "pyproject.toml"
+    for version in ["0.3.6", "9.8.7"]:
+        metadata.write_text(f'[project]\nversion = "{version}"\n')
+        env = SimpleNamespace(variables={})
+        define_env(env)
+        assert env.variables["bondi_version"] == version
+
+
+def test_current_release_pages_use_version_variable():
+    import re
+
+    root = Path(__file__).resolve().parents[1]
+    config = zensical_config.parse_config(str(root / "mkdocs.yml"))
+    macros = config["mdx_configs"]["zensical.extensions.macros"]
+    assert macros["module_name"] == "scripts/docs_macros"
+    assert macros["render_by_default"] is False
+    assert macros["on_error_fail"] is True
+    for name in ["index.md", "installation.md"]:
+        source = (root / "docs" / name).read_text()
+        assert "render_macros: true" in source
+        assert "{{ bondi_version }}" in source
+        assert not re.search(r"\b0\.\d+\.\d+\b", source)

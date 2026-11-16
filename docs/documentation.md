@@ -177,3 +177,21 @@ colours; see the [shared feature examples](https://relaxed-constraints.github.io
 
 Heading permalinks are inherited from relcon-docs. Hover over a heading to reveal
 the ¶ link to that section.
+
+## Current package version
+
+The home, installation and release pages use `{{ bondi_version }}` for current
+version labels, PyPI links, install pins and Git tags. The native Zensical macros
+extension reads `[project].version` from `pyproject.toml` through
+`scripts/docs_macros.py`; it does not read the installed package version. No new
+dependency is required. Enable substitution on a page with YAML front matter:
+
+```yaml
+---
+render_macros: true
+---
+```
+
+Historical changelog entries, verification records and minimum supported versions
+remain literal. After changing `pyproject.toml`, rebuild the docs (restart a running
+preview server) and check the rendered release links.

@@ -61,6 +61,10 @@ nav:
   - Roadmap: roadmap.md
   - Releases: releases.md
 plugins:
+  macros:
+    module_name: scripts/docs_macros
+    render_by_default: false
+    on_error_fail: true
   mkdocstrings:
     handlers:
       python:

@@ -1,17 +1,31 @@
+---
+render_macros: true
+---
+
 # Releases and publishing
 
 ## Current release
 
-Version 0.3.5 adds AptMQL dataset and repository loaders for MongoDB and Couchbase,
-with matching `bondi dataset load-aptmql` and `load-aptmql-repository` commands.
-The loaders download BSON dumps from Hugging Face and decode them with PyMongo.
-Related collections retain their source database or scope names. Dump indexes
-and collection metadata are not restored.
+Version {{ bondi_version }} adds reusable index definitions for MongoDB and Couchbase.
+`FieldIndex` describes shared field paths and directions; `MongoIndex` and
+`CouchbaseIndex` retain native options. `IndexSet` groups definitions by collection
+name, with config parsing and versioned JSON persistence. Single and batch creation
+accept deployments or external connection settings and wait for initial readiness.
 
-See the [dataset guide](datasets.md#load-aptmql-databases) and
-[changelog](changelog.md) for details.
-Release artifacts are available on [PyPI](https://pypi.org/project/bondi/0.3.5/)
-and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.5).
+See the [index guide](indexes.md) and [changelog](changelog.md) for details.
+Release artifacts are available on [PyPI](https://pypi.org/project/bondi/{{ bondi_version }}/)
+and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v{{ bondi_version }}).
+
+## 0.3.6 verification
+
+On 2026-11-16, all 1,517 offline tests and all 199 Docker integration tests passed.
+The live suite covered MongoDB and both Couchbase editions, including index
+creation, readiness and native options. Test-owned deployments were removed.
+
+Ruff, documentation configuration checks, the strict documentation build, wheel/source
+builds and Twine validation passed. A fresh wheel installation with the Couchbase
+extra passed dependency, CLI, query and index serialization checks. Current-version
+labels, links and commands were verified in rendered HTML and exported Markdown.
 
 ## 0.3.5 verification
 
@@ -154,10 +168,10 @@ reference were checked for the new metrics.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.3.5` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v{{ bondi_version }}` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.3.5` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi=={{ bondi_version }}` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.
