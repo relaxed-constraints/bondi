@@ -6,14 +6,28 @@ render_macros: true
 
 ## Current release
 
-Version {{ bondi_version }} allows whitespace, Unicode and punctuation in shared
-`FieldIndex` field-path segments. Names such as `Model Year` and `item.Model Year`
-are preserved exactly and quoted safely for Couchbase. Empty path segments and
-null characters remain invalid. Dots still denote nested field access.
+Version {{ bondi_version }} adds generic index lifecycle dispatchers, secondary-index
+replacement and repeatable named removal. Explicit backend functions now use
+`create_mongo_index[es]` / `remove_mongo_index[es]` and
+`create_couchbase_index[es]` / `remove_couchbase_index[es]`. The old unprefixed
+backend names have been removed; use the top-level `bondi` functions for dispatch.
 
 See the [index guide](indexes.md) and [changelog](changelog.md) for details.
 Release artifacts are available on [PyPI](https://pypi.org/project/bondi/{{ bondi_version }}/)
 and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v{{ bondi_version }}).
+
+## 0.3.8 verification
+
+On 2026-11-17, all 1,591 offline tests and four focused live index tests passed.
+The live checks covered explicit backend creation and generic dispatch with managed
+MongoDB/Couchbase deployments, replacement, named removal, repeated cleanup and
+primary-index preservation. Disposable test deployments were removed. Unrelated
+live deployment, loader and executor suites were not rerun for this index-only change.
+
+Ruff, documentation configuration, strict documentation, distribution builds and
+Twine checks passed. A fresh wheel installation with the Couchbase extra passed
+dependency, public API, dispatch and IndexSet serialization checks. Old backend
+function names are absent; this release intentionally breaks those imports.
 
 ## 0.3.7 verification
 

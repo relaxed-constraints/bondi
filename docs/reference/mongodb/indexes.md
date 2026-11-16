@@ -11,22 +11,22 @@ for `FieldIndex`, `IndexSet`, persistence and batch errors, and the
       heading_level: 2
       inherited_members: true
 
-::: bondi.mongodb.create_index
+::: bondi.mongodb.create_mongo_index
     options:
       show_root_heading: true
       heading_level: 2
 
-::: bondi.mongodb.create_indexes
+::: bondi.mongodb.create_mongo_indexes
     options:
       show_root_heading: true
       heading_level: 2
 
-::: bondi.mongodb.remove_index
+::: bondi.mongodb.remove_mongo_index
     options:
       show_root_heading: true
       heading_level: 2
 
-::: bondi.mongodb.remove_indexes
+::: bondi.mongodb.remove_mongo_indexes
     options:
       show_root_heading: true
       heading_level: 2

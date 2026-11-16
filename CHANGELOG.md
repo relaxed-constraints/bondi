@@ -2,14 +2,19 @@
 
 ## Unreleased
 
+## 0.3.8 — 2026-11-17
+
+- Add top-level index lifecycle dispatchers. Rename backend functions to
+  `create_mongo_index[es]`, `remove_mongo_index[es]`, `create_couchbase_index[es]`
+  and `remove_couchbase_index[es]`, without compatibility aliases (breaking change).
+
 - Organize native index definitions and lifecycle APIs under the MongoDB and
   Couchbase reference sections, with links from the shared index definitions page.
 
-- Add `replace=True` to both backend `create_indexes()` APIs, clearing secondary
+- Add `replace=True` to batch index creation, clearing secondary
   indexes on included collections while preserving primary indexes. Add name-based
   `remove_index()` and `remove_indexes()` with repeatable cleanup, protected-index
   checks and partial-removal errors. Replacement errors report removals and creations.
-
 
 ## 0.3.7 — 2026-11-16
 

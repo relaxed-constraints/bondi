@@ -6,9 +6,11 @@ from pymongo.errors import DuplicateKeyError
 
 from bondi import FieldIndex, IndexSet
 from bondi.couchbase import CouchbaseCollectionRef, CouchbaseIndex
-from bondi.couchbase import create_index as cb_create
-from bondi.couchbase import create_indexes as cb_many
-from bondi.mongodb import MongoCollectionRef, MongoIndex, create_index, create_indexes
+from bondi.couchbase import create_couchbase_index as cb_create
+from bondi.couchbase import create_couchbase_indexes as cb_many
+from bondi.mongodb import MongoCollectionRef, MongoIndex
+from bondi.mongodb import create_mongo_index as create_index
+from bondi.mongodb import create_mongo_indexes as create_indexes
 
 pytestmark = pytest.mark.live
 
@@ -94,7 +96,7 @@ def test_couchbase_indexes(live_deployments, tmp_path):
 
 
 def test_mongodb_index_lifecycle(live_mongodb):
-    from bondi.mongodb import remove_index, remove_indexes
+    from bondi import create_index, create_indexes, remove_index, remove_indexes
 
     target = MongoCollectionRef("lifecycle", "records")
     old = FieldIndex((("old", 1),), name="old")
@@ -132,7 +134,9 @@ def test_couchbase_index_lifecycle(live_deployments):
     from couchbase.cluster import Cluster
     from couchbase.options import ClusterOptions
 
-    from bondi.couchbase import remove_index, remove_indexes
+    from bondi import create_index as cb_create
+    from bondi import create_indexes as cb_many
+    from bondi import remove_index, remove_indexes
 
     db = live_deployments("community")
     target = CouchbaseCollectionRef("demo", "_default", "business")

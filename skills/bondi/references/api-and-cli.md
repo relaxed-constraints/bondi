@@ -359,12 +359,12 @@ Keep checkpoint/rerun decisions downstream; do not add retries or restart
 containers automatically. See the
 [health-check guide](https://relaxed-constraints.github.io/bondi/executor/#bounded-health-checks).
 
-## Index lifecycle (replacement/removal unreleased)
+## Index lifecycle (0.3.8+)
 
 `FieldIndex`, `MongoIndex`, `CouchbaseIndex` and `IndexSet` define reusable indexes.
-The backend `create_indexes()` accepts an IndexSet plus MongoDB `database` or
+The generic `bondi.create_indexes()` accepts an IndexSet plus MongoDB `database` or
 Couchbase `bucket`/`scope`, and a deployment or connection configuration.
-Check installed signatures before using the unreleased lifecycle extensions.
+These lifecycle extensions require BONDI 0.3.8 or newer.
 
 `create_indexes(..., replace=True)` removes all secondary indexes on the collections
 included in the set, including indexes created outside BONDI, then creates the new
@@ -382,3 +382,10 @@ primary requests fail before any deletion. Empty lists remove nothing.
 `phase`. `IndexRemovalError` reports completed removals. Both retain the native
 cause and failed collection; neither rolls back. Use the index guide and API
 reference in the matching checkout for exact fields and timeout semantics.
+
+
+Generic `bondi.create_index`, `create_indexes`, `remove_index` and `remove_indexes`
+dispatch from the deployment or connection type. Explicit backend functions are
+`create_mongo_index[es]` / `remove_mongo_index[es]` in `bondi.mongodb` and
+`create_couchbase_index[es]` / `remove_couchbase_index[es]` in `bondi.couchbase`.
+There are no old-name backend aliases. Namespace arguments must match the backend.

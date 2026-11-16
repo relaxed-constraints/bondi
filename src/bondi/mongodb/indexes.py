@@ -45,7 +45,7 @@ class MongoIndex(_Definition):
             raise ValueError("sparse and partial_filter cannot be combined")
 
 
-def create_index(connection, *, target, index, timeout=300.0):
+def create_mongo_index(connection, *, target, index, timeout=300.0):
     """Create one index and return its name after the initial build completes.
 
     Args:
@@ -64,7 +64,7 @@ def create_index(connection, *, target, index, timeout=300.0):
     return create_one("mongodb", connection, target, index, timeout)
 
 
-def create_indexes(connection, *, indexes, database, timeout=300.0, replace=False):
+def create_mongo_indexes(connection, *, indexes, database, timeout=300.0, replace=False):
     """Create an IndexSet using one client; return collection-to-name lists.
 
     Args:
@@ -94,7 +94,7 @@ def create_indexes(connection, *, indexes, database, timeout=300.0, replace=Fals
     return create_many("mongodb", connection, indexes, targets, timeout, replace)
 
 
-def remove_index(connection, *, target, index, timeout=300.0):
+def remove_mongo_index(connection, *, target, index, timeout=300.0):
     """Remove one named index; return True if removed, False if already absent.
 
     Args:
@@ -111,7 +111,7 @@ def remove_index(connection, *, target, index, timeout=300.0):
     return remove_one("mongodb", connection, target, index, timeout)
 
 
-def remove_indexes(connection, *, indexes, database, timeout=300.0):
+def remove_mongo_indexes(connection, *, indexes, database, timeout=300.0):
     """Remove named definitions; return collection-to-removed-name lists.
 
     Args:

@@ -11,22 +11,22 @@ for `FieldIndex`, `IndexSet`, persistence and batch errors, and the
       heading_level: 2
       inherited_members: true
 
-::: bondi.couchbase.create_index
+::: bondi.couchbase.create_couchbase_index
     options:
       show_root_heading: true
       heading_level: 2
 
-::: bondi.couchbase.create_indexes
+::: bondi.couchbase.create_couchbase_indexes
     options:
       show_root_heading: true
       heading_level: 2
 
-::: bondi.couchbase.remove_index
+::: bondi.couchbase.remove_couchbase_index
     options:
       show_root_heading: true
       heading_level: 2
 
-::: bondi.couchbase.remove_indexes
+::: bondi.couchbase.remove_couchbase_indexes
     options:
       show_root_heading: true
       heading_level: 2

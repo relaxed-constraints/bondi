@@ -21,8 +21,8 @@ assert summarize({'plan': {'#operator': 'DummyScan'}}).index_names == ()
 assert summarize({'metrics': {'result_count': 0}}).rows_returned == 0
 from tempfile import TemporaryDirectory
 from pathlib import Path
-from bondi import IndexSet, CouchbaseConnection
-from bondi.couchbase import CouchbaseIndex, CouchbaseCollectionRef, create_index
+from bondi import IndexSet, CouchbaseConnection, create_index
+from bondi.couchbase import CouchbaseIndex, CouchbaseCollectionRef
 index = CouchbaseIndex((("LOWER(email)", 1),))
 with TemporaryDirectory() as directory:
     path = Path(directory) / "indexes.json"

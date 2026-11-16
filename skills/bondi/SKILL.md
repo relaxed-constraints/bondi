@@ -19,7 +19,7 @@ it is not a query translator or an experiment-tracking framework.
 
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
-and dependency constraints before using an API. This skill describes the 0.3.7 API.
+and dependency constraints before using an API. This skill describes the 0.3.8 API.
 It includes sustained load generation, pattern selection, workload callbacks,
 MongoDB memory limits and executor health checks. Check installed signatures before
 using these features. Online documentation can be newer than the installed package.
@@ -103,7 +103,7 @@ or `bondi dataset load-demo`. Use the dataset loader for all data sources.
 Use `FieldIndex` and `IndexSet` from `bondi`, and native `MongoIndex` or
 `CouchbaseIndex` from their backend modules. Definitions support versioned JSON
 `.save()` / `.load()`; `IndexSet.from_dict()` accepts config mappings with
-`fields` shorthand. Backend `create_index()` / `create_indexes()` accept a
+`fields` shorthand. Generic `bondi.create_index()` / `bondi.create_indexes()` dispatch from a
 deployment or connection settings. Single creation uses a collection reference;
 batch creation uses IndexSet collection names and a database or bucket/scope. Batch failures expose
 completed names through `IndexCreationError`; no rollback is performed. See

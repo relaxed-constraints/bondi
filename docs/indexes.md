@@ -107,7 +107,8 @@ and empty collection lists are valid. IndexSet does not silently deduplicate ind
 
 ```python
 from bondi import MongoConnection
-from bondi.mongodb import MongoCollectionRef, create_index, create_indexes
+from bondi import create_index, create_indexes
+from bondi.mongodb import MongoCollectionRef
 
 connection = MongoConnection("mongodb://localhost:27017")
 name = create_index(
@@ -128,11 +129,19 @@ its connection settings; it does not start, stop or otherwise modify its lifecyc
 Connection settings are exported from `bondi`; existing `bondi.data` imports remain
 supported. These objects are configuration, not open SDK clients.
 
+The top-level functions dispatch from the deployment or connection type. They
+require `database` for MongoDB or `bucket` and `scope` for Couchbase and reject mixed
+namespace arguments before connecting. Collection references must match the backend.
+Explicit backend functions are also available as `create_mongo_index`,
+`create_mongo_indexes`, `remove_mongo_index`, `remove_mongo_indexes` in `bondi.mongodb`,
+and the corresponding `create_couchbase_*` / `remove_couchbase_*` functions in
+`bondi.couchbase`. Their old unprefixed backend names have been removed.
+
 For Couchbase, install `bondi[couchbase]` and use:
 
 ```python
 from bondi import CouchbaseConnection
-from bondi.couchbase import create_indexes
+from bondi import create_indexes
 
 connection = CouchbaseConnection("couchbase://localhost", "Administrator", "password")
 names = create_indexes(
@@ -177,7 +186,7 @@ propagate directly because no index operation has started.
 
 ```python
 from bondi import IndexSet
-from bondi.mongodb import create_indexes
+from bondi import create_indexes
 
 names = create_indexes(
     connection,
@@ -215,7 +224,8 @@ gets its own timeout; there is no whole-batch deadline.
 ## Remove selected definitions
 
 ```python
-from bondi.mongodb import MongoCollectionRef, remove_index, remove_indexes
+from bondi import remove_index, remove_indexes
+from bondi.mongodb import MongoCollectionRef
 
 removed = remove_index(
     connection,

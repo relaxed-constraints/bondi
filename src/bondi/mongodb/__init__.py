@@ -9,10 +9,10 @@ from bondi.mongodb.generation import MongoWorkloadGenerator, WorkloadGenerationE
 from bondi.mongodb.generation_config import MongoGenerationConfig
 from bondi.mongodb.indexes import (
     MongoIndex,
-    create_index,
-    create_indexes,
-    remove_index,
-    remove_indexes,
+    create_mongo_index,
+    create_mongo_indexes,
+    remove_mongo_index,
+    remove_mongo_indexes,
 )
 from bondi.mongodb.json import loads_query_json
 from bondi.mongodb.pattern import MongoPredicateTemplate, MongoQueryPattern
@@ -22,10 +22,10 @@ from bondi.mongodb.sync_executor import MongoExecutor
 
 __all__ = [
     "MongoIndex",
-    "create_index",
-    "create_indexes",
-    "remove_index",
-    "remove_indexes",
+    "create_mongo_index",
+    "create_mongo_indexes",
+    "remove_mongo_index",
+    "remove_mongo_indexes",
     "query_statistics",
     "MongoQueryStatistics",
     "MongoStageStatistics",

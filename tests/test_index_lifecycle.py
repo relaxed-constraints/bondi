@@ -27,7 +27,14 @@ def definition(name):
 @pytest.fixture(params=["mongodb", "couchbase"])
 def env(request, monkeypatch):
     backend = request.param
-    module = mongo if backend == "mongodb" else cb
+    native = mongo if backend == "mongodb" else cb
+    prefix = "mongo" if backend == "mongodb" else "couchbase"
+    module = SimpleNamespace(
+        **{
+            operation: getattr(native, operation.replace("_", f"_{prefix}_", 1))
+            for operation in ("create_index", "create_indexes", "remove_index", "remove_indexes")
+        }
+    )
     conn = (
         MongoConnection("mongodb://example")
         if backend == "mongodb"

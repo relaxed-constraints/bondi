@@ -86,8 +86,8 @@ of FieldIndex. IndexSet groups ordered definitions by collection name; batch app
 a MongoDB database or Couchbase bucket/scope. Single creation uses a collection reference. Versioned
 JSON artifacts contain definitions only, with BSON-aware MongoDB predicates.
 Creation validates the whole request before opening a client, reuses one client
-per batch, and reports partial progress without rollback. Backend-specific
-creation functions accept deployments or shared connection settings. Research
+per batch, and reports partial progress without rollback. Top-level lifecycle functions dispatch from deployments or shared connection settings.
+Explicit backend functions use mongo/couchbase names and retain backend validation. Research
 index recommendation and experiment orchestration remain in consumer projects.
 Batch replacement explicitly clears secondary indexes on included collections,
 preserving primary indexes, before creating the new set. Named removal is repeatable

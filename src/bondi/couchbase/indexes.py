@@ -44,7 +44,7 @@ class CouchbaseIndex(_Definition):
             raise ValueError("condition must be nonempty SQL++ or None")
 
 
-def create_index(connection, *, target, index, timeout=300.0):
+def create_couchbase_index(connection, *, target, index, timeout=300.0):
     """Create an index, wait until online and return its name.
 
     Args:
@@ -63,7 +63,7 @@ def create_index(connection, *, target, index, timeout=300.0):
     return create_one("couchbase", connection, target, index, timeout)
 
 
-def create_indexes(connection, *, indexes, bucket, scope, timeout=300.0, replace=False):
+def create_couchbase_indexes(connection, *, indexes, bucket, scope, timeout=300.0, replace=False):
     """Create an IndexSet using one cluster; return collection-to-name lists.
 
     Args:
@@ -94,7 +94,7 @@ def create_indexes(connection, *, indexes, bucket, scope, timeout=300.0, replace
     return create_many("couchbase", connection, indexes, targets, timeout, replace)
 
 
-def remove_index(connection, *, target, index, timeout=300.0):
+def remove_couchbase_index(connection, *, target, index, timeout=300.0):
     """Remove one named index; return True if removed, False if already absent.
 
     Args:
@@ -111,7 +111,7 @@ def remove_index(connection, *, target, index, timeout=300.0):
     return remove_one("couchbase", connection, target, index, timeout)
 
 
-def remove_indexes(connection, *, indexes, bucket, scope, timeout=300.0):
+def remove_couchbase_indexes(connection, *, indexes, bucket, scope, timeout=300.0):
     """Remove named definitions; return collection-to-removed-name lists.
 
     Args:

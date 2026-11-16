@@ -1,6 +1,6 @@
 # Index definitions
 
-Shared definitions, persistence and batch errors are documented here. For native
+Shared definitions, automatic backend dispatch, persistence and batch errors are documented here. For native
 index definitions and creation, replacement and removal functions, see the
 [MongoDB index reference](mongodb/indexes.md) and
 [Couchbase index reference](couchbase/indexes.md).
@@ -29,6 +29,26 @@ See the [index guide](../indexes.md) for semantics and usage examples.
       heading_level: 2
 
 ::: bondi.IndexRemovalError
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: bondi.create_index
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: bondi.create_indexes
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: bondi.remove_index
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: bondi.remove_indexes
     options:
       show_root_heading: true
       heading_level: 2

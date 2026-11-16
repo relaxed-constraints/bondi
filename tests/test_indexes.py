@@ -18,9 +18,11 @@ from bondi import (
 )
 from bondi import _index_creation as creation
 from bondi.couchbase import CouchbaseCollectionRef, CouchbaseIndex
-from bondi.couchbase import create_index as cb_create
-from bondi.couchbase import create_indexes as cb_many
-from bondi.mongodb import MongoCollectionRef, MongoIndex, create_index, create_indexes
+from bondi.couchbase import create_couchbase_index as cb_create
+from bondi.couchbase import create_couchbase_indexes as cb_many
+from bondi.mongodb import MongoCollectionRef, MongoIndex
+from bondi.mongodb import create_mongo_index as create_index
+from bondi.mongodb import create_mongo_indexes as create_indexes
 
 
 @pytest.mark.parametrize(
