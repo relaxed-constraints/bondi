@@ -42,6 +42,7 @@ nav:
   - Estimation interfaces: reference/estimation.md
   - MongoDB:
     - Queries: reference/mongodb/queries.md
+    - Indexes: reference/mongodb/indexes.md
     - Query statistics: reference/mongodb/statistics.md
     - Executors: reference/mongodb/executors.md
     - Sampling estimation: reference/mongodb/estimation.md
@@ -49,6 +50,7 @@ nav:
     - Summary parsing: reference/mongodb/summaries.md
   - Couchbase:
     - Queries: reference/couchbase/queries.md
+    - Indexes: reference/couchbase/indexes.md
     - Executors: reference/couchbase/executors.md
     - Summary parsing: reference/couchbase/summaries.md
 - Projects: projects.md

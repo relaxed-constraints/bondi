@@ -1,20 +1,13 @@
-# Index definitions and lifecycle
+# Index definitions
 
-See the [index guide](../indexes.md) for native semantics and persistence examples.
+Shared definitions, persistence and batch errors are documented here. For native
+index definitions and creation, replacement and removal functions, see the
+[MongoDB index reference](mongodb/indexes.md) and
+[Couchbase index reference](couchbase/indexes.md).
+
+See the [index guide](../indexes.md) for semantics and usage examples.
 
 ::: bondi.FieldIndex
-    options:
-      show_root_heading: true
-      heading_level: 2
-      inherited_members: true
-
-::: bondi.mongodb.MongoIndex
-    options:
-      show_root_heading: true
-      heading_level: 2
-      inherited_members: true
-
-::: bondi.couchbase.CouchbaseIndex
     options:
       show_root_heading: true
       heading_level: 2
@@ -35,47 +28,7 @@ See the [index guide](../indexes.md) for native semantics and persistence exampl
       show_root_heading: true
       heading_level: 2
 
-::: bondi.mongodb.create_index
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: bondi.mongodb.create_indexes
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: bondi.couchbase.create_index
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: bondi.couchbase.create_indexes
-    options:
-      show_root_heading: true
-      heading_level: 2
-
 ::: bondi.IndexRemovalError
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: bondi.mongodb.remove_index
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: bondi.mongodb.remove_indexes
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: bondi.couchbase.remove_index
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: bondi.couchbase.remove_indexes
     options:
       show_root_heading: true
       heading_level: 2

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Organize native index definitions and lifecycle APIs under the MongoDB and
+  Couchbase reference sections, with links from the shared index definitions page.
+
 - Add `replace=True` to both backend `create_indexes()` APIs, clearing secondary
   indexes on included collections while preserving primary indexes. Add name-based
   `remove_index()` and `remove_indexes()` with repeatable cleanup, protected-index
