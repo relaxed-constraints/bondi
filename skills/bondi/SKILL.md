@@ -97,3 +97,13 @@ Use `bondi dataset` for dataset commands. Python deployment creation still uses
 
 Load packaged demo businesses with `bondi.data.load_demo_data(target=deployment, collection=ref)`
 or `bondi dataset load-demo`. Use the dataset loader for all data sources.
+
+## Index definitions
+
+Use `FieldIndex` and `IndexSet` from `bondi`, and native `MongoIndex` or
+`CouchbaseIndex` from their backend modules. Definitions support versioned JSON
+`.save()` / `.load()`; `IndexSet.from_dict()` accepts config mappings with
+`fields` shorthand. Backend `create_index()` / `create_indexes()` accept a
+deployment or connection settings and explicit targets. Batch failures expose
+completed names through `IndexCreationError`; no rollback is performed. See
+[index definitions](https://relaxed-constraints.github.io/bondi/indexes/).

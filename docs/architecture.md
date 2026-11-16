@@ -77,3 +77,15 @@ maps configurations directly to collection names. AptMQL loaders decode cached B
 dumps through the same writers. Dataset names map to MongoDB databases or Couchbase
 scopes; dump indexes and collection metadata are not restored. There are no manifests.
 Loading is synchronous and non-atomic. Partial results report acknowledged writes.
+
+## Index definitions
+
+FieldIndex describes ordered paths and directions with backend-native semantics.
+MongoIndex and CouchbaseIndex are independent native definitions, not subclasses
+of FieldIndex. IndexSet groups ordered definitions under logical target names;
+application supplies exact backend collection references separately. Versioned
+JSON artifacts contain definitions only, with BSON-aware MongoDB predicates.
+Creation validates the whole request before opening a client, reuses one client
+per batch, and reports partial progress without rollback. Backend-specific
+creation functions accept deployments or shared connection settings. Research
+index recommendation and experiment orchestration remain in consumer projects.

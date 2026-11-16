@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add shared `FieldIndex`, native `MongoIndex` / `CouchbaseIndex`, and ordered
+  `IndexSet` definitions with versioned JSON persistence and config parsing.
+- Add synchronous single and batch index creation for deployments or connection
+  settings, with build readiness, explicit targets and partial failure reporting.
+- Export connection settings from `bondi`, preserving `bondi.data` imports.
+
 ## 0.3.5 — 2026-11-16
 
 - Add `load_aptmql_dataset` and `load_aptmql_repository`, with matching

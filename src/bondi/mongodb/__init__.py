@@ -7,6 +7,7 @@ from bondi.mongodb.executor import AsyncMongoExecutor
 from bondi.mongodb.explain import summarize
 from bondi.mongodb.generation import MongoWorkloadGenerator, WorkloadGenerationError
 from bondi.mongodb.generation_config import MongoGenerationConfig
+from bondi.mongodb.indexes import MongoIndex, create_index, create_indexes
 from bondi.mongodb.json import loads_query_json
 from bondi.mongodb.pattern import MongoPredicateTemplate, MongoQueryPattern
 from bondi.mongodb.query import MongoFindQuery
@@ -14,6 +15,9 @@ from bondi.mongodb.statistics import MongoQueryStatistics, MongoStageStatistics,
 from bondi.mongodb.sync_executor import MongoExecutor
 
 __all__ = [
+    "MongoIndex",
+    "create_index",
+    "create_indexes",
     "query_statistics",
     "MongoQueryStatistics",
     "MongoStageStatistics",

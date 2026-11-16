@@ -15,6 +15,7 @@ nav:
 - User guide:
   - Database deployment: deployment.md
   - Loading datasets: datasets.md
+  - Index definitions: indexes.md
   - Queries and workloads:
     - MongoDB queries: find-query.md
     - MongoDB Query statistics: mongodb-query-statistics.md
@@ -33,6 +34,7 @@ nav:
   - Overview: api.md
   - Database deployment: reference/deployment.md
   - Dataset loading: reference/data.md
+  - Index definitions: reference/indexes.md
   - Queries and workloads: reference/queries.md
   - Results and summaries: reference/results.md
   - Load generation: reference/load.md

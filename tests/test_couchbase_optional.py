@@ -19,6 +19,23 @@ from bondi.workload import Workload, WorkloadEntry
 from bondi.execution import ExecutionResult
 assert summarize({'plan': {'#operator': 'DummyScan'}}).index_names == ()
 assert summarize({'metrics': {'result_count': 0}}).rows_returned == 0
+from tempfile import TemporaryDirectory
+from pathlib import Path
+from bondi import IndexSet, CouchbaseConnection
+from bondi.couchbase import CouchbaseIndex, CouchbaseCollectionRef, create_index
+index = CouchbaseIndex((("LOWER(email)", 1),))
+with TemporaryDirectory() as directory:
+    path = Path(directory) / "indexes.json"
+    indexes = IndexSet({"users": [index]})
+    indexes.save(path)
+    assert IndexSet.load(path).to_dict() == indexes.to_dict()
+try:
+    create_index(CouchbaseConnection("couchbase://example", "u", "p"),
+                 target=CouchbaseCollectionRef("b", "s", "c"), index=index)
+except ImportError as error:
+    assert 'uv sync --extra couchbase' in str(error)
+else:
+    raise AssertionError('Missing SDK did not produce an installation hint')
 query = CouchbaseQuery('SELECT RAW 1')
 assert CouchbaseQuery.from_json(query.to_json()) == query
 assert len(Workload([WorkloadEntry(query)])) == 1

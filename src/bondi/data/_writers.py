@@ -7,7 +7,11 @@ from datetime import timedelta
 from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 
-from ._types import CouchbaseConnection, MongoConnection
+from bondi.connection import normalize_connection
+
+
+def connection(target):
+    return normalize_connection(target)
 
 
 class InsertBatchError(RuntimeError):
@@ -23,18 +27,6 @@ def name(value):
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_-]{0,62}", value):
         raise ValueError("Destination names require 1-63 letters, digits, underscores or hyphens")
     return value
-
-
-def connection(target):
-    if isinstance(target, (MongoConnection, CouchbaseConnection)):
-        return target
-    from bondi.deployment import Deployment
-
-    if not isinstance(target, Deployment):
-        raise TypeError("target must be a Deployment, MongoConnection or CouchbaseConnection")
-    if target.backend == "mongodb":
-        return MongoConnection(target.uri)
-    return CouchbaseConnection(target.uri, target.username, target.password)
 
 
 class MongoWriter:
