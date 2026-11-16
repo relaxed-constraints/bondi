@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.5 — 2026-11-16
+
 - Add `load_aptmql_dataset` and `load_aptmql_repository`, with matching
   `bondi dataset load-aptmql` and `load-aptmql-repository` commands. Download
   pinned BSON dumps, preserve dataset namespaces, and use shared MongoDB/Couchbase

@@ -2,17 +2,29 @@
 
 ## Current release
 
-Version 0.3.4 adds deployment name globs with bulk confirmation, Image and
-Created columns in deployment tables, and UTC creation timestamps for new
-deployments. Existing deployments display — for unknown creation times.
+Version 0.3.5 adds AptMQL dataset and repository loaders for MongoDB and Couchbase,
+with matching `bondi dataset load-aptmql` and `load-aptmql-repository` commands.
+The loaders download BSON dumps from Hugging Face and decode them with PyMongo.
+Related collections retain their source database or scope names. Dump indexes
+and collection metadata are not restored.
 
-Hugging Face loaders now use Hugging Face-managed disk caches by default.
-Use `streaming=True` or `--streaming` to retain remote streaming. JSONL and
-gzip JSONL preserve original document fields and Extended JSON decoding.
+See the [dataset guide](datasets.md#load-aptmql-databases) and
+[changelog](changelog.md) for details.
+Release artifacts are available on [PyPI](https://pypi.org/project/bondi/0.3.5/)
+and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.5).
 
-See the [changelog](changelog.md) for details.
-Release artifacts are available on [PyPI](https://pypi.org/project/bondi/0.3.4/)
-and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v0.3.4).
+## 0.3.5 verification
+
+On 2026-11-16, all 1,479 offline tests and all 197 Docker integration tests passed,
+covering MongoDB and both Couchbase editions. Fixture-owned deployments and their
+data were removed after testing. AptMQL checks loaded the pinned beer_factory
+source into MongoDB and Couchbase, verified counts, compared all MongoDB documents,
+and checked Couchbase keys and sampled converted values.
+
+Ruff lint and formatting, documentation configuration checks, the strict documentation
+build, wheel/source builds and Twine validation passed. A fresh wheel installation
+with the Couchbase extra passed dependency, import, CLI, query-serialization and
+pinned AptMQL discovery checks. The bundled skill documents the 0.3.5 loaders.
 
 ## 0.3.4 verification
 
@@ -142,10 +154,10 @@ reference were checked for the new metrics.
    documentation links and installation from the source containing the skill.
 2. For the first publication, configure the PyPI trusted publisher for project `bondi`, owner
    `relaxed-constraints`, repository `bondi`, workflow `release.yml`, environment `pypi`.
-3. Create a `v0.3.4` tag at the reviewed commit and publish its GitHub release.
+3. Create a `v0.3.5` tag at the reviewed commit and publish its GitHub release.
 4. The release workflow reruns CI, checks tag/version agreement, and publishes the
    tested wheel and source distribution using OIDC. No API token is stored.
-5. Verify a fresh `pip install bondi==0.3.4` and the optional Couchbase extra.
+5. Verify a fresh `pip install bondi==0.3.5` and the optional Couchbase extra.
 6. Update installation instructions and the release status/changelog after verification.
 
 Use a new version for each release; do not replace a published tag or distribution.

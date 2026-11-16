@@ -66,7 +66,7 @@ each load. Cache locations follow `HF_HOME`, `HF_HUB_CACHE` and
 `HF_DATASETS_CACHE`; BONDI does not manage its own cache.
 Metadata resolution still contacts the Hub, so caching is not an offline guarantee.
 
-AptMQL loaders (unreleased; check installed exports) use the fixed
+AptMQL loaders (0.3.5+; check installed exports) use the fixed
 `MongoDB/AptMQL-Bench` repository. `load_aptmql_dataset("beer_factory", target=...)`
 loads all related collections into a MongoDB database or Couchbase scope named
 `beer_factory`. Single-dataset calls allow `database` or `scope` overrides.
