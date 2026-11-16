@@ -6,15 +6,26 @@ render_macros: true
 
 ## Current release
 
-Version {{ bondi_version }} adds reusable index definitions for MongoDB and Couchbase.
-`FieldIndex` describes shared field paths and directions; `MongoIndex` and
-`CouchbaseIndex` retain native options. `IndexSet` groups definitions by collection
-name, with config parsing and versioned JSON persistence. Single and batch creation
-accept deployments or external connection settings and wait for initial readiness.
+Version {{ bondi_version }} allows whitespace, Unicode and punctuation in shared
+`FieldIndex` field-path segments. Names such as `Model Year` and `item.Model Year`
+are preserved exactly and quoted safely for Couchbase. Empty path segments and
+null characters remain invalid. Dots still denote nested field access.
 
 See the [index guide](indexes.md) and [changelog](changelog.md) for details.
 Release artifacts are available on [PyPI](https://pypi.org/project/bondi/{{ bondi_version }}/)
 and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v{{ bondi_version }}).
+
+## 0.3.7 verification
+
+On 2026-11-16, all 1,527 offline tests and both focused live index suites passed.
+The live checks created whitespace-containing field indexes on MongoDB and
+Couchbase, including nested paths. Disposable test deployments were removed.
+The full 199-test live suite had passed for 0.3.6 earlier the same day; this patch
+reran the affected index suites rather than all deployment and loader tests.
+
+Ruff, documentation configuration, strict documentation, distribution builds and
+Twine checks passed. A fresh wheel installation with the Couchbase extra passed
+dependency and serialization checks, including shared whitespace-containing paths.
 
 ## 0.3.6 verification
 
