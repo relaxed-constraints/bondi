@@ -367,3 +367,21 @@ def test_empty_couchbase_batch_still_validates_namespace(client, bucket, scope):
             scope=scope,
         )
     assert not client.open_calls
+
+
+@pytest.mark.parametrize("field", ["Model Year", "item.Model Year", " café ", "a`b", "123"])
+def test_shared_field_names_preserved_and_escaped(field, tmp_path):
+    index = FieldIndex(((field, 1),))
+    path = tmp_path / "index.json"
+    index.save(path)
+    assert FieldIndex.load(path) == index
+    assert list(creation._mongo_model(index).document["key"].items()) == [(field, 1)]
+    quoted = ".".join("`" + part.replace("`", "``") + "`" for part in field.split("."))
+    statement = creation._couchbase_statement(CouchbaseCollectionRef("b", "s", "c"), index)
+    assert f"({quoted} ASC)" in statement
+
+
+@pytest.mark.parametrize("field", ["", ".year", "year.", "item..year", "Model\0Year"])
+def test_shared_field_paths_reject_empty_segments_and_nulls(field):
+    with pytest.raises(ValueError):
+        FieldIndex(((field, 1),))

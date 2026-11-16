@@ -23,8 +23,13 @@ tags = CouchbaseIndex(
 )
 ```
 
-`FieldIndex` accepts simple dotted paths (identifier segments containing letters,
-digits and underscores, beginning with a letter or underscore). Directions are
+`FieldIndex` accepts dotted field paths with nonempty segments. Spaces, Unicode,
+and punctuation within segments are preserved exactly, including leading or trailing
+spaces. For example, `Model Year` and `item.Model Year` are valid. Dots mean nested
+field access; literal dots in field names are not represented by shared paths.
+Couchbase quotes and escapes each segment; MongoDB receives the original path.
+Null characters and empty segments are rejected. Server naming restrictions still
+apply. Directions are
 integer `1` and `-1`; booleans are rejected. MongoIndex accepts native field names,
 but this initial API still limits directions to `1` and `-1`. Text, hashed,
 search/vector and clustered indexes are outside this API.

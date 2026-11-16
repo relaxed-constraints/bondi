@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-import re
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
@@ -30,10 +29,8 @@ class _Definition:
                 raise ValueError("Each key must be a (key, direction) tuple")
             key, direction = pair
             _name(key)
-            if self.kind == "field" and not re.fullmatch(
-                r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*", key
-            ):
-                raise ValueError("Shared keys must be simple dotted field paths")
+            if self.kind == "field" and any(not part for part in key.split(".")):
+                raise ValueError("Shared field paths must not contain empty segments")
             if type(direction) is not int or direction not in (1, -1):
                 raise ValueError("Directions must be integer 1 or -1")
             if key in seen:
@@ -89,7 +86,7 @@ class FieldIndex(_Definition):
     """Ordered field paths, interpreted using each backend's native semantics.
 
     Args:
-        keys: Nonempty tuple of (simple dotted path, 1 or -1) tuples.
+        keys: Nonempty tuple of (dotted field path, 1 or -1) tuples.
         name: Optional server index name; otherwise generated deterministically.
 
     Definitions are mutable and validated at construction, serialization and creation.

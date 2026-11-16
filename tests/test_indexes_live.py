@@ -19,6 +19,7 @@ def test_mongodb_indexes(live_mongodb, tmp_path):
         {
             "business": [
                 FieldIndex((("_id", 1),)),
+                FieldIndex((("Model Year", 1), ("item.Model Year", -1)), name="spaced_fields"),
                 FieldIndex((("city", 1), ("stars", -1)), name="bondi_city_stars"),
                 MongoIndex((("name", 1),), name="bondi_unique_name", unique=True),
                 MongoIndex(
@@ -43,7 +44,7 @@ def test_mongodb_indexes(live_mongodb, tmp_path):
         with pytest.raises(DuplicateKeyError):
             collection.insert_one({"name": collection.find_one()["name"]})
     assert (
-        create_index(live_mongodb, target=target, index=indexes["business"][1])
+        create_index(live_mongodb, target=target, index=indexes["business"][2])
         == "bondi_city_stars"
     )
 
@@ -60,6 +61,7 @@ def test_couchbase_indexes(live_deployments, tmp_path):
         {
             "business": [
                 FieldIndex((("city", 1), ("stars", -1)), name="bondi_shared"),
+                FieldIndex((("Model Year", 1), ("item.Model Year", -1)), name="spaced_fields"),
                 CouchbaseIndex(
                     (("LOWER(`name`)", 1),),
                     name="bondi_functional",

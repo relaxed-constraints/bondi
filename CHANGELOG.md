@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Allow whitespace, Unicode and punctuation in shared FieldIndex path segments,
+  preserving names exactly and quoting them safely for Couchbase.
+
 ## 0.3.6 — 2026-11-16
 
 - Derive current-version documentation labels, links and install commands from
