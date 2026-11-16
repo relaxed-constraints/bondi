@@ -48,10 +48,10 @@ def create_index(connection, *, target, index, timeout=300.0):
     """Create an index, wait until online and return its name.
 
     Args:
-        connection: Deployment or CouchbaseConnection settings.
-        target: CouchbaseCollectionRef destination.
-        index: FieldIndex or CouchbaseIndex definition.
-        timeout: Positive finite seconds covering DDL and readiness waiting.
+        connection (Deployment | CouchbaseConnection): Deployment or CouchbaseConnection settings.
+        target (CouchbaseCollectionRef): CouchbaseCollectionRef destination.
+        index (FieldIndex | CouchbaseIndex): FieldIndex or CouchbaseIndex definition.
+        timeout (float): Positive finite seconds covering DDL and readiness waiting.
 
     A client is owned per call. Native expressions are executed as SQL++. Existing
     names raise server errors; no replacement or silent skipping occurs. Online
@@ -63,18 +63,26 @@ def create_index(connection, *, target, index, timeout=300.0):
     return create_one("couchbase", connection, target, index, timeout)
 
 
-def create_indexes(connection, *, indexes, targets, timeout=300.0):
-    """Create an IndexSet using one cluster; return target-to-name lists.
+def create_indexes(connection, *, indexes, bucket, scope, timeout=300.0):
+    """Create an IndexSet using one cluster; return collection-to-name lists.
 
     Args:
-        connection: Deployment or CouchbaseConnection settings.
-        indexes: IndexSet of shared or Couchbase definitions.
-        targets: Exact mapping of logical targets to CouchbaseCollectionRef objects.
-        timeout: Positive finite seconds per index, not a whole-batch deadline.
+        connection (Deployment | CouchbaseConnection): Deployment or CouchbaseConnection settings.
+        indexes (IndexSet): IndexSet of shared or Couchbase definitions.
+        bucket (str): Bucket containing the IndexSet collections.
+        scope (str): Scope containing the IndexSet collections.
+        timeout (float): Positive finite seconds per index, not a whole-batch deadline.
 
     Preflight validates every definition and target before connecting. Server
     failures raise IndexCreationError with completed names. Creation is non-atomic.
     """
     from bondi._index_creation import create_many
+    from bondi.couchbase.collection import CouchbaseCollectionRef
+    from bondi.indexes import IndexSet
 
+    if not isinstance(indexes, IndexSet):
+        raise TypeError("indexes must be an IndexSet")
+    # Validate the namespace even when the set is empty.
+    CouchbaseCollectionRef(bucket, scope, "_validation")
+    targets = {name: CouchbaseCollectionRef(bucket, scope, name) for name in indexes}
     return create_many("couchbase", connection, indexes, targets, timeout)

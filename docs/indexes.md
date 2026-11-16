@@ -59,15 +59,15 @@ assert restored == unknown_kind
 Files are UTF-8 JSON with `format_version: 1` and a `kind` discriminator. Class-specific
 loads reject a different kind; unknown versions/options fail explicitly. MongoDB
 partial predicates use canonical Extended JSON to preserve BSON types. Connection
-settings, targets and server status are never persisted. Saving overwrites the named
-file; parent directories must exist. File writes are not transactional.
+settings, database/bucket/scope names and server status are never persisted.
+Saving overwrites the named file; parent directories must exist. File writes are not transactional.
 
 `to_dict()` / `from_dict()` exchange independent JSON-compatible definitions without
 file version envelopes. BSON predicates in these mappings use Extended JSON.
 Missing names resolve deterministically from the definition (`resolved_name`);
 explicit names are passed unchanged and remain subject to server restrictions.
 
-## Group indexes by logical target
+## Group indexes by collection
 
 ```python
 from bondi import IndexSet
@@ -92,11 +92,11 @@ plus `keys`, optional `name`, and the native options above. Omitted kind means f
 `fields` and `keys` are mutually exclusive. `to_dict()` emits explicit canonical
 entries, not original shorthand or YAML formatting.
 
-IndexSet preserves target and definition order. Iteration yields target names and
-`len(indexes)` counts targets. Constructor inputs are copied; retrieved lists and
-objects are mutable. Duplicate explicit names within a target fail validation;
+IndexSet preserves collection and definition order. Iteration yields collection names and
+`len(indexes)` counts collections. Constructor inputs are copied; retrieved lists and
+objects are mutable. Duplicate explicit names within a collection fail validation;
 creation also rejects collisions between generated and explicit names. Empty sets
-and empty target lists are valid. IndexSet does not silently deduplicate indexes.
+and empty collection lists are valid. IndexSet does not silently deduplicate indexes.
 
 ## Apply to deployments or external connections
 
@@ -113,7 +113,7 @@ name = create_index(
 names = create_indexes(
     connection,
     indexes=indexes,
-    targets={key: MongoCollectionRef("shop", key) for key in indexes},
+    database="shop",
     timeout=300,
 )
 ```
@@ -127,20 +127,24 @@ For Couchbase, install `bondi[couchbase]` and use:
 
 ```python
 from bondi import CouchbaseConnection
-from bondi.couchbase import CouchbaseCollectionRef, create_indexes
+from bondi.couchbase import create_indexes
 
 connection = CouchbaseConnection("couchbase://localhost", "Administrator", "password")
 names = create_indexes(
     connection,
     indexes=indexes,
-    targets={key: CouchbaseCollectionRef("research", "shop", key) for key in indexes},
+    bucket="research",
+    scope="shop",
 )
 ```
 
-The target mapping must contain exactly the logical names in the set. Shared-only
-sets work with either backend; a native definition for the other backend fails
-before any client is opened. Backend references remain explicit so saved logical
-names can map to different database/scope layouts in different projects.
+IndexSet keys are collection names. MongoDB batch creation applies them within
+one `database`; Couchbase batch creation applies them within one `bucket` and
+`scope`. These namespace arguments are required, including for empty sets.
+Shared-only sets work with either backend; a native definition for the other
+backend fails before any client is opened. The same saved set can be reused in
+different databases or scopes without editing it. Single-index creation still
+accepts an explicit collection reference.
 
 Each call owns and closes a client. Batch calls reuse one client and create indexes
 in order. Each index gets its own positive finite timeout in seconds. MongoDB waits
@@ -155,10 +159,10 @@ existing `_id_` index after checking its keys. Custom names or filtering for thi
 built-in index are rejected; a collection without it raises an error. Couchbase
 `_id` is an ordinary JSON field index, not a primary query index.
 
-Batch results map logical targets to lists of confirmed names. Validation failures
+Batch results map collection names to lists of confirmed names. Validation failures
 occur before connection. A server failure during a batch raises
-`IndexCreationError`, with `completed`, `target`, `position` (zero-based), and the
-original exception as `__cause__`. Creation is non-atomic: earlier indexes remain,
+`IndexCreationError`, with `completed`, `target` (the collection name),
+`position` (zero-based), and the original exception as `__cause__`. Creation is non-atomic: earlier indexes remain,
 and the failed operation may have created an index or left a build running.
 Single-index calls propagate the original exception. Connection-open failures also
 propagate directly because no index operation has started.

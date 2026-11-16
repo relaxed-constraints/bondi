@@ -195,7 +195,7 @@ def test_batch_reuses_client_and_reports_partial_failure(client):
         create_indexes(
             MongoConnection("mongodb://example"),
             indexes=indexes,
-            targets={name: MongoCollectionRef("db", name) for name in indexes},
+            database="db",
         )
     assert caught.value.completed == {"one": ["a"], "two": ["b"]}
     assert (caught.value.target, caught.value.position) == ("two", 1)
@@ -210,14 +210,15 @@ def test_batch_preflight_and_empty_set_do_not_connect(client):
         create_indexes(
             MongoConnection("mongodb://example"),
             indexes=indexes,
-            targets={"t": MongoCollectionRef("db", "c")},
+            database="db",
         )
     with pytest.raises(ValueError):
         create_indexes(
-            MongoConnection("mongodb://example"), indexes=IndexSet({"t": []}), targets={}
+            MongoConnection("mongodb://example"), indexes=IndexSet({"t": []}), database=""
         )
     assert (
-        create_indexes(MongoConnection("mongodb://example"), indexes=IndexSet({}), targets={}) == {}
+        create_indexes(MongoConnection("mongodb://example"), indexes=IndexSet({}), database="db")
+        == {}
     )
     assert not client.open_calls
 
@@ -257,7 +258,7 @@ def test_wrong_connection_and_nonfinite_timeout(client):
                 timeout=timeout,
             )
     with pytest.raises(TypeError):
-        cb_many(MongoConnection("mongodb://example"), indexes=IndexSet({}), targets={})
+        cb_many(MongoConnection("mongodb://example"), indexes=IndexSet({}), bucket="b", scope="s")
     assert not client.open_calls
 
 
@@ -282,14 +283,14 @@ def test_generated_name_collision_and_mutated_batch_preflight(client):
         create_indexes(
             MongoConnection("mongodb://example"),
             indexes=indexes,
-            targets={"t": MongoCollectionRef("db", "c")},
+            database="db",
         )
     indexes["t"][1].keys = (("y", 7),)
     with pytest.raises(ValueError):
         create_indexes(
             MongoConnection("mongodb://example"),
             indexes=indexes,
-            targets={"t": MongoCollectionRef("db", "c")},
+            database="db",
         )
     assert not client.open_calls
 
@@ -323,3 +324,46 @@ def test_owned_mongo_client_closes_on_failure(monkeypatch):
     fake.close.assert_called_once()
     assert constructor.call_args.kwargs["username"] == "u"
     assert constructor.call_args.kwargs["password"] == "p"
+
+
+@pytest.mark.parametrize("backend", ["mongodb", "couchbase"])
+def test_batch_collection_names_resolve_within_namespace(client, monkeypatch, backend):
+    calls = []
+
+    def create(backend, client, target, index, timeout):
+        calls.append(target)
+        return index.resolved_name
+
+    monkeypatch.setattr(creation, "_create", create)
+    indexes = IndexSet.from_dict(
+        {"inventory": [{"fields": ["brandId"]}], "transactions": [{"fields": ["customerId"]}]}
+    )
+    if backend == "mongodb":
+        result = create_indexes(
+            MongoConnection("mongodb://example"), indexes=indexes, database="beer_factory"
+        )
+        expected = [MongoCollectionRef("beer_factory", name) for name in indexes]
+    else:
+        result = cb_many(
+            CouchbaseConnection("couchbase://example", "u", "p"),
+            indexes=indexes,
+            bucket="research",
+            scope="beer_factory",
+        )
+        expected = [CouchbaseCollectionRef("research", "beer_factory", name) for name in indexes]
+    assert calls == expected
+    assert list(result) == ["inventory", "transactions"]
+    assert all(len(names) == 1 for names in result.values())
+    assert len(client.open_calls) == 1
+
+
+@pytest.mark.parametrize("bucket,scope", [("", "s"), ("b", ""), ("b", None)])
+def test_empty_couchbase_batch_still_validates_namespace(client, bucket, scope):
+    with pytest.raises((TypeError, ValueError)):
+        cb_many(
+            CouchbaseConnection("couchbase://example", "u", "p"),
+            indexes=IndexSet({}),
+            bucket=bucket,
+            scope=scope,
+        )
+    assert not client.open_calls

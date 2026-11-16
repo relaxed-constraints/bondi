@@ -30,7 +30,7 @@ def test_mongodb_indexes(live_mongodb, tmp_path):
     )
     indexes.save(tmp_path / "indexes.json")
     names = create_indexes(
-        live_mongodb, indexes=IndexSet.load(tmp_path / "indexes.json"), targets={"business": target}
+        live_mongodb, indexes=IndexSet.load(tmp_path / "indexes.json"), database="demo"
     )
     assert names["business"][0] == "_id_"
     with MongoClient(live_mongodb.uri) as client:
@@ -76,7 +76,7 @@ def test_couchbase_indexes(live_deployments, tmp_path):
     )
     indexes.save(tmp_path / "indexes.json")
     result = cb_many(
-        db, indexes=IndexSet.load(tmp_path / "indexes.json"), targets={"business": target}
+        db, indexes=IndexSet.load(tmp_path / "indexes.json"), bucket="demo", scope="_default"
     )
     cluster = Cluster(db.uri, ClusterOptions(PasswordAuthenticator(db.username, db.password)))
     try:

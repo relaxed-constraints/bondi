@@ -27,7 +27,7 @@ def _validate(backend, connection, indexes, targets, timeout):
         raise TypeError("indexes must be an IndexSet")
     indexes.validate()
     if not isinstance(targets, Mapping) or set(targets) != set(indexes):
-        raise ValueError("targets must map exactly the logical names in indexes")
+        raise ValueError("targets must map exactly the collection names in indexes")
     conn = normalize_connection(connection)
     native, ref, credentials = (
         (MongoIndex, MongoCollectionRef, MongoConnection)
@@ -36,9 +36,9 @@ def _validate(backend, connection, indexes, targets, timeout):
     )
     if not isinstance(conn, credentials):
         raise TypeError(f"Connection must be for {backend}")
-    for logical, definitions in indexes.items():
-        if not isinstance(targets[logical], ref):
-            raise TypeError(f"Incorrect target type for {logical}")
+    for collection_name, definitions in indexes.items():
+        if not isinstance(targets[collection_name], ref):
+            raise TypeError(f"Incorrect target type for {collection_name}")
         names = set()
         for index in definitions:
             if type(index) not in (FieldIndex, native):
@@ -46,12 +46,12 @@ def _validate(backend, connection, indexes, targets, timeout):
             # Serialization also checks BSON/JSON encodability before any side effects.
             name = index.resolved_name
             if name in names:
-                raise ValueError(f"Duplicate resolved index name for {logical}: {name}")
+                raise ValueError(f"Duplicate resolved index name for {collection_name}: {name}")
             names.add(name)
             if backend == "mongodb":
                 _mongo_model(index)
             else:
-                _couchbase_statement(targets[logical], index)
+                _couchbase_statement(targets[collection_name], index)
     return conn
 
 
@@ -165,15 +165,15 @@ def create_many(backend, connection, indexes, targets, timeout):
     # Freeze the operation's inputs after preflight; caller mutations cannot alter this batch.
     indexes = IndexSet(indexes)
     targets = dict(targets)
-    completed = {logical: [] for logical in indexes}
+    completed = {collection_name: [] for collection_name in indexes}
     if not any(indexes.values()):
         return completed
     with _client(backend, conn, timeout) as client:
-        for logical, definitions in indexes.items():
+        for collection_name, definitions in indexes.items():
             for position, index in enumerate(definitions):
                 try:
-                    name = _create(backend, client, targets[logical], index, timeout)
+                    name = _create(backend, client, targets[collection_name], index, timeout)
                 except Exception as exc:
-                    raise IndexCreationError(completed, logical, position) from exc
-                completed[logical].append(name)
+                    raise IndexCreationError(completed, collection_name, position) from exc
+                completed[collection_name].append(name)
     return completed

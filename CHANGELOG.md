@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Simplify index batches: IndexSet keys are collection names; create_indexes accepts
+  a MongoDB database or Couchbase bucket/scope instead of a target mapping.
+
 - Fix index API reference headings to show class names and nested method navigation.
 
 - Add shared `FieldIndex`, native `MongoIndex` / `CouchbaseIndex`, and ordered

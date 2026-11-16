@@ -82,8 +82,8 @@ Loading is synchronous and non-atomic. Partial results report acknowledged write
 
 FieldIndex describes ordered paths and directions with backend-native semantics.
 MongoIndex and CouchbaseIndex are independent native definitions, not subclasses
-of FieldIndex. IndexSet groups ordered definitions under logical target names;
-application supplies exact backend collection references separately. Versioned
+of FieldIndex. IndexSet groups ordered definitions by collection name; batch application supplies
+a MongoDB database or Couchbase bucket/scope. Single creation uses a collection reference. Versioned
 JSON artifacts contain definitions only, with BSON-aware MongoDB predicates.
 Creation validates the whole request before opening a client, reuses one client
 per batch, and reports partial progress without rollback. Backend-specific

@@ -104,6 +104,7 @@ Use `FieldIndex` and `IndexSet` from `bondi`, and native `MongoIndex` or
 `CouchbaseIndex` from their backend modules. Definitions support versioned JSON
 `.save()` / `.load()`; `IndexSet.from_dict()` accepts config mappings with
 `fields` shorthand. Backend `create_index()` / `create_indexes()` accept a
-deployment or connection settings and explicit targets. Batch failures expose
+deployment or connection settings. Single creation uses a collection reference;
+batch creation uses IndexSet collection names and a database or bucket/scope. Batch failures expose
 completed names through `IndexCreationError`; no rollback is performed. See
 [index definitions](https://relaxed-constraints.github.io/bondi/indexes/).

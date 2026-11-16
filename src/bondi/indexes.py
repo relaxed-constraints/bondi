@@ -159,14 +159,14 @@ def load_index(path):
 
 
 class IndexSet(Mapping):
-    """Ordered logical targets mapped to lists of independent index definitions.
+    """Ordered collection names mapped to lists of independent index definitions.
 
     Args:
-        indexes: Mapping of logical target names to lists of definitions.
+        indexes (Mapping): Mapping of collection names to lists of definitions.
 
     Constructor inputs are deep-copied. Lists and definitions returned by lookup
-    remain mutable. Duplicate explicit names within one target are rejected.
-    Iteration yields logical targets; len() counts targets, not definitions.
+    remain mutable. Duplicate explicit names within one collection are rejected.
+    Iteration yields collection names; len() counts collections, not definitions.
     """
 
     def __init__(self, indexes):
@@ -185,11 +185,11 @@ class IndexSet(Mapping):
         return len(self._indexes)
 
     def validate(self):
-        """Validate every definition and per-target explicit name uniqueness."""
+        """Validate every definition and per-collection explicit name uniqueness."""
         for target, definitions in self.items():
             _name(target)
             if not isinstance(definitions, list):
-                raise TypeError("Each target must map to a list of definitions")
+                raise TypeError("Each collection must map to a list of definitions")
             names = set()
             for index in definitions:
                 if not isinstance(index, _Definition):
@@ -213,7 +213,7 @@ class IndexSet(Mapping):
         result = {}
         for target, definitions in data.items():
             if not isinstance(definitions, list):
-                raise TypeError("Each target must map to a list")
+                raise TypeError("Each collection must map to a list")
             result[target] = [_from_dict(index) for index in definitions]
         return cls(result)
 
@@ -234,9 +234,9 @@ class IndexCreationError(RuntimeError):
     """Batch creation failed after zero or more successful operations.
 
     Attributes:
-        completed: Logical targets mapped to confirmed index names.
-        target: Logical target of the failed operation.
-        position: Zero-based position in that target's definition list.
+        completed: Collection names mapped to confirmed index names.
+        target: Collection name of the failed operation.
+        position: Zero-based position in that collection's definition list.
 
     The failed operation may have created an index or left a build running.
     The original exception is available as __cause__. No rollback is attempted.

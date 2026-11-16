@@ -49,10 +49,11 @@ def create_index(connection, *, target, index, timeout=300.0):
     """Create one index and return its name after the initial build completes.
 
     Args:
-        connection: Deployment or MongoConnection settings. A client is owned per call.
-        target: MongoCollectionRef destination.
-        index: FieldIndex or MongoIndex definition.
-        timeout: Positive finite timeout in seconds for this operation.
+        connection (Deployment | MongoConnection): Deployment or connection settings.
+            A client is owned per call.
+        target (MongoCollectionRef): MongoCollectionRef destination.
+        index (FieldIndex | MongoIndex): FieldIndex or MongoIndex definition.
+        timeout (float): Positive finite timeout in seconds for this operation.
 
     Existing-index conflicts follow MongoDB behavior. The default ascending _id
     index is reused when compatible. Errors propagate; timeouts may leave builds
@@ -63,18 +64,25 @@ def create_index(connection, *, target, index, timeout=300.0):
     return create_one("mongodb", connection, target, index, timeout)
 
 
-def create_indexes(connection, *, indexes, targets, timeout=300.0):
-    """Create an IndexSet using one client; return target-to-name lists.
+def create_indexes(connection, *, indexes, database, timeout=300.0):
+    """Create an IndexSet using one client; return collection-to-name lists.
 
     Args:
-        connection: Deployment or MongoConnection settings.
-        indexes: IndexSet of shared or MongoDB definitions.
-        targets: Exact mapping of logical target names to MongoCollectionRef objects.
-        timeout: Positive finite seconds per index, not a whole-batch deadline.
+        connection (Deployment | MongoConnection): Deployment or MongoConnection settings.
+        indexes (IndexSet): IndexSet of shared or MongoDB definitions.
+        database (str): Database containing the IndexSet collections.
+        timeout (float): Positive finite seconds per index, not a whole-batch deadline.
 
     All definitions and targets are validated before connecting. Creation is ordered
     and non-atomic. Server failures raise IndexCreationError with completed names.
     """
     from bondi._index_creation import create_many
+    from bondi.indexes import IndexSet
+    from bondi.mongodb.collection import MongoCollectionRef
 
+    if not isinstance(indexes, IndexSet):
+        raise TypeError("indexes must be an IndexSet")
+    # Validate the namespace even when the set is empty.
+    MongoCollectionRef(database, "_validation")
+    targets = {name: MongoCollectionRef(database, name) for name in indexes}
     return create_many("mongodb", connection, indexes, targets, timeout)
