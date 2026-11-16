@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix index API reference headings to show class names and nested method navigation.
+
 - Add shared `FieldIndex`, native `MongoIndex` / `CouchbaseIndex`, and ordered
   `IndexSet` definitions with versioned JSON persistence and config parsing.
 - Add synchronous single and batch index creation for deployments or connection
