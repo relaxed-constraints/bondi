@@ -66,13 +66,14 @@ For pip, keep the virtual environment activated.
 
 Open a notebook from `notebooks/` in the browser interface and run its cells in order.
 
-## Inspect a dataset
+## Load datasets into MongoDB
 
-[Open `schema_demo.ipynb`](https://github.com/relaxed-constraints/bondi/blob/main/notebooks/schema_demo.ipynb)
+[Open `dataset_loading.ipynb`](https://github.com/relaxed-constraints/bondi/blob/main/notebooks/dataset_loading.ipynb)
 
-Explore nested Python dictionaries without connecting to a database. Learn how
-BONDI represents field types, nulls, missing values and array elements, then compare
-value-retention modes and update a schema with another batch of documents.
+Start with one JSON file, then dictionaries and multiple local files. Optional
+Hugging Face examples load one split, all splits, or a whole repository.
+The final cell removes the demo deployment and all its data.
+See [Loading datasets](datasets.md) for the API and CLI workflow.
 
 ## Execute and inspect MongoDB queries
 
@@ -124,11 +125,10 @@ deployment, then compare execution, explain plans and profiling metadata. Learn
 how to interpret row counts, index consistency and common summaries, including
 which detailed diagnostics are unavailable in Community edition.
 
-## Load datasets into MongoDB
+## Inspect the schema of a dataset
 
-[Open `dataset_loading.ipynb`](https://github.com/relaxed-constraints/bondi/blob/main/notebooks/dataset_loading.ipynb)
+[Open `schema_demo.ipynb`](https://github.com/relaxed-constraints/bondi/blob/main/notebooks/schema_demo.ipynb)
 
-Start with one JSON file, then dictionaries and multiple local files. Optional
-Hugging Face examples load one split, all splits, or a whole repository.
-The final cell removes the demo deployment and all its data.
-See [Loading datasets](datasets.md) for the API and CLI workflow.
+Explore nested Python dictionaries without connecting to a database. Learn how
+BONDI represents field types, nulls, missing values and array elements, then compare
+value-retention modes and update a schema with another batch of documents.

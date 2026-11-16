@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move dataset loading to the first tutorial and clarify the schema inspection title.
+
 - Simplify index batches: IndexSet keys are collection names; create_indexes accepts
   a MongoDB database or Couchbase bucket/scope instead of a target mapping.
 
