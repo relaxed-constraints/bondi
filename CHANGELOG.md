@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add `replace=True` to both backend `create_indexes()` APIs, clearing secondary
+  indexes on included collections while preserving primary indexes. Add name-based
+  `remove_index()` and `remove_indexes()` with repeatable cleanup, protected-index
+  checks and partial-removal errors. Replacement errors report removals and creations.
+
+
 ## 0.3.7 — 2026-11-16
 
 - Allow whitespace, Unicode and punctuation in shared FieldIndex path segments,

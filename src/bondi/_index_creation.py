@@ -1,4 +1,4 @@
-"""Backend adapters for index creation; no deployment lifecycle operations."""
+"""Backend index lifecycle adapters; no deployment lifecycle operations."""
 
 import math
 from collections.abc import Mapping
@@ -10,7 +10,7 @@ import pymongo
 from pymongo import IndexModel, MongoClient
 
 from bondi.connection import CouchbaseConnection, MongoConnection, normalize_connection
-from bondi.indexes import FieldIndex, IndexCreationError, IndexSet
+from bondi.indexes import FieldIndex, IndexCreationError, IndexRemovalError, IndexSet
 
 
 def _validate(backend, connection, indexes, targets, timeout):
@@ -160,20 +160,163 @@ def create_one(backend, connection, target, index, timeout):
         return _create(backend, client, target, indexes["target"][0], timeout)
 
 
-def create_many(backend, connection, indexes, targets, timeout):
+def _existing(backend, client, target, timeout):
+    """Return name-to-protected flags, including indexes created outside BONDI."""
+    if backend == "mongodb":
+        with pymongo.timeout(timeout):
+            return {
+                name: name == "_id_"
+                for name in client[target.database][target.collection].index_information()
+            }
+    manager = (
+        client.bucket(target.bucket)
+        .scope(target.scope)
+        .collection(target.collection)
+        .query_indexes()
+    )
+    return {
+        index.name: index.is_primary
+        for index in manager.get_all_indexes(timeout=timedelta(seconds=timeout))
+    }
+
+
+def _drop(backend, client, target, name, timeout):
+    """Return whether the server acknowledged removal; tolerate only missing indexes."""
+    if backend == "mongodb":
+        try:
+            with pymongo.timeout(timeout):
+                client[target.database][target.collection].drop_index(name)
+        except pymongo.errors.OperationFailure as exc:
+            if exc.code not in (26, 27):  # NamespaceNotFound or IndexNotFound
+                raise
+            return False
+    else:
+        from couchbase.exceptions import QueryIndexNotFoundException
+
+        manager = (
+            client.bucket(target.bucket)
+            .scope(target.scope)
+            .collection(target.collection)
+            .query_indexes()
+        )
+        try:
+            manager.drop_index(name, timeout=timedelta(seconds=timeout))
+        except QueryIndexNotFoundException:
+            return False
+    return True
+
+
+def create_many(backend, connection, indexes, targets, timeout, replace=False):
+    if type(replace) is not bool:
+        raise TypeError("replace must be a boolean")
     conn = _validate(backend, connection, indexes, targets, timeout)
-    # Freeze the operation's inputs after preflight; caller mutations cannot alter this batch.
+    # Freeze inputs after preflight; caller mutations cannot alter this batch.
     indexes = IndexSet(indexes)
     targets = dict(targets)
-    completed = {collection_name: [] for collection_name in indexes}
-    if not any(indexes.values()):
+    completed = {name: [] for name in indexes}
+    removed = {name: [] for name in indexes}
+    if not indexes or (not replace and not any(indexes.values())):
         return completed
     with _client(backend, conn, timeout) as client:
+        if replace:
+            plan = {}
+            # Discover every collection before deleting anything.
+            for collection_name in indexes:
+                try:
+                    plan[collection_name] = [
+                        name
+                        for name, protected in _existing(
+                            backend, client, targets[collection_name], timeout
+                        ).items()
+                        if not protected
+                    ]
+                except Exception as exc:
+                    raise IndexCreationError(
+                        completed, collection_name, None, removed=removed, phase="inspect"
+                    ) from exc
+            for collection_name, names in plan.items():
+                for name in names:
+                    try:
+                        if _drop(backend, client, targets[collection_name], name, timeout):
+                            removed[collection_name].append(name)
+                    except Exception as exc:
+                        raise IndexCreationError(
+                            completed,
+                            collection_name,
+                            None,
+                            removed=removed,
+                            phase="remove",
+                            index_name=name,
+                        ) from exc
         for collection_name, definitions in indexes.items():
             for position, index in enumerate(definitions):
                 try:
                     name = _create(backend, client, targets[collection_name], index, timeout)
                 except Exception as exc:
-                    raise IndexCreationError(completed, collection_name, position) from exc
+                    raise IndexCreationError(
+                        completed, collection_name, position, removed=removed
+                    ) from exc
                 completed[collection_name].append(name)
+    return completed
+
+
+def _removal_inputs(backend, connection, indexes, targets, timeout):
+    conn = _validate(backend, connection, indexes, targets, timeout)
+    indexes = IndexSet(indexes)
+    for definitions in indexes.values():
+        for index in definitions:
+            if backend == "mongodb" and _mongo_model(index) is None:
+                raise ValueError("Cannot remove the protected MongoDB _id index")
+    return conn, indexes, dict(targets)
+
+
+def _check_protected(existing, definitions):
+    for index in definitions:
+        if existing.get(index.resolved_name):
+            raise ValueError(f"Cannot remove protected primary index: {index.resolved_name}")
+
+
+def remove_one(backend, connection, target, index, timeout):
+    conn, indexes, _ = _removal_inputs(
+        backend, connection, IndexSet({"target": [index]}), {"target": target}, timeout
+    )
+    definition = indexes["target"][0]
+    with _client(backend, conn, timeout) as client:
+        existing = _existing(backend, client, target, timeout)
+        _check_protected(existing, [definition])
+        return definition.resolved_name in existing and _drop(
+            backend, client, target, definition.resolved_name, timeout
+        )
+
+
+def remove_many(backend, connection, indexes, targets, timeout):
+    conn, indexes, targets = _removal_inputs(backend, connection, indexes, targets, timeout)
+    completed = {name: [] for name in indexes}
+    if not any(indexes.values()):
+        return completed
+    with _client(backend, conn, timeout) as client:
+        existing = {}
+        for collection_name, definitions in indexes.items():
+            if not definitions:
+                continue
+            try:
+                existing[collection_name] = _existing(
+                    backend, client, targets[collection_name], timeout
+                )
+            except Exception as exc:
+                raise IndexRemovalError(completed, collection_name, None, phase="inspect") from exc
+            # A protected-name request aborts the entire batch before any deletion.
+            _check_protected(existing[collection_name], definitions)
+        for collection_name, definitions in indexes.items():
+            for position, index in enumerate(definitions):
+                name = index.resolved_name
+                if name not in existing[collection_name]:
+                    continue
+                try:
+                    if _drop(backend, client, targets[collection_name], name, timeout):
+                        completed[collection_name].append(name)
+                except Exception as exc:
+                    raise IndexRemovalError(
+                        completed, collection_name, position, index_name=name
+                    ) from exc
     return completed

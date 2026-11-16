@@ -158,7 +158,7 @@ online. Online does not guarantee that concurrent writes are visible. Connection
 establishment and teardown are not covered by a whole-batch deadline.
 
 Existing-index conflicts follow native behavior. MongoDB may reuse an identical
-index; Couchbase reports an existing name as an error. Nothing is automatically
+index; Couchbase reports an existing name as an error. With the default `replace=False`, nothing is automatically
 replaced or dropped. The default ascending MongoDB `_id` definition reuses the
 existing `_id_` index after checking its keys. Custom names or filtering for this
 built-in index are rejected; a collection without it raises an error. Couchbase
@@ -171,3 +171,76 @@ occur before connection. A server failure during a batch raises
 and the failed operation may have created an index or left a build running.
 Single-index calls propagate the original exception. Connection-open failures also
 propagate directly because no index operation has started.
+
+
+## Replace an experiment's index configuration
+
+```python
+from bondi import IndexSet
+from bondi.mongodb import create_indexes
+
+names = create_indexes(
+    connection,
+    database="shop",
+    indexes=IndexSet({"orders": [recent], "inventory": []}),
+    replace=True,
+)
+```
+
+`replace=True` first removes **all secondary indexes** on the included collections,
+including indexes created outside BONDI, then creates the supplied definitions.
+MongoDB's built-in `_id_` index and all Couchbase primary indexes are preserved.
+Couchbase uses the same flag with `bucket` and `scope` instead of `database`.
+Collections omitted from the set are untouched. An empty collection list clears
+its secondary indexes; an entirely empty set touches nothing. For configuration
+comparisons, list every collection the experiment controls, even when its desired
+index list is empty. Singular `create_index()` has no replacement flag.
+
+All definitions, targets and options are validated before connecting. Every included
+collection is inspected before any deletion. All removals finish before creation
+starts. Replacement is not atomic: failures can leave old indexes removed and only
+part of the new set created. There is no rollback. A server error raises
+`IndexCreationError`, whose `removed` map records confirmed removals and `completed`
+map records confirmed creations. `phase` identifies `inspect`, `remove` or `create`;
+`position` is a definition position during creation and `None` otherwise.
+`index_name` identifies a failed removal. The original error is `__cause__`.
+A failed operation may have taken effect even when its result was not confirmed.
+
+Replacement enumerates the backend's ordinary collection indexes (MongoDB indexes
+and Couchbase SQL++ query indexes). It does not administer separate Search services.
+Run without concurrent index administration: enumeration and deletion are separate
+operations, and BONDI does not lock the schema. Each inspection, deletion and build
+gets its own timeout; there is no whole-batch deadline.
+
+## Remove selected definitions
+
+```python
+from bondi.mongodb import MongoCollectionRef, remove_index, remove_indexes
+
+removed = remove_index(
+    connection,
+    target=MongoCollectionRef("shop", "orders"),
+    index=recent,
+)
+removed_names = remove_indexes(connection, database="shop", indexes=indexes)
+```
+
+Couchbase exposes the same functions with its collection reference or bucket/scope.
+Removal identifies an index **by its explicit or generated name**, not by comparing
+keys or options. Definitions still undergo normal backend validation. If an existing
+index with that name has a different definition, it is still selected for removal.
+Equivalent indexes under other names are untouched. MongoDB `_id` definitions and
+requests naming a Couchbase primary index raise `ValueError`; in a batch, protected
+requests are rejected before any deletion.
+
+`remove_index()` returns `True` for a confirmed removal and `False` when absent.
+`remove_indexes()` returns collection-to-name lists of confirmed removals. Missing
+names are skipped, so cleanup is repeatable. Empty lists remove nothing. Native
+errors other than missing-index errors propagate; absent Couchbase collections
+may still raise namespace errors. Each call owns and closes one client.
+
+Batch server failures raise `IndexRemovalError` with `completed`, `target`,
+`position`, `phase`, `index_name` and `__cause__`. Inspection failures have no
+position or index name. Single-index calls propagate the original error. No rollback
+is attempted, and the failing removal may have taken effect. These functions do
+not remove collections, documents or deployments.

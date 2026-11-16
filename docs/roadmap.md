@@ -5,7 +5,7 @@ This page tracks capabilities and open work, not a commitment to release dates.
 ## Available
 
 - Reusable shared and native index definitions, versioned persistence, and synchronous
-  single/batch index creation for MongoDB and Couchbase.
+  single/batch index creation and removal, plus opt-in batch replacement, for MongoDB and Couchbase.
 
 - AptMQL dataset and repository loading from cached BSON dumps, without index restoration.
 

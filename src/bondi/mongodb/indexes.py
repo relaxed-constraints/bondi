@@ -1,4 +1,4 @@
-"""MongoDB index definitions and synchronous creation."""
+"""MongoDB index definitions and synchronous lifecycle operations."""
 
 from copy import deepcopy
 from dataclasses import dataclass
@@ -64,17 +64,23 @@ def create_index(connection, *, target, index, timeout=300.0):
     return create_one("mongodb", connection, target, index, timeout)
 
 
-def create_indexes(connection, *, indexes, database, timeout=300.0):
+def create_indexes(connection, *, indexes, database, timeout=300.0, replace=False):
     """Create an IndexSet using one client; return collection-to-name lists.
 
     Args:
         connection (Deployment | MongoConnection): Deployment or MongoConnection settings.
         indexes (IndexSet): IndexSet of shared or MongoDB definitions.
         database (str): Database containing the IndexSet collections.
-        timeout (float): Positive finite seconds per index, not a whole-batch deadline.
+        timeout (float): Positive finite seconds per inspection, removal or creation operation.
+        replace (bool): Remove all secondary indexes on included collections before creation.
+            Preserve primary indexes; empty collection lists clear secondary indexes.
 
     All definitions and targets are validated before connecting. Creation is ordered
     and non-atomic. Server failures raise IndexCreationError with completed names.
+    Replacement includes indexes created outside BONDI, leaves omitted collections
+    untouched and is non-atomic. Inspect all collections, then remove, then create.
+    IndexCreationError reports the failing phase, confirmed removals and creations.
+    No rollback is attempted. Run without concurrent index administration.
     """
     from bondi._index_creation import create_many
     from bondi.indexes import IndexSet
@@ -85,4 +91,47 @@ def create_indexes(connection, *, indexes, database, timeout=300.0):
     # Validate the namespace even when the set is empty.
     MongoCollectionRef(database, "_validation")
     targets = {name: MongoCollectionRef(database, name) for name in indexes}
-    return create_many("mongodb", connection, indexes, targets, timeout)
+    return create_many("mongodb", connection, indexes, targets, timeout, replace)
+
+
+def remove_index(connection, *, target, index, timeout=300.0):
+    """Remove one named index; return True if removed, False if already absent.
+
+    Args:
+        connection (Deployment | MongoConnection): Deployment or connection settings.
+        target (MongoCollectionRef): Destination collection.
+        index (FieldIndex | MongoIndex): Definition identifying an explicit or generated name.
+        timeout (float): Positive finite seconds per inspection or removal operation.
+
+    Removal matches names only, not keys/options. Protected primary indexes raise
+    ValueError. Other native errors propagate. The owned client always closes.
+    """
+    from bondi._index_creation import remove_one
+
+    return remove_one("mongodb", connection, target, index, timeout)
+
+
+def remove_indexes(connection, *, indexes, database, timeout=300.0):
+    """Remove named definitions; return collection-to-removed-name lists.
+
+    Args:
+        connection (Deployment | MongoConnection): Deployment or connection settings.
+        indexes (IndexSet): Definitions identifying explicit or generated names.
+        database (str): Database containing the IndexSet collections.
+        timeout (float): Positive finite seconds per inspection or removal operation.
+
+    Missing names are skipped. Empty lists remove nothing. Only named definitions
+    are removed, regardless of their keys/options. Protected primary indexes raise
+    ValueError before any deletion. Validation precedes connection; inspection
+    precedes removal. One client is owned per call. Server failures raise
+    IndexRemovalError with completed removals; no rollback is attempted.
+    """
+    from bondi._index_creation import remove_many
+    from bondi.indexes import IndexSet
+    from bondi.mongodb.collection import MongoCollectionRef
+
+    if not isinstance(indexes, IndexSet):
+        raise TypeError("indexes must be an IndexSet")
+    MongoCollectionRef(database, "_validation")
+    targets = {name: MongoCollectionRef(database, name) for name in indexes}
+    return remove_many("mongodb", connection, indexes, targets, timeout)

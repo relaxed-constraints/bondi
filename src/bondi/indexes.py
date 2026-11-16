@@ -233,14 +233,44 @@ class IndexCreationError(RuntimeError):
     Attributes:
         completed: Collection names mapped to confirmed index names.
         target: Collection name of the failed operation.
-        position: Zero-based position in that collection's definition list.
+        position: Zero-based definition position during creation; None otherwise.
+        removed: Collection names mapped to confirmed removals during replacement.
+        phase: The failing phase: inspect, remove, or create.
+        index_name: Name of the failed removal, or None.
 
-    The failed operation may have created an index or left a build running.
+    The failed operation may have removed or created an index, or left a build running.
     The original exception is available as __cause__. No rollback is attempted.
     """
 
-    def __init__(self, completed, target, position):
-        super().__init__(f"Index creation failed at {target}[{position}]")
+    def __init__(
+        self, completed, target, position, *, removed=None, phase="create", index_name=None
+    ):
+        super().__init__(f"Index creation failed during {phase} at {target}[{position}]")
+        self.removed = deepcopy(removed if removed is not None else {})
+        self.phase = phase
+        self.index_name = index_name
         self.completed = deepcopy(completed)
         self.target = target
         self.position = position
+
+
+class IndexRemovalError(RuntimeError):
+    """Batch removal failed, with no rollback.
+
+    Attributes:
+        completed: Collection names mapped to confirmed removed names; absent names omitted.
+        target: Collection name of the failed operation.
+        position: Zero-based definition position, or None during collection inspection.
+        phase: The failing phase: inspect or remove.
+        index_name: Requested name, or None during inspection.
+
+    The original exception is __cause__. The failed operation may have taken effect.
+    """
+
+    def __init__(self, completed, target, position, *, phase="remove", index_name=None):
+        super().__init__(f"Index removal failed during {phase} at {target}[{position}]")
+        self.completed = deepcopy(completed)
+        self.target = target
+        self.position = position
+        self.phase = phase
+        self.index_name = index_name

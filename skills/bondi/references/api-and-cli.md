@@ -358,3 +358,27 @@ a point-in-time observation, not proof of process death or future query success.
 Keep checkpoint/rerun decisions downstream; do not add retries or restart
 containers automatically. See the
 [health-check guide](https://relaxed-constraints.github.io/bondi/executor/#bounded-health-checks).
+
+## Index lifecycle (replacement/removal unreleased)
+
+`FieldIndex`, `MongoIndex`, `CouchbaseIndex` and `IndexSet` define reusable indexes.
+The backend `create_indexes()` accepts an IndexSet plus MongoDB `database` or
+Couchbase `bucket`/`scope`, and a deployment or connection configuration.
+Check installed signatures before using the unreleased lifecycle extensions.
+
+`create_indexes(..., replace=True)` removes all secondary indexes on the collections
+included in the set, including indexes created outside BONDI, then creates the new
+set. An empty collection list clears secondary indexes; omitted collections are
+untouched. MongoDB `_id_` and Couchbase primary indexes are preserved. This is
+non-atomic and must not run alongside concurrent index administration.
+
+`remove_index(..., target=ref, index=definition)` returns whether removal was
+confirmed. `remove_indexes(..., indexes=index_set, database=...)` returns confirmed
+removed names by collection; Couchbase uses bucket/scope. Removal uses explicit or
+generated names, not semantic equivalence. Missing names are skipped; protected
+primary requests fail before any deletion. Empty lists remove nothing.
+
+`IndexCreationError` reports `completed` creations, `removed` names and a failure
+`phase`. `IndexRemovalError` reports completed removals. Both retain the native
+cause and failed collection; neither rolls back. Use the index guide and API
+reference in the matching checkout for exact fields and timeout semantics.

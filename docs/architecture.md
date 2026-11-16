@@ -89,3 +89,7 @@ Creation validates the whole request before opening a client, reuses one client
 per batch, and reports partial progress without rollback. Backend-specific
 creation functions accept deployments or shared connection settings. Research
 index recommendation and experiment orchestration remain in consumer projects.
+Batch replacement explicitly clears secondary indexes on included collections,
+preserving primary indexes, before creating the new set. Named removal is repeatable
+and checks protected indexes before deleting. Both operations report partial progress
+without rollback and require exclusive index administration by the caller.
