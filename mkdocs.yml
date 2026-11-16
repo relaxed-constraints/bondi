@@ -32,10 +32,10 @@ nav:
 - API reference:
   - Overview: api.md
   - Database deployment: reference/deployment.md
+  - Dataset loading: reference/data.md
   - Queries and workloads: reference/queries.md
   - Results and summaries: reference/results.md
   - Load generation: reference/load.md
-  - Dataset loading: reference/data.md
   - Schema inspection: reference/schema.md
   - Estimation interfaces: reference/estimation.md
   - MongoDB:

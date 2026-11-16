@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add `load_aptmql_dataset` and `load_aptmql_repository`, with matching
+  `bondi dataset load-aptmql` and `load-aptmql-repository` commands. Download
+  pinned BSON dumps, preserve dataset namespaces, and use shared MongoDB/Couchbase
+  writers with partial receipts. Document the available datasets. Skip dump indexes
+  and collection metadata.
+
 ## 0.3.4 — 2026-11-15
 
 - Use Hugging Face's disk caches by default for dataset and repository loaders.

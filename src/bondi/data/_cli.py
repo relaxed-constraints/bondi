@@ -18,6 +18,8 @@ from . import (
     MongoConnection,
     dataset_info,
     list_datasets,
+    load_aptmql_dataset,
+    load_aptmql_repository,
     load_demo_data,
     load_file,
     load_hf_dataset,
@@ -45,14 +47,12 @@ def info(name):
     return _dispatch(dataset_command="info", name=name)
 
 
-def _load_options(function, *, hub=False):
+def _load_options(function, *, hub=False, aptmql=False, repository_names=False):
     """Common destination and write options for dataset source commands."""
     decorators = [
         click.option("--deployment", help="Saved deployment name."),
         click.option("--connection", help="JSON connection file, with optional password_env."),
-        click.option("--database", help="MongoDB destination database."),
         click.option("--bucket", help="Couchbase destination bucket."),
-        click.option("--scope", default="_default", show_default=True),
         click.option("--id-field"),
         click.option("--namespace"),
         click.option("--bucket-memory-mb", type=int),
@@ -63,15 +63,32 @@ def _load_options(function, *, hub=False):
             default="create",
             show_default=True,
         ),
-        click.option(
-            "--json-mode",
-            type=click.Choice(["auto", "plain", "extended"] if hub else ["plain", "extended"]),
-            default="auto" if hub else "plain",
-            show_default=True,
-        ),
         click.option("--naive-datetimes", type=click.Choice(["error", "utc"]), default="error"),
         click.option("--decimal-mode", type=click.Choice(["error", "string"]), default="error"),
     ]
+    if not repository_names:
+        decorators.extend(
+            [
+                click.option(
+                    "--database", help="MongoDB database. AptMQL defaults to the dataset name."
+                ),
+                click.option(
+                    "--scope",
+                    default=None if aptmql else "_default",
+                    show_default=True,
+                    help="Couchbase scope. AptMQL defaults to the dataset name.",
+                ),
+            ]
+        )
+    if not aptmql:
+        decorators.append(
+            click.option(
+                "--json-mode",
+                type=click.Choice(["auto", "plain", "extended"] if hub else ["plain", "extended"]),
+                default="auto" if hub else "plain",
+                show_default=True,
+            )
+        )
     for decorate in reversed(decorators):
         function = decorate(function)
     return function
@@ -122,6 +139,23 @@ def hf_command(**options):
 def repository_command(**options):
     """Load all HF configurations, using their names as collection names."""
     return _load_dispatch("load-hf-repository", options)
+
+
+@dataset.command("load-aptmql")
+@click.argument("source")
+@click.option("--revision", help="Hub branch, tag or commit.")
+@partial(_load_options, aptmql=True)
+def aptmql_command(**options):
+    """Load every collection of one AptMQL dataset, such as beer_factory."""
+    return _load_dispatch("load-aptmql", options)
+
+
+@dataset.command("load-aptmql-repository")
+@click.option("--revision", help="Hub branch, tag or commit.")
+@partial(_load_options, aptmql=True, repository_names=True)
+def aptmql_repository_command(**options):
+    """Load all AptMQL datasets into their own databases or scopes."""
+    return _load_dispatch("load-aptmql-repository", {**options, "database": None, "scope": None})
 
 
 def _load_dispatch(command, options):
@@ -190,11 +224,38 @@ def run(args):
             "bucket_memory_mb",
             "batch_size",
             "mode",
-            "json_mode",
             "naive_datetimes",
             "decimal_mode",
         )
     }
+    options["json_mode"] = getattr(args, "json_mode", "plain")
+    if args.dataset_command in ("load-aptmql", "load-aptmql-repository"):
+        if args.dataset_command == "load-aptmql":
+            result = load_aptmql_dataset(
+                args.source,
+                target=target,
+                database=args.database,
+                bucket=args.bucket,
+                scope=args.scope,
+                revision=args.revision,
+                **options,
+            )
+            payload = {key: asdict(value) for key, value in result.items()}
+        else:
+            if args.database is not None or args.scope is not None:
+                raise ValueError("AptMQL repository loading does not accept --database or --scope")
+            result = load_aptmql_repository(
+                target=target,
+                bucket=args.bucket,
+                revision=args.revision,
+                **options,
+            )
+            payload = {
+                dataset: {key: asdict(value) for key, value in collections.items()}
+                for dataset, collections in result.items()
+            }
+        print(json.dumps(payload, indent=2))
+        return 0
     conn = connection(target)
     if isinstance(conn, MongoConnection):
         if not args.database:

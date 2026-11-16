@@ -66,6 +66,18 @@ each load. Cache locations follow `HF_HOME`, `HF_HUB_CACHE` and
 `HF_DATASETS_CACHE`; BONDI does not manage its own cache.
 Metadata resolution still contacts the Hub, so caching is not an offline guarantee.
 
+AptMQL loaders (unreleased; check installed exports) use the fixed
+`MongoDB/AptMQL-Bench` repository. `load_aptmql_dataset("beer_factory", target=...)`
+loads all related collections into a MongoDB database or Couchbase scope named
+`beer_factory`. Single-dataset calls allow `database` or `scope` overrides.
+`load_aptmql_repository(target=...)` loads all datasets under their source names.
+Couchbase requires `bucket` for either function. The CLI commands are
+`bondi dataset load-aptmql beer_factory` and `bondi dataset load-aptmql-repository`.
+Both accept `--revision` and standard destination/write options. Pin a commit for
+reproducibility. BSON files are cached and decoded incrementally with PyMongo;
+no mongorestore is needed. Dump indexes and collection metadata are ignored.
+Repository writes are non-atomic. Partial errors include earlier acknowledged writes.
+
 [Dataset guide](https://relaxed-constraints.github.io/bondi/datasets/)
 
 ### Database versions

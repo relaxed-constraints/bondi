@@ -73,5 +73,7 @@ speculative compatibility layers.
 `bondi.data` reads existing documents and writes them to native databases.
 Source readers, conversion rules and writers remain separate. Consumers own data generation and benchmark-specific verification.
 Single-source loaders use exact collection references. Hub repository loading
-maps configurations directly to collection names. There are no manifests.
+maps configurations directly to collection names. AptMQL loaders decode cached BSON
+dumps through the same writers. Dataset names map to MongoDB databases or Couchbase
+scopes; dump indexes and collection metadata are not restored. There are no manifests.
 Loading is synchronous and non-atomic. Partial results report acknowledged writes.

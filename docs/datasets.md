@@ -550,3 +550,114 @@ CLI load commands return plain JSON.
 Errors go to stderr.
 
 See the [dataset API reference](reference/data.md) for signatures and return types.
+
+## Load AptMQL databases
+
+[AptMQL-Bench](https://huggingface.co/datasets/MongoDB/AptMQL-Bench) provides 21 MongoDB databases for research and benchmarking, converted
+from the relational SQL databases in [BIRD](https://bird-bench.github.io/).
+The datasets span commerce, science, sports, and finance, with document schemas
+designed around expected access patterns rather than one-to-one table mappings.
+
+The AptMQL loaders read BSON dumps from
+[MongoDB/AptMQL-Bench](https://huggingface.co/datasets/MongoDB/AptMQL-Bench).
+An AptMQL **dataset** is a group of related collections, such as `beer_factory`.
+This differs from `load_hf_dataset`, which loads one HF configuration into one collection.
+
+```sh
+# Load every beer_factory collection into a MongoDB database named beer_factory.
+bondi dataset load-aptmql beer_factory --deployment mongo-demo
+
+# Load collections into a Couchbase scope named beer_factory in the demo bucket.
+bondi dataset load-aptmql beer_factory --deployment cb-demo --bucket demo
+
+# All source datasets, each in its own MongoDB database.
+bondi dataset load-aptmql-repository --deployment mongo-demo
+
+# All source datasets, each in its own Couchbase scope within bucket demo.
+bondi dataset load-aptmql-repository --deployment cb-demo --bucket demo
+```
+
+Run the single-dataset and entire-repository examples on separate empty destinations.
+The default `create` mode rejects occupied collections. Repository loading is non-atomic:
+a later failure leaves earlier writes in place.
+
+```python
+from bondi.data import load_aptmql_dataset, load_aptmql_repository
+from bondi.deployment import get_deployment
+
+results = load_aptmql_dataset(
+    "beer_factory",
+    target=get_deployment("mongo-demo"),
+    database="beer_experiment",
+)
+print(results["brands"].destinations)  # {"beer_experiment.brands": 24}
+
+# A different destination for the complete repository:
+all_results = load_aptmql_repository(
+    target=get_deployment("cb-demo"),
+    bucket="demo",
+)
+print(all_results["beer_factory"]["brands"].destinations)
+# {"demo.beer_factory.brands": 24}
+```
+
+For a single dataset, `database`/`--database` overrides the MongoDB database name.
+`scope`/`--scope` overrides the Couchbase scope name. Both default to the dataset name.
+The repository loader preserves dataset names and rejects database or scope overrides.
+Couchbase requires an explicit bucket. Use `bucket_memory_mb`/`--bucket-memory-mb`
+when creating a new bucket, as with the other loaders.
+
+### Source and loading rules
+
+- BONDI discovers the dataset under `train` or `dev`; no split option is needed.
+  An ambiguous dataset name across splits is rejected.
+- Only selected `.bson` files download to the standard Hugging Face cache.
+  All selected files download before the first write. The entire-repository loader
+  currently downloads about 2.55 GB of BSON data.
+- PyMongo decodes cached BSON incrementally. No clone, JSON conversion, or
+  `mongorestore` installation is required.
+- Dates decode as timezone-aware UTC values. IDs and references follow BONDI's
+  existing backend conversion rules. Unsupported Couchbase values fail explicitly;
+  decimal strings require `decimal_mode="string"`.
+- Dump indexes and collection metadata are ignored. MongoDB creates its standard
+  `_id` index. BONDI does not create secondary or Couchbase query indexes.
+- Results record the dataset, split, source filename, and
+  SHA256. The single-dataset result maps collection names to `LoadDataResult`.
+  Repository results add an outer mapping keyed by dataset name.
+- Collections load sequentially in sorted dataset/collection order. Progress describes
+  the current collection. On failure, `LoadDataError.result` includes acknowledged
+  counts from earlier collections and datasets. No rollback or automatic retry occurs.
+
+### Available AptMQL datasets
+
+The repository contains 21 datasets and 150 collections.
+The loader discovers available files rather than hard-coding this list.
+An unknown dataset error lists the available names.
+
+| Dataset | Split | Collections |
+| --- | --- | ---: |
+| california_schools | dev | 2 |
+| card_games | dev | 2 |
+| codebase_community | dev | 8 |
+| debit_card_specializing | dev | 4 |
+| european_football_2 | dev | 6 |
+| financial | dev | 7 |
+| formula_1 | dev | 12 |
+| student_club | dev | 6 |
+| superhero | dev | 4 |
+| thrombosis_prediction | dev | 4 |
+| toxicology | dev | 1 |
+| beer_factory | train | 6 |
+| cs_semester | train | 3 |
+| food_inspection_2 | train | 4 |
+| hockey | train | 11 |
+| mondial_geo | train | 16 |
+| professional_basketball | train | 8 |
+| public_review_platform | train | 4 |
+| restaurant | train | 1 |
+| shooting | train | 1 |
+| works_cycles | train | 40 |
+
+For example, `beer_factory` contains `brands`, `customers`, `inventory`, `locations`,
+`reviews`, and `transactions`. See the upstream repository for dataset descriptions
+and its CC BY-SA 4.0 license.
