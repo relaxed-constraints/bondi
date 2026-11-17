@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Inherit shared image lightboxes and allow relcon-docs updates within
+  `>=0.1.0,<1.0.0`, retaining the lockfile for reproducible documentation builds.
+
 ## 0.3.8 — 2026-11-17
 
 - Add top-level index lifecycle dispatchers. Rename backend functions to
