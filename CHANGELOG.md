@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Upgrade relcon-docs to 0.1.7 and apply shared Markdown defaults, including SmartSymbols arrows.
+
 - Allow manual documentation publishing alongside release-triggered deployment.
 
 - Refresh the documentation homepage introduction to reflect the toolkit's broader

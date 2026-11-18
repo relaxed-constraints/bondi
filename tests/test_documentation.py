@@ -36,11 +36,14 @@ def test_managed_documentation_files_match_installed_package():
     assert cli.main(["configure", "--project", str(root), "--check"]) == 0
 
 
-def test_deployment_is_limited_to_published_releases():
+def test_deployment_is_limited_to_published_releases_and_manual_requests():
     yaml = pytest.importorskip("yaml")
     root = Path(__file__).resolve().parents[1]
     workflow = yaml.load((root / ".github/workflows/docs.yml").read_text(), Loader=yaml.BaseLoader)
-    assert workflow["on"] == {"release": {"types": ["published"]}}
+    assert workflow["on"] == {
+        "release": {"types": ["published"]},
+        "workflow_dispatch": "",
+    }
     assert not (root / ".github/workflows/pages.yml").exists()
     assert workflow["permissions"]["pages"] == "write"
     assert workflow["permissions"]["id-token"] == "write"

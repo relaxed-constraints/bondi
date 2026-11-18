@@ -1,0 +1,25 @@
+{% extends "main.html" %}
+
+{% block content %}
+<div class="presentation-content" data-presentation-root="{{ base_url }}/">
+  <div class="presentation-controls">
+    <button type="button" class="presentation-toggle" aria-pressed="false" hidden>
+      <span class="md-icon" aria-hidden="true">{% include ".icons/material/presentation-play.svg" %}</span>
+      Presentation mode
+    </button>
+  </div>
+  {{ super() }}
+  <nav class="presentation-nav" aria-label="Presentation sections" hidden>
+    <button type="button" data-section-step="-1" aria-label="Previous section" title="Previous section (left arrow)">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m14 6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="presentation-position">
+      <span data-section-title></span>
+      <span data-section-count aria-live="polite" aria-atomic="true"></span>
+    </div>
+    <button type="button" data-section-step="1" aria-label="Next section" title="Next section (right arrow)">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m10 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </nav>
+</div>
+{% endblock %}

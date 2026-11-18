@@ -263,7 +263,7 @@ dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.9" },
 ]
-docs = [{ name = "relcon-docs", specifier = ">=0.1.0,<1.0.0" }]
+docs = [{ name = "relcon-docs", specifier = ">=0.1.7,<1.0.0" }]
 
 [[package]]
 name = "certifi"
@@ -1962,7 +1962,7 @@ wheels = [
 
 [[package]]
 name = "relcon-docs"
-version = "0.1.1"
+version = "0.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "mkdocstrings-python" },
@@ -1970,9 +1970,9 @@ dependencies = [
     { name = "ruff" },
     { name = "zensical" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/0a/a5838ece7c1291f63e3b41bec927ec8e3a8ca62c7bb4832788fe3b16be81/relcon_docs-0.1.1.tar.gz", hash = "sha256:38b39377e18e27f2a59fc925056b9d022a50ee91943a641bf5a1aef47dab0bbf", size = 60875 }
+sdist = { url = "https://files.pythonhosted.org/packages/a4/80/ab9d7aa0d18be73ff247f27dc55c1d6804fbc59ed18c1599e0322ab7f3e0/relcon_docs-0.1.7.tar.gz", hash = "sha256:457b31a30509c4286f743d1269c4d5b2b7b3bbb36b9ec444f7738b2091155431", size = 311258 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/86/417a08fdbd8822ab78d57da1daa3dc5194a7e06c2fd27953a4520a947980/relcon_docs-0.1.1-py3-none-any.whl", hash = "sha256:4fa700447b1ad89092837c721b7f0fc6158a5247a50ba5300d6c18f519565863", size = 12943 },
+    { url = "https://files.pythonhosted.org/packages/81/b9/ac8a2da05d5454a114f5d96926d7f3cd7638a8e18f30cd2d1c006ba43cd1/relcon_docs-0.1.7-py3-none-any.whl", hash = "sha256:f9ab6955d69797e6e119a8a18589d31036f0c944fb92e223b951fe33b199d8d5", size = 19795 },
 ]
 
 [[package]]
