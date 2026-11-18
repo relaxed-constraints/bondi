@@ -1,6 +1,7 @@
-# Project-owned: deploy only when a GitHub release is published.
+# Project-owned: deploy on published releases or manual requests.
 name: Documentation
 on:
+  workflow_dispatch:
   release:
     types: [published]
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Allow manual documentation publishing alongside release-triggered deployment.
+
 - Refresh the documentation homepage introduction to reflect the toolkit's broader
   research and benchmarking capabilities.
 
