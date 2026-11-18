@@ -6,11 +6,9 @@ render_macros: true
 
 *A Python toolkit for document database research.*
 
-`bondi` provides Python building blocks for students and researchers studying
-database queries, query optimization and index selection. Use it to describe native
-queries, run experiments against databases, inspect data, and generate workloads.
-Research models and experiment tracking belong in your project; the toolkit supplies
-the shared database components.
+`bondi` is a Python toolkit for document database research and benchmarking with
+MongoDB and Couchbase. It gives students and researchers reusable building blocks
+for setting up databases, running experiments and analysing their behaviour.
 
 ## Start here
 
