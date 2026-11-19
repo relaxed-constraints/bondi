@@ -23,7 +23,7 @@ from bondi.deployment import get_deployment
 from bondi.mongodb import MongoCollectionRef
 
 result = load_demo_data(
-    connection=get_deployment("mongo-demo"),
+    connection=get_deployment("mongo-demo").connection,
     collection=MongoCollectionRef("demo", "business"),
 )
 print(result.destinations)  # {"demo.business": 8}
@@ -35,7 +35,7 @@ For Couchbase, install `bondi[couchbase]` and use a Couchbase collection referen
 from bondi.couchbase import CouchbaseCollectionRef
 
 result = load_demo_data(
-    connection=get_deployment("cb-demo"),
+    connection=get_deployment("cb-demo").connection,
     collection=CouchbaseCollectionRef("demo", "_default", "business"),
 )
 ```
@@ -48,8 +48,8 @@ The destination must be empty by default. To reload, use `mode="upsert"` in
 Python or `--mode upsert` in the CLI. This replaces matching business IDs and
 keeps other documents. Use `replace` to clear the collection first.
 The helper uses `business_id` for stable IDs and returns `LoadDataResult`.
-It accepts the same targets and options as `load_documents()`, including explicit
-connections and progress callbacks. It does not start databases or create query indexes.
+It accepts the same connection settings and options as `load_documents()`,
+including progress callbacks. It does not start databases or create query indexes.
 
 For the Couchbase query examples, create a primary index after loading:
 
@@ -585,14 +585,14 @@ from bondi.deployment import get_deployment
 
 results = load_aptmql_dataset(
     "beer_factory",
-    connection=get_deployment("mongo-demo"),
+    connection=get_deployment("mongo-demo").connection,
     database="beer_experiment",
 )
 print(results["brands"].destinations)  # {"beer_experiment.brands": 24}
 
 # A different destination for the complete repository:
 all_results = load_aptmql_repository(
-    connection=get_deployment("cb-demo"),
+    connection=get_deployment("cb-demo").connection,
     bucket="demo",
 )
 print(all_results["beer_factory"]["brands"].destinations)

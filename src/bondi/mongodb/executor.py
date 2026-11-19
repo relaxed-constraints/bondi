@@ -55,12 +55,19 @@ _QUERY_FIELDS = {
 _COMMAND_FIELDS = _QUERY_FIELDS | {"command", "value", "check", "allowable_errors"}
 
 
-def _options(value: Mapping[str, Any] | None, forbidden: set[str], name: str) -> dict:
+def _options(
+    value: Mapping[str, Any] | None,
+    forbidden: set[str],
+    name: str,
+    *,
+    case_insensitive: bool = False,
+) -> dict:
     if value is None:
         return {}
     if not isinstance(value, Mapping) or any(not isinstance(k, str) for k in value):
         raise TypeError(f"{name} must be a mapping with string keys")
-    conflicts = forbidden.intersection(value)
+    # Client options are case-insensitive in PyMongo; query document fields are not.
+    conflicts = {key for key in value if (key.lower() if case_insensitive else key) in forbidden}
     if conflicts:
         raise ValueError(f"{name} overrides reserved fields: {', '.join(sorted(conflicts))}")
     return dict(value)
@@ -129,7 +136,7 @@ class AsyncMongoExecutor:
 
         Validates executor options before allocating the client. Use async with
         or await close() for cleanup. Creating the executor does not ping MongoDB.
-        client_kwargs must not contain host, username or password.
+        client_kwargs must not contain host, username or password, regardless of case.
 
         Args:
             connection: MongoConnection settings for the instance. No client is borrowed.
@@ -144,7 +151,9 @@ class AsyncMongoExecutor:
         """
         if not isinstance(connection, MongoConnection):
             raise TypeError("connection must be a MongoConnection")
-        options = _options(client_kwargs, {"host", "username", "password"}, "client_kwargs")
+        options = _options(
+            client_kwargs, {"host", "username", "password"}, "client_kwargs", case_insensitive=True
+        )
         options.update(
             {
                 key: value

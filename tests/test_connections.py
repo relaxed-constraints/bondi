@@ -95,7 +95,7 @@ def test_mongo_executor_forwards_settings_without_reencoding(credentials):
     client.close.assert_awaited_once()
 
 
-@pytest.mark.parametrize("field", ["host", "username", "password"])
+@pytest.mark.parametrize("field", ["host", "username", "password", "HOST", "Username", "PASSWORD"])
 def test_mongo_executor_rejects_duplicate_connection_options_before_creating_client(field):
     with patch("bondi.mongodb.executor.AsyncMongoClient") as create:
         with pytest.raises(ValueError, match="reserved"):
@@ -185,3 +185,13 @@ def test_couchbase_executor_rejects_duplicate_authenticator_before_connecting():
             connect.assert_not_awaited()
 
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("uri", [None, 27017, ["mongodb://example"], {}])
+@pytest.mark.parametrize("backend", ["mongodb", "couchbase"])
+def test_connection_settings_reject_non_string_uri(uri, backend):
+    with pytest.raises(TypeError, match="uri must be a string"):
+        if backend == "mongodb":
+            MongoConnection(uri)
+        else:
+            CouchbaseConnection(uri, "u", "p")

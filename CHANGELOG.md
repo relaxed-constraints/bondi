@@ -8,7 +8,8 @@
   require connection settings instead of accepting deployments.
   Rename loader `target=` to `connection=` and remove connection exports from
   `bondi.data`. MongoDB executor credentials belong to the connection settings,
-  not `client_kwargs`. Validate credential types consistently with `TypeError`
+  not `client_kwargs`, regardless of option-name case. Validate URI and credential
+  types consistently with `TypeError`
   (breaking change).
 - Standardize collection arguments and attributes on `collection`, including
   queries, patterns, workload generators, estimators and single-index operations.

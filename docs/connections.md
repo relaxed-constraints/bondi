@@ -8,7 +8,8 @@ BONDI separates a database's lifecycle, connection settings and collection names
 
 Connection settings are immutable values. Creating or reading them does not open
 an SDK client, check readiness or start Docker. They need no cleanup. Their
-representations omit URIs and credentials.
+representations omit URIs and credentials. Both classes reject non-string URIs
+with `TypeError`; URI syntax validation remains with the native driver.
 
 ## Managed databases
 
@@ -78,8 +79,8 @@ context. Couchbase setup waits for the Query service.
 
 Native `client_kwargs` (MongoDB) and `cluster_kwargs` (Couchbase) remain available
 for driver options. Authentication comes from the connection settings;
-`client_kwargs` must not contain `host`, `username` or `password`, and
-`cluster_kwargs` must not contain `authenticator`.
+`client_kwargs` must not contain `host`, `username` or `password` in any letter
+case. `cluster_kwargs` must not contain `authenticator`.
 
 For an existing native async client, construct `AsyncMongoExecutor(client)` or
 `AsyncCouchbaseExecutor(cluster)` to borrow it. The caller retains ownership.

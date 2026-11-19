@@ -67,8 +67,3 @@ namespace mappings, and the available datasets. Dump indexes are not restored.
     options:
       show_root_heading: true
       heading_level: 2
-
-::: bondi.couchbase.CouchbaseCollectionRef
-    options:
-      show_root_heading: true
-      heading_level: 2
