@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from bondi import CouchbaseConnection
+
 pytest.importorskip("couchbase")
 from couchbase.exceptions import (  # noqa: E402
     InvalidArgumentException,
@@ -265,8 +267,8 @@ def test_owned_borrowed_lifetimes_and_readiness_failure():
             pass
         c.close.assert_not_awaited()
         with patch("acouchbase.cluster.Cluster.connect", AsyncMock(return_value=c)):
-            e = await AsyncCouchbaseExecutor.from_uri(
-                "couchbase://local", username="u", password="p"
+            e = await AsyncCouchbaseExecutor.from_connection(
+                CouchbaseConnection("couchbase://local", username="u", password="p"),
             )
             c.wait_until_ready.assert_awaited_once()
             await e.close()
@@ -277,8 +279,8 @@ def test_owned_borrowed_lifetimes_and_readiness_failure():
             c.close.reset_mock()
             c.wait_until_ready.side_effect = RuntimeError("not ready")
             with pytest.raises(RuntimeError, match="not ready"):
-                await AsyncCouchbaseExecutor.from_uri(
-                    "couchbase://local", username="u", password="p"
+                await AsyncCouchbaseExecutor.from_connection(
+                    CouchbaseConnection("couchbase://local", username="u", password="p"),
                 )
             c.close.assert_awaited_once()
 
@@ -314,8 +316,8 @@ def test_invalid_config_does_not_connect(options):
     async def scenario():
         with patch("acouchbase.cluster.Cluster.connect", AsyncMock()) as connect:
             with pytest.raises((TypeError, ValueError)):
-                await AsyncCouchbaseExecutor.from_uri(
-                    "couchbase://local", username="u", password="p", **options
+                await AsyncCouchbaseExecutor.from_connection(
+                    CouchbaseConnection("couchbase://local", username="u", password="p"), **options
                 )
             connect.assert_not_awaited()
 

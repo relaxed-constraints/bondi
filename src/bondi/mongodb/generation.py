@@ -220,7 +220,7 @@ def _instantiate(pattern, pools, rng):
             operand = values if op in ("in", "nin") else values[0]
         predicates[predicate.field] = operand if op == "eq" else {"$" + op: operand}
     return MongoFindQuery(
-        pattern.target,
+        pattern.collection,
         predicates,
         sort=pattern.sort,
         projection=None if pattern.projection is None else dict(pattern.projection),
@@ -233,7 +233,7 @@ class MongoWorkloadGenerator:
     """Generate flat-find patterns for one collection, with optional selectivity checks.
 
     Args:
-        target: Collection targeted by every generated query.
+        collection: Collection targeted by every generated query.
         schema: Observed Schema retaining distinct or full values. Frequencies are ignored.
         estimator: Optional prepared synchronous CardinalityEstimator[MongoFindQuery].
             Required only when selectivity bounds are active. Never opened or closed here.
@@ -248,13 +248,13 @@ class MongoWorkloadGenerator:
     def __init__(
         self,
         *,
-        target: MongoCollectionRef,
+        collection: MongoCollectionRef,
         schema: Schema,
         estimator: CardinalityEstimator[MongoFindQuery] | None = None,
         config: MongoGenerationConfig | None = None,
     ):
-        if not isinstance(target, MongoCollectionRef) or not isinstance(schema, Schema):
-            raise TypeError("Expected MongoCollectionRef target and Schema schema")
+        if not isinstance(collection, MongoCollectionRef) or not isinstance(schema, Schema):
+            raise TypeError("Expected MongoCollectionRef collection and Schema schema")
         if config is not None and not isinstance(config, MongoGenerationConfig):
             raise TypeError("config must be MongoGenerationConfig")
         if estimator is not None and (
@@ -264,7 +264,7 @@ class MongoWorkloadGenerator:
             raise TypeError("estimator must expose a synchronous estimate(query) method")
         if schema.value_mode == "none":
             raise ValueError("Generation requires Schema values='distinct' or values='full'")
-        self.target, self.schema, self.estimator = target, schema, estimator
+        self.collection, self.schema, self.estimator = collection, schema, estimator
         self.config = config if config is not None else MongoGenerationConfig()
         self.config.validate()
         self._last_stats = {}
@@ -462,7 +462,9 @@ class MongoWorkloadGenerator:
                     stats["structural_rejections"] += 1
                     continue
                 query = MongoFindQuery(
-                    self.target, predicates, **_options(names, list(fields), config, presence, rng)
+                    self.collection,
+                    predicates,
+                    **_options(names, list(fields), config, presence, rng),
                 )
                 pattern = MongoQueryPattern.from_query(query)
                 if pattern in seen:

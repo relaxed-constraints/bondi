@@ -13,7 +13,7 @@ def test_conversion_order_and_independence():
     )
     converted = query.to_aggregate()
     assert isinstance(converted, MongoAggregateQuery)
-    assert converted.target == TARGET
+    assert converted.collection == TARGET
     assert converted.pipeline == [
         {"$match": {"x": {"$in": [1, 2]}}},
         {"$sort": {"x": -1, "_id": 1}},

@@ -9,15 +9,9 @@ import pytest
 from bson import BSON, Decimal128, ObjectId
 from click.testing import CliRunner
 
+from bondi import CouchbaseConnection, MongoConnection
 from bondi._cli import cli as main
-from bondi.data import (
-    CouchbaseConnection,
-    LoadDataError,
-    MongoConnection,
-    _aptmql,
-    load_aptmql_dataset,
-    load_aptmql_repository,
-)
+from bondi.data import LoadDataError, _aptmql, load_aptmql_dataset, load_aptmql_repository
 
 
 @pytest.fixture
@@ -103,7 +97,7 @@ def test_native_bson_types_destinations_and_provenance(hub, writer, backend):
     progress = []
     results = load_aptmql_dataset(
         "beer_factory",
-        target=target,
+        connection=target,
         revision="tag",
         batch_size=1,
         on_progress=progress.append,
@@ -137,7 +131,7 @@ def test_repository_separates_datasets_with_same_collection(hub, writer, backend
         else CouchbaseConnection("couchbase://unused", "user", "pass")
     )
     kwargs = {} if backend == "mongodb" else {"bucket": "research"}
-    results = load_aptmql_repository(target=target, **kwargs)
+    results = load_aptmql_repository(connection=target, **kwargs)
     assert list(results) == ["alpha", "zeta"]
     assert len([c for c in hub.calls if c[0] == "resolve"]) == 1
     assert len(writer.data) == 2
@@ -153,7 +147,7 @@ def test_failure_keeps_counts_from_previous_databases_and_closes_stream(hub, wri
     hub.add("alpha", "items", [{"_id": 1}])
     path = hub.add("zeta", "items", [{"_id": 1}, {"_id": 1}])
     with pytest.raises(LoadDataError, match="Duplicate") as caught:
-        load_aptmql_repository(target=MongoConnection("mongodb://unused"), batch_size=1)
+        load_aptmql_repository(connection=MongoConnection("mongodb://unused"), batch_size=1)
     assert caught.value.result.destinations == {"alpha.items": 1, "zeta.items": 1}
     assert caught.value.result.source_counts == {"alpha.items:train": 1, "zeta.items:train": 1}
     assert len(caught.value.result.sources) == 2
@@ -166,7 +160,7 @@ def test_bad_bson_is_reported_with_partial_receipt(hub, writer):
     path.write_bytes(path.read_bytes() + b"\x05\x00\x00\x00x")
     with pytest.raises(LoadDataError) as caught:
         load_aptmql_dataset(
-            "beer_factory", target=MongoConnection("mongodb://unused"), batch_size=1
+            "beer_factory", connection=MongoConnection("mongodb://unused"), batch_size=1
         )
     assert caught.value.result.destinations == {"beer_factory.brands": 1}
 
@@ -175,9 +169,9 @@ def test_unsupported_couchbase_values_fail_explicitly(hub, writer):
     hub.add("beer_factory", "brands", [{"_id": 1, "price": Decimal128("1.25")}])
     target = CouchbaseConnection("couchbase://unused", "user", "pass")
     with pytest.raises(LoadDataError, match="decimal_mode"):
-        load_aptmql_dataset("beer_factory", target=target, bucket="research")
+        load_aptmql_dataset("beer_factory", connection=target, bucket="research")
     result = load_aptmql_dataset(
-        "beer_factory", target=target, bucket="research", decimal_mode="string"
+        "beer_factory", connection=target, bucket="research", decimal_mode="string"
     )
     assert result["brands"].conversions == {"decimal_string": 1}
 
@@ -198,7 +192,7 @@ def test_invalid_selection_has_no_writes(hub, writer, problem):
     if problem == "mode":
         kwargs["json_mode"] = "extended"
     with pytest.raises(ValueError):
-        load_aptmql_dataset(selected, target=MongoConnection("mongodb://unused"), **kwargs)
+        load_aptmql_dataset(selected, connection=MongoConnection("mongodb://unused"), **kwargs)
     assert not writer.data
 
 
@@ -208,7 +202,7 @@ def test_download_failure_precedes_all_writes(hub, writer, monkeypatch):
         _aptmql, "hf_hub_download", lambda *a, **kw: (_ for _ in ()).throw(OSError())
     )
     with pytest.raises(OSError):
-        load_aptmql_dataset("beer_factory", target=MongoConnection("mongodb://unused"))
+        load_aptmql_dataset("beer_factory", connection=MongoConnection("mongodb://unused"))
     assert not writer.data
 
 

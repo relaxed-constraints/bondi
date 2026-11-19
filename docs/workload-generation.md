@@ -15,7 +15,7 @@ schema = Schema.from_documents(
     values="distinct",
 )
 generator = MongoWorkloadGenerator(
-    target=MongoCollectionRef("demo", "business"),
+    collection=MongoCollectionRef("demo", "business"),
     schema=schema,
     config=MongoGenerationConfig(min_predicates=1, max_predicates=2),
 )

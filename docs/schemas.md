@@ -50,8 +50,8 @@ that contain literal dots or brackets; see the [reference](reference/schema.md).
 ## Read from a database
 
 Use a bounded query and pass `result.documents` to `Schema.from_documents`. MongoDB
-supports both `MongoFindQuery(target, {}, limit=1000)` and a random sample through
-`MongoAggregateQuery(target, [{"$sample": {"size": 1000}}])`.
+supports both `MongoFindQuery(collection, {}, limit=1000)` and a random sample through
+`MongoAggregateQuery(collection, [{"$sample": {"size": 1000}}])`.
 
 For Couchbase use `SELECT RAW b FROM ... b LIMIT 1000` so rows are the documents,
 not wrappers. `ORDER BY RANDOM() LIMIT 1000` selects random rows but can scan and

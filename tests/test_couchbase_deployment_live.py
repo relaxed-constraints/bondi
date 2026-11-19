@@ -60,9 +60,7 @@ def test_couchbase_lifecycle(tmp_path, monkeypatch, edition, live_ports):
         assert command.returncode == 0, command.stderr
         assert db.console_url in command.stdout
         assert "Password: bondi-local" in command.stdout
-        with CouchbaseExecutor.from_uri(
-            db.uri, username=db.username, password=db.password, timeout_seconds=30
-        ) as executor:
+        with CouchbaseExecutor.from_connection(db.connection, timeout_seconds=30) as executor:
             result = executor.run(
                 CouchbaseQuery('UPSERT INTO `demo` (KEY, VALUE) VALUES ("keep", {"value":42})')
             )
@@ -73,9 +71,7 @@ def test_couchbase_lifecycle(tmp_path, monkeypatch, edition, live_ports):
         db.remove(keep_data=True)
         assert db.status() == "removed"
         db.start(timeout=180)
-        with CouchbaseExecutor.from_uri(
-            db.uri, username=db.username, password=db.password, timeout_seconds=30
-        ) as executor:
+        with CouchbaseExecutor.from_connection(db.connection, timeout_seconds=30) as executor:
             result = executor.run(
                 CouchbaseQuery('SELECT RAW d.`value` FROM `demo` d USE KEYS "keep"'),
                 collect_results=True,
@@ -104,10 +100,8 @@ def test_fresh_community_800_restarts(tmp_path, monkeypatch, live_ports, attempt
         kv_port=ports[2],
     )
     try:
-        with CouchbaseExecutor.from_uri(
-            db.uri,
-            username=db.username,
-            password=db.password,
+        with CouchbaseExecutor.from_connection(
+            db.connection,
             timeout_seconds=30,
         ) as executor:
             executor.run(
@@ -119,10 +113,8 @@ def test_fresh_community_800_restarts(tmp_path, monkeypatch, live_ports, attempt
             db.stop()
             db.start(timeout=90)
             assert db.status() == "running"
-            with CouchbaseExecutor.from_uri(
-                db.uri,
-                username=db.username,
-                password=db.password,
+            with CouchbaseExecutor.from_connection(
+                db.connection,
                 timeout_seconds=30,
             ) as executor:
                 result = executor.run(

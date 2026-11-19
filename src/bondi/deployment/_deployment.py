@@ -14,7 +14,9 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
+
+from bondi.connection import CouchbaseConnection, MongoConnection
 
 from ._couchbase import DEFAULT_DATA_MEMORY_MB, DEFAULT_INDEX_MEMORY_MB
 
@@ -110,6 +112,19 @@ class Deployment:
         return f"mongodb://127.0.0.1:{self.port}/"
 
     @property
+    def connection(self) -> MongoConnection | CouchbaseConnection:
+        """Connection settings, without Docker access or a readiness check.
+
+        Available for stopped deployments too. The returned settings do not own
+        a client and do not track subsequent deployment configuration changes.
+        """
+        if self.backend == "mongodb":
+            return MongoConnection(self.uri, self.username, self.password)
+        if self.backend == "couchbase":
+            return CouchbaseConnection(self.uri, self.username, self.password)
+        raise ValueError(f"Unsupported deployment backend: {self.backend}")
+
+    @property
     def console_url(self) -> str | None:
         """Couchbase browser console URL, or None for MongoDB."""
         return f"http://127.0.0.1:{self.port}/" if self.backend == "couchbase" else None
@@ -144,12 +159,15 @@ class Deployment:
             ) from exc
         return result.stdout
 
-    def start(self, *, timeout: float = 120) -> None:
+    def start(self, *, timeout: float = 120) -> Self:
         """Create/start the container, initialize it and wait for database readiness.
 
         Args:
             timeout: Maximum seconds for startup, including image download.
                 Increase this for a first deployment on a slow connection.
+
+        Returns:
+            This deployment after readiness succeeds.
         """
         _timeout(timeout)
         deadline = time.monotonic() + timeout
@@ -166,10 +184,16 @@ class Deployment:
             from ._couchbase import initialize
 
             initialize(self, deadline=deadline)
+        return self
 
-    def stop(self, *, timeout: float = 120) -> None:
-        """Stop the database, retaining its container, configuration and data volume."""
+    def stop(self, *, timeout: float = 120) -> Self:
+        """Stop the database, retaining its container, configuration and data volume.
+
+        Returns:
+            This deployment after stopping succeeds.
+        """
         self._run("stop", self.backend, timeout=timeout)
+        return self
 
     def status(self) -> Status:
         """Return observed container state; Docker access errors raise RuntimeError.
@@ -322,7 +346,7 @@ def deploy_mongodb(
         timeout: Startup deadline in seconds, including image download.
 
     Returns:
-        A ready Deployment, usable with MongoExecutor.from_uri(deployment.uri).
+        A ready Deployment, usable with MongoExecutor.from_connection(deployment.connection).
 
     Raises:
         ValueError: Invalid arguments or saved port/image conflicts with this request.
@@ -406,7 +430,7 @@ def deploy_couchbase(
         timeout: Total startup and initialization deadline in seconds.
 
     Returns:
-        A ready deployment with uri, console_url and credentials.
+        A ready deployment with connection settings and a console URL.
 
     Raises:
         ValueError: Invalid arguments or requested settings conflict with a saved

@@ -10,12 +10,11 @@ from types import SimpleNamespace
 import click
 
 from bondi._terminal import table
+from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
 from bondi.couchbase.collection import CouchbaseCollectionRef
 from bondi.mongodb import MongoCollectionRef
 
 from . import (
-    CouchbaseConnection,
-    MongoConnection,
     dataset_info,
     list_datasets,
     load_aptmql_dataset,
@@ -25,7 +24,6 @@ from . import (
     load_hf_dataset,
     load_hf_repository,
 )
-from ._writers import connection
 
 
 @click.group(no_args_is_help=False)
@@ -195,7 +193,7 @@ def run(args):
     if args.deployment:
         from bondi.deployment import get_deployment
 
-        target = get_deployment(args.deployment)
+        connection = get_deployment(args.deployment).connection
     else:
         config = json.loads(Path(args.connection).read_text())
         if not isinstance(config, dict) or not config.get("uri"):
@@ -207,11 +205,11 @@ def run(args):
                 if not isinstance(variable, str) or variable not in os.environ:
                     raise ValueError("MongoDB password_env must name a set environment variable")
                 password = os.environ[variable]
-            target = MongoConnection(config["uri"], config.get("username"), password)
+            connection = MongoConnection(config["uri"], config.get("username"), password)
         elif config.get("backend") == "couchbase":
             if not config.get("username") or config.get("password_env") not in os.environ:
                 raise ValueError("Couchbase connection requires username and a set password_env")
-            target = CouchbaseConnection(
+            connection = CouchbaseConnection(
                 config["uri"], config["username"], os.environ[config["password_env"]]
             )
         else:
@@ -233,7 +231,7 @@ def run(args):
         if args.dataset_command == "load-aptmql":
             result = load_aptmql_dataset(
                 args.source,
-                target=target,
+                connection=connection,
                 database=args.database,
                 bucket=args.bucket,
                 scope=args.scope,
@@ -245,7 +243,7 @@ def run(args):
             if args.database is not None or args.scope is not None:
                 raise ValueError("AptMQL repository loading does not accept --database or --scope")
             result = load_aptmql_repository(
-                target=target,
+                connection=connection,
                 bucket=args.bucket,
                 revision=args.revision,
                 **options,
@@ -256,7 +254,7 @@ def run(args):
             }
         print(json.dumps(payload, indent=2))
         return 0
-    conn = connection(target)
+    conn = _validate_connection(connection)
     if isinstance(conn, MongoConnection):
         if not args.database:
             raise ValueError("MongoDB requires a destination database. Specify --database NAME.")
@@ -270,7 +268,7 @@ def run(args):
     if args.dataset_command == "load-hf-repository":
         result = load_hf_repository(
             args.source,
-            target=target,
+            connection=connection,
             database=args.database,
             bucket=args.bucket,
             scope=args.scope,
@@ -287,13 +285,13 @@ def run(args):
             else CouchbaseCollectionRef(args.bucket, args.scope, args.collection)
         )
         if args.dataset_command == "load-demo":
-            result = load_demo_data(target=target, collection=ref, **options)
+            result = load_demo_data(connection=connection, collection=ref, **options)
         elif args.dataset_command == "load-file":
-            result = load_file(args.source, target=target, collection=ref, **options)
+            result = load_file(args.source, connection=connection, collection=ref, **options)
         else:
             result = load_hf_dataset(
                 args.source,
-                target=target,
+                connection=connection,
                 collection=ref,
                 dataset=args.dataset,
                 split=args.split,

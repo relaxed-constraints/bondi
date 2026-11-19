@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pymongo.errors import ExecutionTimeout, OperationFailure
 
+from bondi import MongoConnection
 from bondi.couchbase import CouchbaseQuery
 from bondi.execution import ExecutionResult
 from bondi.mongodb import (
@@ -261,8 +262,8 @@ def test_borrowed_and_owned_client_lifetimes():
             pass
         client.close.assert_not_awaited()
         with patch("bondi.mongodb.executor.AsyncMongoClient", return_value=client) as factory:
-            async with AsyncMongoExecutor.from_uri(
-                "mongodb://example", client_kwargs={"retryReads": False}
+            async with AsyncMongoExecutor.from_connection(
+                MongoConnection("mongodb://example"), client_kwargs={"retryReads": False}
             ) as executor:
                 factory.assert_called_once_with("mongodb://example", retryReads=False)
             await executor.close()

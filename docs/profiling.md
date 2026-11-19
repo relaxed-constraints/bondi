@@ -12,10 +12,11 @@ All three have matching `*_workload()` methods. Those methods use the same
 concurrency and error policy described in [execution](executor.md).
 
 ```python
+from bondi import MongoConnection
 from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery, summarize
 
 query = MongoFindQuery(MongoCollectionRef("demo", "business"), {"city": "Sydney"})
-with MongoExecutor.from_uri("mongodb://127.0.0.1:27017") as executor:
+with MongoExecutor.from_connection(MongoConnection("mongodb://127.0.0.1:27017")) as executor:
     plan = executor.explain(query)
     profile = executor.profile(query)
 

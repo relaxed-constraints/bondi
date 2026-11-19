@@ -18,7 +18,10 @@ entries from one backend, retaining input order and optional integer pattern IDs
 
 ## Execution and interpretation
 
-Executors own or borrow backend connections. Async implementations perform I/O;
+Deployment handles manage Docker lifecycle and expose immutable connection settings
+through `deployment.connection`. Database operations that create a client accept
+`MongoConnection` or `CouchbaseConnection`. Collection references identify data
+independently of these settings. Executors own or borrow backend clients. Async implementations perform I/O;
 synchronous adapters use a dedicated background loop and are the teaching default.
 Workload concurrency stays inside the executor rather than a separate runner class.
 Queries are passed by reference and must not be mutated during operations.
@@ -86,7 +89,7 @@ of FieldIndex. IndexSet groups ordered definitions by collection name; batch app
 a MongoDB database or Couchbase bucket/scope. Single creation uses a collection reference. Versioned
 JSON artifacts contain definitions only, with BSON-aware MongoDB predicates.
 Creation validates the whole request before opening a client, reuses one client
-per batch, and reports partial progress without rollback. Top-level lifecycle functions dispatch from deployments or shared connection settings.
+per batch, and reports partial progress without rollback. Top-level index lifecycle functions dispatch from shared connection settings.
 Explicit backend functions use mongo/couchbase names and retain backend validation. Research
 index recommendation and experiment orchestration remain in consumer projects.
 Batch replacement explicitly clears secondary indexes on included collections,

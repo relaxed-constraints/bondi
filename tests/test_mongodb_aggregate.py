@@ -59,7 +59,7 @@ def test_rejects_invalid_stage_structure(pipeline, error):
 
 
 def test_target_validation():
-    with pytest.raises(TypeError, match="target"):
+    with pytest.raises(TypeError, match="collection"):
         MongoAggregateQuery("research.businesses", [])
 
 

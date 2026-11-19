@@ -21,21 +21,25 @@ def test_loader_live(backend, live_deployments):
         else CouchbaseCollectionRef(deployment.bucket, unique, "items")
     )
     # Fixture cleanup removes the entire isolated deployment.
-    result = load_documents([{"_id": "a", "v": 1}], target=deployment, collection=ref)
+    result = load_documents(
+        [{"_id": "a", "v": 1}], connection=deployment.connection, collection=ref
+    )
     expected = f"{unique}.items" if backend == "mongodb" else f"{deployment.bucket}.{unique}.items"
     assert result.destinations == {expected: 1}
     with pytest.raises(LoadDataError, match="empty"):
-        load_documents([{"_id": "b"}], target=deployment, collection=ref)
-    result = load_documents([{"_id": "b"}], target=deployment, collection=ref, mode="replace")
+        load_documents([{"_id": "b"}], connection=deployment.connection, collection=ref)
+    result = load_documents(
+        [{"_id": "b"}], connection=deployment.connection, collection=ref, mode="replace"
+    )
     assert sum(result.destinations.values()) == 1
     result = load_documents(
-        [{"_id": "b", "v": 2}], target=deployment, collection=ref, mode="upsert"
+        [{"_id": "b", "v": 2}], connection=deployment.connection, collection=ref, mode="upsert"
     )
     assert sum(result.destinations.values()) == 1
 
     load_documents(
         [{"_id": "replacement"}],
-        target=deployment,
+        connection=deployment.connection,
         collection=ref,
         mode="replace",
         namespace="different-dataset",
@@ -48,9 +52,9 @@ def test_loader_live(backend, live_deployments):
             assert list(client[unique].items.find({})) == [{"_id": "replacement"}]
     else:
         from bondi.data._values import document_key
-        from bondi.data._writers import CouchbaseWriter, connection
+        from bondi.data._writers import CouchbaseWriter
 
-        writer = CouchbaseWriter(connection(deployment))
+        writer = CouchbaseWriter(deployment.connection)
         try:
             scopes = writer._bucket(deployment.bucket).collections().get_all_scopes()
             scope = next(scope for scope in scopes if scope.name == unique)
@@ -72,7 +76,7 @@ def test_couchbase_new_bucket(live_deployments):
     from couchbase.cluster import Cluster
     from couchbase.options import ClusterOptions
 
-    from bondi.data import CouchbaseConnection
+    from bondi import CouchbaseConnection
     from bondi.data._values import document_key
 
     deployment = live_deployments("community")
@@ -81,10 +85,10 @@ def test_couchbase_new_bucket(live_deployments):
     ref = CouchbaseCollectionRef(bucket, "_default", "items")
     rows = [{"_id": "x", "field": "value"}]
     with pytest.raises(LoadDataError, match="bucket_memory_mb"):
-        load_documents(rows, target=target, collection=ref)
-    result = load_documents(rows, target=target, collection=ref, bucket_memory_mb=100)
+        load_documents(rows, connection=target, collection=ref)
+    result = load_documents(rows, connection=target, collection=ref, bucket_memory_mb=100)
     assert sum(result.destinations.values()) == 1
-    load_documents(rows, target=target, collection=ref, mode="replace")
+    load_documents(rows, connection=target, collection=ref, mode="replace")
     cluster = Cluster(
         deployment.uri,
         ClusterOptions(PasswordAuthenticator(deployment.username, deployment.password)),
@@ -101,7 +105,7 @@ def test_couchbase_new_bucket(live_deployments):
 def test_mongo_explicit_credentials_live(live_deployments):
     from pymongo import MongoClient
 
-    from bondi.data import MongoConnection
+    from bondi import MongoConnection
 
     deployment = live_deployments("mongodb")
     database = "auth_" + uuid4().hex[:10]
@@ -115,7 +119,7 @@ def test_mongo_explicit_credentials_live(live_deployments):
     uri = uri.rstrip("/") + ("&" if "?" in uri else "/?") + f"authSource={database}"
     target = MongoConnection(uri, username="loader", password=password)
     result = load_documents(
-        [{"_id": "a"}], target=target, collection=MongoCollectionRef(database, "items")
+        [{"_id": "a"}], connection=target, collection=MongoCollectionRef(database, "items")
     )
     assert result.destinations == {f"{database}.items": 1}
     with MongoClient(deployment.uri) as admin:
@@ -171,7 +175,7 @@ def test_couchbase_type_conversion_round_trip(live_deployments, tmp_path, source
             ]
         },
     }
-    kwargs = dict(target=deployment, collection=ref, decimal_mode="string")
+    kwargs = dict(connection=deployment.connection, collection=ref, decimal_mode="string")
     if source_kind == "native":
         result = load_documents([native], **kwargs)
     elif source_kind == "extended_documents":
@@ -241,7 +245,7 @@ def test_couchbase_replace_new_collection_live(live_deployments, new_scope):
     with patch.object(CouchbaseWriter, "_scan", side_effect=AssertionError("unexpected scan")):
         result = load_documents(
             [{"_id": "old", "value": 1}],
-            target=deployment,
+            connection=deployment.connection,
             collection=ref,
             mode="replace",
         )
@@ -257,7 +261,7 @@ def test_couchbase_replace_new_collection_live(live_deployments, new_scope):
         # Existing collections still need deletion on replacement.
         load_documents(
             [{"_id": "new", "value": 2}],
-            target=deployment,
+            connection=deployment.connection,
             collection=ref,
             mode="replace",
         )

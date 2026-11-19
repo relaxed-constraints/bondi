@@ -22,6 +22,7 @@ from bondi._health import (
     _validate_timeout,
 )
 from bondi._load import _generate_load
+from bondi.connection import MongoConnection
 from bondi.execution import DatabaseUnavailableError, ExecutionResult
 from bondi.load import LoadCallback, LoadResult, Selection
 from bondi.mongodb.aggregate import MongoAggregateQuery
@@ -78,7 +79,7 @@ class AsyncMongoExecutor:
         timeout_seconds: Optional positive, finite deadline shared by the operation
             and all cursor batches. None leaves client timeout configuration in effect.
 
-    Use from_uri() and async with for an owned client. The client and executor must
+    Use from_connection() and async with for an owned client. The client and executor must
     stay on one event loop. Inputs are retained by reference: do not modify queries,
     workloads or option contents while a call is running. No write-stage guard or
     additional retries are added. Database permissions govern allowed operations.
@@ -114,9 +115,9 @@ class AsyncMongoExecutor:
         self._closed = False
 
     @classmethod
-    def from_uri(
+    def from_connection(
         cls,
-        uri: str,
+        connection: MongoConnection,
         *,
         concurrency: int = 1,
         continue_on_error: bool = False,
@@ -128,11 +129,32 @@ class AsyncMongoExecutor:
 
         Validates executor options before allocating the client. Use async with
         or await close() for cleanup. Creating the executor does not ping MongoDB.
+        client_kwargs must not contain host, username or password.
+
+        Args:
+            connection: MongoConnection settings for the instance. No client is borrowed.
+            concurrency: Positive maximum number of in-flight workload entries.
+            continue_on_error: Schedule remaining entries after database operation errors.
+            timeout_seconds: Optional positive finite deadline per query operation.
+            health_check_timeout_seconds: Optional positive finite preflight deadline.
+            client_kwargs: Native driver options. Authentication comes from connection settings.
 
         Returns:
             An [`AsyncMongoExecutor`][bondi.mongodb.AsyncMongoExecutor] that owns its connection.
         """
-        options = _options(client_kwargs, {"host"}, "client_kwargs")
+        if not isinstance(connection, MongoConnection):
+            raise TypeError("connection must be a MongoConnection")
+        options = _options(client_kwargs, {"host", "username", "password"}, "client_kwargs")
+        options.update(
+            {
+                key: value
+                for key, value in (
+                    ("username", connection.username),
+                    ("password", connection.password),
+                )
+                if value is not None
+            }
+        )
         executor = cls(
             None,
             concurrency=concurrency,
@@ -140,7 +162,7 @@ class AsyncMongoExecutor:
             timeout_seconds=timeout_seconds,
             health_check_timeout_seconds=health_check_timeout_seconds,
         )
-        executor.client = AsyncMongoClient(uri, **options)
+        executor.client = AsyncMongoClient(connection.uri, **options)
         executor._owns_client = True
         return executor
 
@@ -218,7 +240,7 @@ class AsyncMongoExecutor:
         if type(collect_results) is not bool:
             raise TypeError("collect_results must be a boolean")
         options = _options(query_kwargs, _QUERY_FIELDS, "query_kwargs")
-        collection = self.client[query.target.database][query.target.collection]
+        collection = self.client[query.collection.database][query.collection.collection]
         documents = [] if collect_results else None
         count = 0
         cursor = None
@@ -312,7 +334,7 @@ class AsyncMongoExecutor:
         inner_options = _options(query_kwargs, _QUERY_FIELDS, "query_kwargs")
         outer_options = _options(command_kwargs, _COMMAND_FIELDS, "command_kwargs")
         if isinstance(query, MongoFindQuery):
-            inner = {"find": query.target.collection, "filter": query.filter}
+            inner = {"find": query.collection.collection, "filter": query.filter}
             for name, value in (
                 ("projection", query.projection),
                 ("sort", dict(query.sort) or None),
@@ -322,9 +344,13 @@ class AsyncMongoExecutor:
                 if value is not None:
                     inner[name] = value
         else:
-            inner = {"aggregate": query.target.collection, "pipeline": query.pipeline, "cursor": {}}
+            inner = {
+                "aggregate": query.collection.collection,
+                "pipeline": query.pipeline,
+                "cursor": {},
+            }
         inner.update(inner_options)
-        db = self.client[query.target.database]
+        db = self.client[query.collection.database]
         probe_ms = await _preflight(self)
         start = perf_counter()
         with self._timeout():

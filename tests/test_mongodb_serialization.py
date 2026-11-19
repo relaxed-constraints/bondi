@@ -114,7 +114,7 @@ def test_fingerprint_is_recomputed_and_order_sensitive():
 @pytest.mark.parametrize(
     "field,value",
     [
-        ("target", MongoCollectionRef("other", "businesses")),
+        ("collection", MongoCollectionRef("other", "businesses")),
         ("projection", {"a": 1}),
         ("sort", (("a", 1),)),
         ("skip", 1),

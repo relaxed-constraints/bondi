@@ -8,8 +8,8 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any, Literal
 
+from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
 from bondi.couchbase.collection import CouchbaseCollectionRef
-from bondi.deployment import Deployment
 from bondi.mongodb import MongoCollectionRef
 
 from ._sources import (
@@ -21,26 +21,26 @@ from ._sources import (
     records,
     source_plan,
 )
-from ._types import CouchbaseConnection, LoadDataError, LoadDataResult, MongoConnection
+from ._types import LoadDataError, LoadDataResult
 from ._values import convert, document_key, generated_id, identity
-from ._writers import CouchbaseWriter, InsertBatchError, MongoWriter, connection, name
+from ._writers import CouchbaseWriter, InsertBatchError, MongoWriter, name
 
 
-def _destination(target, collection):
-    conn = connection(target)
+def _destination(connection, collection):
+    conn = _validate_connection(connection)
     if isinstance(conn, MongoConnection) and isinstance(collection, MongoCollectionRef):
         dest = (name(collection.database), None, name(collection.collection))
     elif isinstance(conn, CouchbaseConnection) and isinstance(collection, CouchbaseCollectionRef):
         dest = (name(collection.bucket), name(collection.scope), name(collection.collection))
     else:
-        raise TypeError("collection must be a CollectionRef for the target backend")
+        raise TypeError("collection must be a CollectionRef for the connection backend")
     return conn, dest
 
 
 def load_documents(
     documents: Iterable[dict],
     *,
-    target: Deployment | MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection,
     collection: MongoCollectionRef | CouchbaseCollectionRef,
     id_field: str | None = None,
     namespace: str | None = None,
@@ -56,8 +56,8 @@ def load_documents(
 
     Args:
         documents: Iterable of document dictionaries. No split or collection mappings.
-        target: Managed deployment or explicit connection.
-        collection: Exact destination reference matching the target backend.
+        connection: Connection settings for the destination instance.
+        collection: Exact destination reference matching the connection backend.
         id_field: Field to use as _id. Otherwise preserve _id.
         namespace: Stable identity used to generate missing IDs.
         mode: create requires an empty destination. replace clears it, preserving
@@ -85,10 +85,10 @@ def load_documents(
     """
     if isinstance(documents, (str, Path, Mapping)) or not isinstance(documents, Iterable):
         raise TypeError("documents must be an iterable of dictionaries, not a file or mapping")
-    _destination(target, collection)
+    _destination(connection, collection)
     return _load(
         [source_plan(documents, collection.collection, namespace)],
-        target=target,
+        connection=connection,
         collection=collection,
         id_field=id_field,
         namespace=namespace,
@@ -105,7 +105,7 @@ def load_documents(
 def load_file(
     path: str | Path,
     *,
-    target: Deployment | MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection,
     collection: MongoCollectionRef | CouchbaseCollectionRef,
     **options: Any,
 ) -> LoadDataResult:
@@ -113,7 +113,7 @@ def load_file(
 
     Args:
         path: Local file. Its extension selects the reader.
-        target: Managed deployment or explicit connection.
+        connection: Connection settings for the destination instance.
         collection: MongoCollectionRef or CouchbaseCollectionRef.
         **options: Shared ID, write, type and progress options from load_documents.
 
@@ -123,13 +123,13 @@ def load_file(
     CSV values remain strings. JSON arrays are streamed. No manifest, package
     mapping or catalogue alias is accepted.
     """
-    _destination(target, collection)
+    _destination(connection, collection)
     path = Path(path)
     if path.suffix.lower() not in (".csv", ".json", ".jsonl", ".parquet"):
         raise ValueError("Supported file formats: csv, json, jsonl, parquet")
     return _load(
         [source_plan(path, collection.collection, options.get("namespace"))],
-        target=target,
+        connection=connection,
         collection=collection,
         **options,
     )
@@ -138,7 +138,7 @@ def load_file(
 def load_hf_dataset(
     repo_id: str,
     *,
-    target: Deployment | MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection,
     collection: MongoCollectionRef | CouchbaseCollectionRef,
     dataset: str | None = None,
     split: str | list[str] | None = None,
@@ -151,7 +151,7 @@ def load_hf_dataset(
 
     Args:
         repo_id: Hub dataset repository ID.
-        target: Managed deployment or explicit connection.
+        connection: Connection settings for the destination instance.
         collection: Exact destination reference. No suffix is added.
         dataset: Configuration name. May be omitted only for a single-config repo.
         split: Split name or list. None combines all splits in sorted name order.
@@ -173,7 +173,7 @@ def load_hf_dataset(
     Other sources use Hugging Face readers, which can normalize rows to a shared
     schema. Generated IDs include the original split; explicit duplicate IDs fail.
     """
-    _destination(target, collection)
+    _destination(connection, collection)
     commit, extended_json = hf_source(repo_id, revision)
     configs = hf_configs(repo_id, commit)
     if dataset is None:
@@ -184,13 +184,13 @@ def load_hf_dataset(
         raise ValueError(f"Unknown dataset {dataset!r}. Available datasets: {configs}")
     plans = hf_plans(repo_id, dataset, commit, split, options.get("namespace"), streaming=streaming)
     mode = _hf_json_mode(json_mode, plans, extended_json)
-    return _load(plans, target=target, collection=collection, json_mode=mode, **options)
+    return _load(plans, connection=connection, collection=collection, json_mode=mode, **options)
 
 
 def load_hf_repository(
     repo_id: str,
     *,
-    target: Deployment | MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection,
     database: str | None = None,
     bucket: str | None = None,
     scope: str = "_default",
@@ -204,7 +204,7 @@ def load_hf_repository(
 
     Args:
         repo_id: Hub dataset repository ID.
-        target: Managed deployment or explicit connection.
+        connection: Connection settings for the destination instance.
         database: Required for MongoDB. Do not pass bucket or scope.
         bucket: Required for Couchbase. Do not pass database.
         scope: Couchbase scope, default _default.
@@ -226,7 +226,7 @@ def load_hf_repository(
     LoadDataError.result includes completed collections and the failed collection.
     Progress callbacks report the current collection only.
     """
-    conn = connection(target)
+    conn = _validate_connection(connection)
     if isinstance(conn, MongoConnection):
         if database is None:
             raise ValueError("MongoDB requires --database NAME or database='NAME'")
@@ -262,7 +262,7 @@ def load_hf_repository(
     for config, ref, plans, effective_mode in prepared:
         try:
             results[config] = _load(
-                plans, target=target, collection=ref, json_mode=effective_mode, **options
+                plans, connection=connection, collection=ref, json_mode=effective_mode, **options
             )
         except LoadDataError as error:
             for previous in results.values():
@@ -292,7 +292,7 @@ def _hf_json_mode(json_mode, plans, extended_json):
 def _load(
     plans,
     *,
-    target,
+    connection,
     collection,
     bucket_memory_mb=None,
     id_field=None,
@@ -325,7 +325,7 @@ def _load(
         type(bucket_memory_mb) is not int or bucket_memory_mb < 100
     ):
         raise ValueError("bucket_memory_mb must be an integer of at least 100")
-    conn, dest = _destination(target, collection)
+    conn, dest = _destination(connection, collection)
     backend = "couchbase" if isinstance(conn, CouchbaseConnection) else "mongodb"
     for plan in plans:
         plan["destination"] = dest

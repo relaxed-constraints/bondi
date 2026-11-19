@@ -20,6 +20,7 @@ from bondi._health import (
     _validate_timeout,
 )
 from bondi._load import _generate_load
+from bondi.connection import CouchbaseConnection
 from bondi.couchbase.query import CouchbaseQuery
 from bondi.execution import DatabaseUnavailableError, ExecutionResult
 from bondi.load import LoadCallback, LoadResult, Selection
@@ -142,12 +143,10 @@ class AsyncCouchbaseExecutor:
         self._closed = False
 
     @classmethod
-    async def from_uri(
+    async def from_connection(
         cls,
-        uri: str,
+        connection: CouchbaseConnection,
         *,
-        username: str,
-        password: str,
         concurrency: int = 1,
         continue_on_error: bool = False,
         timeout_seconds: float | None = None,
@@ -157,14 +156,24 @@ class AsyncCouchbaseExecutor:
         """Connect an owned cluster and wait up to 30 seconds for the Query service.
 
         Await this factory before using async with. cluster_kwargs supplies native
-        ClusterOptions; authentication comes from username/password. On readiness
+        ClusterOptions; authentication comes from connection settings. On readiness
         failure or cancellation the newly connected cluster is closed. Connection
         setup is outside per-query timing and uses SDK connection timeout settings.
+
+        Args:
+            connection: CouchbaseConnection settings for the instance. No client is borrowed.
+            concurrency: Positive maximum number of in-flight workload entries.
+            continue_on_error: Schedule remaining entries after database operation errors.
+            timeout_seconds: Optional positive finite deadline per query operation.
+            health_check_timeout_seconds: Optional positive finite preflight deadline.
+            cluster_kwargs: Native driver options. Authentication comes from connection settings.
 
         Returns:
             An [`AsyncCouchbaseExecutor`][bondi.couchbase.AsyncCouchbaseExecutor] that owns its
             connection.
         """
+        if not isinstance(connection, CouchbaseConnection):
+            raise TypeError("connection must be a CouchbaseConnection")
         executor = cls(
             None,
             concurrency=concurrency,
@@ -179,7 +188,10 @@ class AsyncCouchbaseExecutor:
 
         options = _options(cluster_kwargs, {"authenticator"})
         executor.cluster = await Cluster.connect(
-            uri, ClusterOptions(PasswordAuthenticator(username, password), **options)
+            connection.uri,
+            ClusterOptions(
+                PasswordAuthenticator(connection.username, connection.password), **options
+            ),
         )
         executor._owns_cluster = True
         try:

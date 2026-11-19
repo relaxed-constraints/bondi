@@ -60,7 +60,7 @@ def test_sort_order_is_preserved_and_affects_equality():
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("target", "research.businesses"),
+        ("collection", "research.businesses"),
         ("filter", None),
         ("filter", []),
         ("projection", ["name"]),
@@ -77,7 +77,7 @@ def test_sort_order_is_preserved_and_affects_equality():
     ],
 )
 def test_rejects_incorrect_types(field, value):
-    kwargs = {"target": TARGET, "filter": {}, field: value}
+    kwargs = {"collection": TARGET, "filter": {}, field: value}
     with pytest.raises(TypeError):
         MongoFindQuery(**kwargs)
 
@@ -96,6 +96,6 @@ def test_rejects_incorrect_types(field, value):
     ],
 )
 def test_rejects_invalid_values(field, value):
-    kwargs = {"target": TARGET, "filter": {}, field: value}
+    kwargs = {"collection": TARGET, "filter": {}, field: value}
     with pytest.raises(ValueError):
         MongoFindQuery(**kwargs)

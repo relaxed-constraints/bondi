@@ -7,12 +7,6 @@ from datetime import timedelta
 from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 
-from bondi.connection import normalize_connection
-
-
-def connection(target):
-    return normalize_connection(target)
-
 
 class InsertBatchError(RuntimeError):
     """A failed batch with its confirmed write count."""

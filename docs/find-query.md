@@ -1,7 +1,7 @@
 # MongoDB queries
 
 Query objects describe operations independently of a connection. A collection
-reference contains only a database and collection name; choose the deployment when
+reference contains only a database and collection name; choose connection settings when
 creating an executor.
 
 ```python
@@ -125,7 +125,7 @@ audit records should retain the text or decode it separately with standard JSON.
 ## Convert a find query to aggregation
 
 `MongoFindQuery.to_aggregate()` returns an independent `MongoAggregateQuery`
-with the same target. It emits `$match`, `$sort`, `$skip`, `$limit`, then `$project`,
+with the same collection. It emits `$match`, `$sort`, `$skip`, `$limit`, then `$project`,
 omitting empty/default components. For example:
 
 ```python

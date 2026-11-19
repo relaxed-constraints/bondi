@@ -113,7 +113,7 @@ from bondi.mongodb import MongoCollectionRef
 connection = MongoConnection("mongodb://localhost:27017")
 name = create_index(
     connection,
-    target=MongoCollectionRef("shop", "orders"),
+    collection=MongoCollectionRef("shop", "orders"),
     index=recent,
 )
 names = create_indexes(
@@ -124,18 +124,17 @@ names = create_indexes(
 )
 ```
 
-A managed `Deployment` can replace the connection argument directly. This reads
-its connection settings; it does not start, stop or otherwise modify its lifecycle.
-Connection settings are exported from `bondi`; existing `bondi.data` imports remain
-supported. These objects are configuration, not open SDK clients.
+Use `deployment.connection` for a managed database, or construct `MongoConnection`
+or `CouchbaseConnection` for an external instance. These objects are settings;
+each operation owns and closes its SDK client. See [Connection settings](connections.md).
 
-The top-level functions dispatch from the deployment or connection type. They
+The top-level functions dispatch from the connection type. They
 require `database` for MongoDB or `bucket` and `scope` for Couchbase and reject mixed
 namespace arguments before connecting. Collection references must match the backend.
 Explicit backend functions are also available as `create_mongo_index`,
 `create_mongo_indexes`, `remove_mongo_index`, `remove_mongo_indexes` in `bondi.mongodb`,
 and the corresponding `create_couchbase_*` / `remove_couchbase_*` functions in
-`bondi.couchbase`. Their old unprefixed backend names have been removed.
+`bondi.couchbase`.
 
 For Couchbase, install `bondi[couchbase]` and use:
 
@@ -175,7 +174,7 @@ built-in index are rejected; a collection without it raises an error. Couchbase
 
 Batch results map collection names to lists of confirmed names. Validation failures
 occur before connection. A server failure during a batch raises
-`IndexCreationError`, with `completed`, `target` (the collection name),
+`IndexCreationError`, with `completed`, `collection` (the collection name),
 `position` (zero-based), and the original exception as `__cause__`. Creation is non-atomic: earlier indexes remain,
 and the failed operation may have created an index or left a build running.
 Single-index calls propagate the original exception. Connection-open failures also
@@ -229,7 +228,7 @@ from bondi.mongodb import MongoCollectionRef
 
 removed = remove_index(
     connection,
-    target=MongoCollectionRef("shop", "orders"),
+    collection=MongoCollectionRef("shop", "orders"),
     index=recent,
 )
 removed_names = remove_indexes(connection, database="shop", indexes=indexes)
@@ -249,7 +248,7 @@ names are skipped, so cleanup is repeatable. Empty lists remove nothing. Native
 errors other than missing-index errors propagate; absent Couchbase collections
 may still raise namespace errors. Each call owns and closes one client.
 
-Batch server failures raise `IndexRemovalError` with `completed`, `target`,
+Batch server failures raise `IndexRemovalError` with `completed`, `collection`,
 `position`, `phase`, `index_name` and `__cause__`. Inspection failures have no
 position or index name. Single-index calls propagate the original error. No rollback
 is attempted, and the failing removal may have taken effect. These functions do

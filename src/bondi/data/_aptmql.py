@@ -8,14 +8,14 @@ from bson import decode_file_iter
 from bson.codec_options import CodecOptions
 from huggingface_hub import HfApi, hf_hub_download
 
+from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
 from bondi.couchbase.collection import CouchbaseCollectionRef
-from bondi.deployment import Deployment
 from bondi.mongodb import MongoCollectionRef
 
 from ._loader import _load
 from ._sources import source_plan
-from ._types import CouchbaseConnection, LoadDataError, LoadDataResult, MongoConnection
-from ._writers import connection, name
+from ._types import LoadDataError, LoadDataResult
+from ._writers import name
 
 REPOSITORY = "MongoDB/AptMQL-Bench"
 
@@ -44,8 +44,8 @@ def _catalog(revision):
     return commit, catalog
 
 
-def _references(target, datasets, database, bucket, scope):
-    conn = connection(target)
+def _references(connection, datasets, database, bucket, scope):
+    conn = _validate_connection(connection)
     if isinstance(conn, MongoConnection):
         if bucket is not None or scope is not None:
             raise ValueError("MongoDB does not accept bucket or scope")
@@ -73,7 +73,7 @@ def _references(target, datasets, database, bucket, scope):
     }
 
 
-def _load_catalog(target, commit, catalog, refs, options):
+def _load_catalog(connection, commit, catalog, refs, options):
     # BSON is already decoded. Never reinterpret literal Extended JSON-shaped documents.
     if options.get("json_mode", "plain") != "plain":
         raise ValueError("AptMQL BSON loading requires json_mode='plain'")
@@ -105,7 +105,7 @@ def _load_catalog(target, commit, catalog, refs, options):
             with cached.open("rb") as stream:
                 plan["source"] = decode_file_iter(stream, CodecOptions(tz_aware=True))
                 result = _load(
-                    [plan], target=target, collection=refs[dataset][collection], **options
+                    [plan], connection=connection, collection=refs[dataset][collection], **options
                 )
         except Exception as error:
             if not isinstance(error, LoadDataError):
@@ -113,7 +113,7 @@ def _load_catalog(target, commit, catalog, refs, options):
                     f"{dataset}.{collection}: {type(error).__name__}",
                     LoadDataResult(
                         "mongodb"
-                        if isinstance(connection(target), MongoConnection)
+                        if isinstance(_validate_connection(connection), MongoConnection)
                         else "couchbase",
                         sources=[plan["info"]],
                     ),
@@ -135,7 +135,7 @@ def _load_catalog(target, commit, catalog, refs, options):
 def load_aptmql_dataset(
     dataset: str,
     *,
-    target: Deployment | MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection,
     database: str | None = None,
     bucket: str | None = None,
     scope: str | None = None,
@@ -146,7 +146,7 @@ def load_aptmql_dataset(
 
     Args:
         dataset: Source database name, such as beer_factory. Its split is discovered.
-        target: Managed deployment or explicit connection.
+        connection: Connection settings for the destination instance.
         database: MongoDB destination name. Defaults to the source dataset name.
         bucket: Required Couchbase bucket. Do not supply for MongoDB.
         scope: Couchbase destination scope. Defaults to the source dataset name.
@@ -168,20 +168,20 @@ def load_aptmql_dataset(
     before writes. Unsupported destination values follow load_documents policies.
     """
     name(dataset)
-    connection(target)
+    _validate_connection(connection)
     commit, catalog = _catalog(revision)
     if dataset not in catalog:
         raise ValueError(
             f"Unknown AptMQL dataset {dataset!r}. Available datasets: {sorted(catalog)}"
         )
     selected = {dataset: catalog[dataset]}
-    refs = _references(target, selected, database, bucket, scope)
-    return _load_catalog(target, commit, selected, refs, options)[dataset]
+    refs = _references(connection, selected, database, bucket, scope)
+    return _load_catalog(connection, commit, selected, refs, options)[dataset]
 
 
 def load_aptmql_repository(
     *,
-    target: Deployment | MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection,
     bucket: str | None = None,
     revision: str | None = None,
     **options: Any,
@@ -189,7 +189,7 @@ def load_aptmql_repository(
     """Load every AptMQL dataset into its own MongoDB database or Couchbase scope.
 
     Args:
-        target: Managed deployment or explicit connection.
+        connection: Connection settings for the destination instance.
         bucket: Required Couchbase destination bucket. Do not supply for MongoDB.
         revision: Hub branch, tag or commit, resolved once for the entire repository.
         **options: Shared load_documents options applied to every collection.
@@ -209,7 +209,7 @@ def load_aptmql_repository(
     """
     if "database" in options or "scope" in options:
         raise ValueError("Repository loading uses source dataset names as databases or scopes")
-    connection(target)
+    _validate_connection(connection)
     commit, catalog = _catalog(revision)
-    refs = _references(target, catalog, None, bucket, None)
-    return _load_catalog(target, commit, catalog, refs, options)
+    refs = _references(connection, catalog, None, bucket, None)
+    return _load_catalog(connection, commit, catalog, refs, options)

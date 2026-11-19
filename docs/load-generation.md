@@ -6,6 +6,7 @@ query timeout, error policy and optional health preflight. Both MongoDB and
 Couchbase provide synchronous and asynchronous methods.
 
 ```python
+from bondi import MongoConnection
 from bondi.load import WeightedRandom
 from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery
 from bondi.workload import Workload, WorkloadEntry
@@ -24,8 +25,8 @@ def record_result(result):
     print(result.attempt_id, result.workload_position, result.duration, result.stop_reason)
 
 
-with MongoExecutor.from_uri(
-    "mongodb://localhost:27017",
+with MongoExecutor.from_connection(
+    MongoConnection("mongodb://localhost:27017"),
     concurrency=16,
     timeout_seconds=90,
     continue_on_error=True,

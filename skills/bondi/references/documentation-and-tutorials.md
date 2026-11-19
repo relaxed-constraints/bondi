@@ -44,3 +44,5 @@ matching Git tag (for example, replace `main` with `v0.3.0`). Database notebooks
 create named deployments and load demo data; their cleanup cells delete the
 deployment's data. Read setup and cleanup before running against existing state.
 Notebook timings illustrate the API, not controlled benchmark results.
+
+Connection settings and client ownership: [guide](https://relaxed-constraints.github.io/bondi/connections/), [API](https://relaxed-constraints.github.io/bondi/reference/connection/).

@@ -249,7 +249,7 @@ Paths are retained even when the corresponding parent contains no operators.
 from bondi.mongodb import MongoAggregateQuery
 
 nested = MongoAggregateQuery(
-    query.target,
+    query.collection,
     [
         {
             "$lookup": {
@@ -312,7 +312,7 @@ operators on a path. Start each stage-local expression at zero:
 
 ```python
 expression_query = MongoAggregateQuery(
-    query.target,
+    query.collection,
     [{"$project": {"total": {"$multiply": [{"$add": ["$price", 1]}, "$quantity"]}}}],
 )
 expression_stats = query_statistics(expression_query)
@@ -374,7 +374,7 @@ not insert `$and` into `operator_counts`, change predicates, or mutate the query
 
 ```python
 logical_query = MongoAggregateQuery(
-    query.target,
+    query.collection,
     [{"$match": {"$or": [{"a": 1}, {"$and": [{"b": 2}, {"c": 3}]}, {"d": 4}]}}],
 )
 logical_stats = query_statistics(logical_query)
@@ -383,7 +383,7 @@ assert logical_stats.filter_logical_fan_out == 3
 assert logical_stats.expression_depth == 0
 assert logical_stats.predicate_count == 4
 
-implicit = query_statistics(MongoFindQuery(query.target, {"a": 1, "b": 2, "c": 3}))
+implicit = query_statistics(MongoFindQuery(query.collection, {"a": 1, "b": 2, "c": 3}))
 assert (implicit.filter_logical_depth, implicit.filter_logical_fan_out) == (1, 3)
 assert implicit.operator_counts == {"$eq": 3}  # No synthetic $and operator.
 ```
@@ -408,7 +408,7 @@ syntactically nested pipeline.
 
 ```python
 nested_empty = MongoAggregateQuery(
-    query.target,
+    query.collection,
     [
         {
             "$lookup": {
@@ -457,7 +457,7 @@ statistics from its converted aggregation, but not necessarily to a count of the
 operators originally written in the find query.
 
 ```python
-sliced = MongoFindQuery(query.target, {}, projection={"values": {"$slice": 2}})
+sliced = MongoFindQuery(query.collection, {}, projection={"values": {"$slice": 2}})
 converted = sliced.to_aggregate()
 assert query_statistics(sliced) == query_statistics(converted)
 assert query_statistics(sliced).stage_counts == {"$set": 1}
@@ -476,7 +476,7 @@ bindings and special-projection paths. The statistics parser does not bypass the
 
 ```python
 workload_query = MongoAggregateQuery(
-    query.target,
+    query.collection,
     [
         {"$match": {"status": "active", "age": {"$gte": 18, "$lt": 65}}},
         {"$match": {"$or": [{"country": "AU"}, {"country": "NZ"}]}},
@@ -576,7 +576,7 @@ regression tests rather than producing guessed counts.
 ### Error example and versioning
 
 ```python
-unsupported = MongoAggregateQuery(query.target, [{"$project": {"x": {"$futureOp": 1}}}])
+unsupported = MongoAggregateQuery(query.collection, [{"$project": {"x": {"$futureOp": 1}}}])
 try:
     query_statistics(unsupported)
 except ValueError as error:

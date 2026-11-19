@@ -32,7 +32,7 @@ DOCS = [{"x": i, "y": str(i % 10), "flag": bool(i % 2)} for i in range(100)]
 
 def generator(documents=DOCS, values="distinct", estimator=None, **config):
     return MongoWorkloadGenerator(
-        target=TARGET,
+        collection=TARGET,
         schema=Schema.from_documents(documents, values=values),
         estimator=estimator,
         config=MongoGenerationConfig(**config),
@@ -87,7 +87,7 @@ def test_reproducible_across_hash_seeds():
 from bondi.mongodb import MongoCollectionRef, MongoWorkloadGenerator
 from bondi.schema import Schema
 s = Schema.from_documents([{'a':str(i),'b':i} for i in range(20)],values='full')
-g = MongoWorkloadGenerator(target=MongoCollectionRef('d','c'),schema=s)
+g = MongoWorkloadGenerator(collection=MongoCollectionRef('d','c'),schema=s)
 print([e.query.to_json() for e in g.generate(num_patterns=8,instances_per_pattern=4,seed=9)])
 """
     outputs = [

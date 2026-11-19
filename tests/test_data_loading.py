@@ -9,7 +9,8 @@ from unittest.mock import MagicMock
 import pytest
 from bson import ObjectId
 
-from bondi.data import LoadDataError, MongoConnection, load_documents, load_file
+from bondi import MongoConnection
+from bondi.data import LoadDataError, load_documents, load_file
 from bondi.data._values import convert, document_key
 from bondi.data._writers import CouchbaseWriter, InsertBatchError
 from bondi.mongodb import MongoCollectionRef
@@ -58,7 +59,7 @@ def load(source, **kwargs):
     loader = load_file if isinstance(source, Path) else load_documents
     return loader(
         source,
-        target=MongoConnection("mongodb://unused"),
+        connection=MongoConnection("mongodb://unused"),
         collection=MongoCollectionRef("test", "items"),
         **kwargs,
     )
@@ -132,8 +133,8 @@ def test_mongo_partial_insert_counts(monkeypatch, write_concern_failure):
 @pytest.mark.parametrize("ambiguous", [False, True])
 def test_couchbase_partial_insert_counts(monkeypatch, ambiguous):
     exceptions = pytest.importorskip("couchbase.exceptions")
+    from bondi import CouchbaseConnection
     from bondi.couchbase import CouchbaseCollectionRef
-    from bondi.data import CouchbaseConnection
 
     collection = MagicMock()
     error = (
@@ -152,7 +153,7 @@ def test_couchbase_partial_insert_counts(monkeypatch, ambiguous):
     with pytest.raises(LoadDataError, match="Couchbase write failed") as caught:
         load_documents(
             [{"_id": "first"}, {"_id": "later"}],
-            target=CouchbaseConnection("couchbase://unused", "user", "password"),
+            connection=CouchbaseConnection("couchbase://unused", "user", "password"),
             collection=CouchbaseCollectionRef("test", "scope", "items"),
         )
 
@@ -276,7 +277,7 @@ def test_mongo_credentials_forwarded_without_encoding(monkeypatch, credentials):
 
 @pytest.mark.parametrize("field", ["username", "password"])
 def test_invalid_mongo_credential_type(field):
-    with pytest.raises(ValueError, match="strings or None"):
+    with pytest.raises(TypeError, match="strings or None"):
         MongoConnection("mongodb://localhost", **{field: 123})
 
 
@@ -316,7 +317,7 @@ def test_cli_mongo_password_env(tmp_path, monkeypatch, capsys, with_password):
         )
         == 0
     )
-    target = loader.call_args.kwargs["target"]
+    target = loader.call_args.kwargs["connection"]
     assert target.username == "user"
     assert target.password == ("p@ss:/%" if with_password else None)
     assert "p@ss:/%" not in capsys.readouterr().out
@@ -419,7 +420,8 @@ def test_cli_missing_database_message(monkeypatch, capsys):
     from bondi._cli import main
 
     monkeypatch.setattr(
-        "bondi.deployment.get_deployment", lambda name: MongoConnection("mongodb://unused")
+        "bondi.deployment.get_deployment",
+        lambda name: SimpleNamespace(connection=MongoConnection("mongodb://unused")),
     )
     constructor = Mock()
     monkeypatch.setattr("bondi.data._loader.MongoWriter", constructor)
@@ -485,7 +487,7 @@ def test_hf_combines_splits_into_exact_destination(writer, hub, streaming):
     result = load_hf_dataset(
         "org/forum",
         dataset="users",
-        target=MongoConnection("x"),
+        connection=MongoConnection("x"),
         collection=MongoCollectionRef("test", "chosen"),
         streaming=streaming,
     )
@@ -500,7 +502,7 @@ def test_hf_combines_splits_into_exact_destination(writer, hub, streaming):
         "org/forum",
         dataset="users",
         split="train",
-        target=MongoConnection("x"),
+        connection=MongoConnection("x"),
         collection=MongoCollectionRef("test", "chosen"),
         streaming=streaming,
         mode="replace",
@@ -512,7 +514,7 @@ def test_hf_combines_splits_into_exact_destination(writer, hub, streaming):
 def test_hf_selection_errors_before_writes(writer, hub):
     from bondi.data import load_hf_dataset, load_hf_repository
 
-    kwargs = dict(target=MongoConnection("x"), collection=MongoCollectionRef("db", "c"))
+    kwargs = dict(connection=MongoConnection("x"), collection=MongoCollectionRef("db", "c"))
     with pytest.raises(ValueError, match="Specify dataset"):
         load_hf_dataset("org/forum", **kwargs)
     with pytest.raises(ValueError, match="Unknown dataset"):
@@ -521,21 +523,25 @@ def test_hf_selection_errors_before_writes(writer, hub):
         load_hf_dataset("org/forum", dataset="users", split="validation", **kwargs)
     hub[0]["users"].pop("train")
     with pytest.raises(ValueError, match="absent"):
-        load_hf_repository("org/forum", target=MongoConnection("x"), database="db", split="train")
+        load_hf_repository(
+            "org/forum", connection=MongoConnection("x"), database="db", split="train"
+        )
     assert writer.data == {}
 
 
 def test_hf_repository_names_revision_and_partial_failure(writer, hub):
     from bondi.data import load_hf_repository
 
-    result = load_hf_repository("org/forum", target=MongoConnection("x"), database="db")
+    result = load_hf_repository("org/forum", connection=MongoConnection("x"), database="db")
     assert list(result) == ["posts", "users"]
     assert result["users"].destinations == {"db.users": 2}
     assert len(hub[2]) == 1
     assert {call[1] for call in hub[1]} == {"fixed-commit"}
     hub[0]["users"]["train"] = [{"fail": True}]
     with pytest.raises(LoadDataError) as error:
-        load_hf_repository("org/forum", target=MongoConnection("x"), database="db", mode="replace")
+        load_hf_repository(
+            "org/forum", connection=MongoConnection("x"), database="db", mode="replace"
+        )
     assert error.value.result.destinations["db.posts"] == 2
     assert error.value.result.destinations["db.users"] == 1
     assert error.value.result.uncertain_writes
@@ -549,7 +555,7 @@ def test_hf_duplicate_ids_across_splits(writer, hub):
         load_hf_dataset(
             "org/forum",
             dataset="users",
-            target=MongoConnection("x"),
+            connection=MongoConnection("x"),
             collection=MongoCollectionRef("db", "c"),
         )
 
@@ -559,12 +565,12 @@ def test_hf_single_config_and_invalid_repository_names(writer, hub):
 
     hub[0].pop("posts")
     assert load_hf_dataset(
-        "org/forum", target=MongoConnection("x"), collection=MongoCollectionRef("db", "c")
+        "org/forum", connection=MongoConnection("x"), collection=MongoCollectionRef("db", "c")
     ).destinations == {"db.c": 2}
     hub[0]["bad/name"] = hub[0]["users"]
     before = dict(writer.data)
     with pytest.raises(ValueError, match="Destination names"):
-        load_hf_repository("org/forum", target=MongoConnection("x"), database="db")
+        load_hf_repository("org/forum", connection=MongoConnection("x"), database="db")
     assert writer.data == before
 
 
@@ -577,11 +583,11 @@ def test_collection_refs_and_old_interface_removed(writer):
     assert len({ref, ref}) == 1
     with pytest.raises(ValueError):
         CouchbaseCollectionRef("", "_default", "items")
-    with pytest.raises(TypeError, match="target backend"):
-        load_documents([], target=MongoConnection("x"), collection=ref)
+    with pytest.raises(TypeError, match="connection backend"):
+        load_documents([], connection=MongoConnection("x"), collection=ref)
     with pytest.raises(TypeError, match="iterable"):
         load_documents(
-            {"items": []}, target=MongoConnection("x"), collection=MongoCollectionRef("db", "c")
+            {"items": []}, connection=MongoConnection("x"), collection=MongoCollectionRef("db", "c")
         )
     assert not hasattr(bondi.data, "load_data")
     with pytest.raises(TypeError):
@@ -601,7 +607,8 @@ def test_cli_hf_dispatch(writer, hub, monkeypatch, capsys, command, streaming):
     from bondi._cli import main
 
     monkeypatch.setattr(
-        "bondi.deployment.get_deployment", lambda name: MongoConnection("mongodb://unused")
+        "bondi.deployment.get_deployment",
+        lambda name: SimpleNamespace(connection=MongoConnection("mongodb://unused")),
     )
     args = ["dataset", command, "org/forum", "--deployment", "db", "--database", "demo"]
     if command == "load-hf":
@@ -621,12 +628,15 @@ def test_cli_hf_dispatch(writer, hub, monkeypatch, capsys, command, streaming):
 def test_cli_couchbase_ref_and_options(monkeypatch, capsys):
     from unittest.mock import Mock
 
+    from bondi import CouchbaseConnection
     from bondi._cli import main
     from bondi.couchbase import CouchbaseCollectionRef
-    from bondi.data import CouchbaseConnection, LoadDataResult
+    from bondi.data import LoadDataResult
 
     target = CouchbaseConnection("couchbase://unused", "u", "p")
-    monkeypatch.setattr("bondi.deployment.get_deployment", lambda name: target)
+    monkeypatch.setattr(
+        "bondi.deployment.get_deployment", lambda name: SimpleNamespace(connection=target)
+    )
     loader = Mock(return_value=LoadDataResult("couchbase"))
     monkeypatch.setattr("bondi.data._cli.load_file", loader)
     assert (
@@ -709,8 +719,8 @@ def test_extended_wrappers_do_not_relax_native_datetime_policy(writer):
 
 
 def test_couchbase_destination_labels_in_progress_and_errors(writer, monkeypatch):
+    from bondi import CouchbaseConnection
     from bondi.couchbase import CouchbaseCollectionRef
-    from bondi.data import CouchbaseConnection
 
     class FakeCouchbaseWriter(writer):
         def prepare(self, dest, mode, quota=None):
@@ -721,7 +731,7 @@ def test_couchbase_destination_labels_in_progress_and_errors(writer, monkeypatch
     with pytest.raises(LoadDataError) as error:
         load_documents(
             [{"_id": "a"}, {"_id": "b", "fail": True}],
-            target=CouchbaseConnection("couchbase://unused", "user", "password"),
+            connection=CouchbaseConnection("couchbase://unused", "user", "password"),
             collection=CouchbaseCollectionRef("bucket", "scope", "items"),
             batch_size=1,
             on_progress=progress.append,
@@ -801,7 +811,7 @@ def test_hf_jsonl_preserves_missing_null_and_extended_types(
     options = {} if mode is None else {"json_mode": mode}
     result = load_hf_repository(
         "org/forum",
-        target=MongoConnection("x"),
+        connection=MongoConnection("x"),
         database="db",
         split="train",
         streaming=streaming,

@@ -52,7 +52,14 @@ Use `bondi deployment create mongodb --help` or `bondi deployment create couchba
 
 ## Deploy via Python API
 
-The API returns a `Deployment` object with connection details and lifecycle methods.
+The API returns a `Deployment` object with lifecycle methods and a `connection`
+property. Pass `deployment.connection` to executors, loaders and index operations.
+Reading the property does not contact Docker, connect to the database or check readiness.
+It is available while the deployment is stopped. See [Connection settings](connections.md).
+
+`start()` waits for readiness and returns the deployment. `stop()` also returns the
+deployment. `remove()` returns `None`; default removal deletes its data and saved
+configuration, so discard the handle afterward.
 
 ```python
 from bondi.deployment import deploy_mongodb, deploy_couchbase
@@ -92,7 +99,7 @@ Use the returned details to create an executor:
 ```python
 from bondi.mongodb import MongoExecutor
 
-with MongoExecutor.from_uri(mongo.uri) as executor:
+with MongoExecutor.from_connection(mongo.connection) as executor:
     # Run queries here.
     pass
 ```
@@ -102,10 +109,8 @@ For Couchbase executors, install `bondi[couchbase]`:
 ```python
 from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
 
-with CouchbaseExecutor.from_uri(
-    couchbase.uri,
-    username=couchbase.username,
-    password=couchbase.password,
+with CouchbaseExecutor.from_connection(
+    couchbase.connection,
 ) as executor:
     result = executor.run(CouchbaseQuery("SELECT RAW 1"), collect_results=True)
     print(result.documents)  # [1]

@@ -74,9 +74,10 @@ Executors consume all rows and optionally retain them. Workload methods use the 
 interface with configurable concurrency and error handling.
 
 ```python
+from bondi import MongoConnection
 from bondi.mongodb import MongoExecutor
 
-with MongoExecutor.from_uri("mongodb://127.0.0.1:27017") as executor:
+with MongoExecutor.from_connection(MongoConnection("mongodb://127.0.0.1:27017")) as executor:
     result = executor.run(query, collect_results=True)
     print(result.documents)
     print(result.row_count, result.elapsed_ms)
@@ -90,9 +91,10 @@ Use `explain()` for a plan and `profile()` for execution diagnostics. Parse the 
 response explicitly; unavailable summary metrics remain `None`.
 
 ```python
+from bondi import MongoConnection
 from bondi.mongodb import summarize
 
-with MongoExecutor.from_uri("mongodb://127.0.0.1:27017") as executor:
+with MongoExecutor.from_connection(MongoConnection("mongodb://127.0.0.1:27017")) as executor:
     result = executor.profile(query)
 
 summary = summarize(result.raw)
@@ -141,9 +143,10 @@ Estimate filter matches using MongoDB's own semantics, before skip and limit.
 A persisted sample is reused across estimates and removed when its context closes.
 
 ```python
+from bondi import MongoConnection
 from bondi.mongodb import MongoSampleEstimator
 
-with MongoExecutor.from_uri("mongodb://127.0.0.1:27017") as executor:
+with MongoExecutor.from_connection(MongoConnection("mongodb://127.0.0.1:27017")) as executor:
     with MongoSampleEstimator(executor, business, sample_size=4, persist=True) as estimator:
         estimate = estimator.estimate(query)
         print(estimate.cardinality, estimate.selectivity)
@@ -162,7 +165,7 @@ prepared estimator to enforce sample-based selectivity bounds on each instance.
 from bondi.mongodb import MongoGenerationConfig, MongoWorkloadGenerator
 
 generator = MongoWorkloadGenerator(
-    target=business,
+    collection=business,
     schema=schema,
     config=MongoGenerationConfig(min_predicates=1, max_predicates=2),
 )

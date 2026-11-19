@@ -88,15 +88,18 @@ def deployment_pool(registry, live_ports):
             # Register teardown before loading data/indexes, including setup failures.
             cleanup.callback(db.remove, keep_data=False)
             if backend == "mongodb":
-                load_demo_data(target=db, collection=MongoCollectionRef("demo", "business"))
+                load_demo_data(
+                    connection=db.connection, collection=MongoCollectionRef("demo", "business")
+                )
             else:
                 from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
 
                 load_demo_data(
-                    target=db, collection=CouchbaseCollectionRef("demo", "_default", "business")
+                    connection=db.connection,
+                    collection=CouchbaseCollectionRef("demo", "_default", "business"),
                 )
-                with CouchbaseExecutor.from_uri(
-                    db.uri, username=db.username, password=db.password, timeout_seconds=60
+                with CouchbaseExecutor.from_connection(
+                    db.connection, timeout_seconds=60
                 ) as executor:
                     executor.run(
                         CouchbaseQuery("CREATE PRIMARY INDEX ON `demo`.`_default`.`business`")

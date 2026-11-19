@@ -6,6 +6,7 @@ this example does not perform exact full-collection verification.
 
 from pymongo import MongoClient
 
+from bondi import MongoConnection
 from bondi.mongodb import (
     MongoCollectionRef,
     MongoExecutor,
@@ -65,11 +66,11 @@ def main():
         with client.yelp.business.find({}).limit(200_000) as documents:
             schema = Schema.from_documents(documents, values="distinct")
 
-    with MongoExecutor.from_uri(URI, timeout_seconds=120) as executor:
+    with MongoExecutor.from_connection(MongoConnection(URI), timeout_seconds=120) as executor:
         # Only the owned temporary sample is written; it is removed on exit.
         with MongoSampleEstimator(executor, TARGET, sample_size=16_000, persist=True) as estimator:
             generator = MongoWorkloadGenerator(
-                target=TARGET, schema=schema, estimator=estimator, config=config
+                collection=TARGET, schema=schema, estimator=estimator, config=config
             )
             print("Generating 10 patterns with 100 instances each...", flush=True)
             workload = generator.generate(

@@ -104,8 +104,8 @@ def _load_envelope(
         data[field] = _decode_bson(raw[field])
     if data["query_kind"] != kind:
         raise ValueError("Unsupported query_kind")
-    target = data["target"]
-    if not isinstance(target, dict) or set(target) != {"database", "collection"}:
+    collection = data["target"]
+    if not isinstance(collection, dict) or set(collection) != {"database", "collection"}:
         raise ValueError("target must contain exactly database and collection")
     return raw, data
 

@@ -13,6 +13,7 @@ nav:
   - Quickstart: quickstart.md
   - AI agent skill: agent-skill.md
 - User guide:
+  - Connection settings: connections.md
   - Database deployment: deployment.md
   - Loading datasets: datasets.md
   - Index definitions: indexes.md
@@ -32,6 +33,7 @@ nav:
 - Tutorials: tutorials.md
 - API reference:
   - Overview: api.md
+  - Connection settings: reference/connection.md
   - Database deployment: reference/deployment.md
   - Dataset loading: reference/data.md
   - Index definitions: reference/indexes.md

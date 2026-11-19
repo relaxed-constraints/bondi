@@ -41,7 +41,7 @@ def env(request, monkeypatch):
         else CouchbaseConnection("couchbase://example", "user", "password")
     )
     namespace = {"database": "db"} if backend == "mongodb" else {"bucket": "b", "scope": "s"}
-    target = (
+    collection = (
         mongo.MongoCollectionRef("db", "one")
         if backend == "mongodb"
         else cb.CouchbaseCollectionRef("b", "s", "one")
@@ -123,8 +123,13 @@ def test_remove_only_names_and_repeat(env):
     }
     assert e.module.remove_indexes(e.conn, indexes=indexes, **e.namespace) == {"one": [], "two": []}
     assert e.state["one"] == {e.primary: True, "external": False}
-    assert e.module.remove_index(e.conn, target=e.target, index=definition("external")) is True
-    assert e.module.remove_index(e.conn, target=e.target, index=definition("external")) is False
+    assert (
+        e.module.remove_index(e.conn, collection=e.collection, index=definition("external")) is True
+    )
+    assert (
+        e.module.remove_index(e.conn, collection=e.collection, index=definition("external"))
+        is False
+    )
 
 
 def test_protected_request_prevents_all_removal(env):
@@ -135,7 +140,7 @@ def test_protected_request_prevents_all_removal(env):
         e.module.remove_indexes(e.conn, indexes=indexes, **e.namespace)
     assert not any(event[0] == "drop" for event in e.events)
     with pytest.raises(ValueError, match="protected"):
-        e.module.remove_index(e.conn, target=e.target, index=protected)
+        e.module.remove_index(e.conn, collection=e.collection, index=protected)
     assert e.state["one"]["old"] is False
 
 
@@ -178,7 +183,7 @@ def test_replacement_failure_reports_removed_and_created(env, monkeypatch):
     error = caught.value
     assert error.completed == {"one": ["new"]}
     assert error.removed == {"one": ["old", "external"]}
-    assert (error.phase, error.target, error.position) == ("create", "one", 1)
+    assert (error.phase, error.collection, error.position) == ("create", "one", 1)
     assert isinstance(error.__cause__, TimeoutError)
     e.client.close.assert_called_once()
 
@@ -289,7 +294,7 @@ def test_removal_inspection_error_has_no_side_effects(env, monkeypatch):
             **e.namespace,
         )
     error = caught.value
-    assert (error.phase, error.target, error.position) == ("inspect", "two", None)
+    assert (error.phase, error.collection, error.position) == ("inspect", "two", None)
     assert error.completed == {"one": [], "two": []}
     assert not any(event[0] == "drop" for event in e.events)
     e.client.close.assert_called_once()

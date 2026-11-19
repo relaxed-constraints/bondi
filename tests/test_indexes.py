@@ -155,7 +155,7 @@ def test_mongo_native_model_and_single_return(client):
     collection.create_indexes.return_value = ["email"]
     name = create_index(
         MongoConnection("mongodb://example"),
-        target=MongoCollectionRef("db", "c"),
+        collection=MongoCollectionRef("db", "c"),
         index=MongoIndex(
             (("email", -1),), name="email", unique=True, partial_filter={"active": True}
         ),
@@ -173,7 +173,7 @@ def test_builtin_id_reuse_and_conflicts(client):
     assert (
         create_index(
             MongoConnection("mongodb://example"),
-            target=MongoCollectionRef("db", "c"),
+            collection=MongoCollectionRef("db", "c"),
             index=FieldIndex((("_id", 1),)),
         )
         == "_id_"
@@ -182,7 +182,7 @@ def test_builtin_id_reuse_and_conflicts(client):
     with pytest.raises(ValueError):
         create_index(
             MongoConnection("mongodb://example"),
-            target=MongoCollectionRef("db", "c"),
+            collection=MongoCollectionRef("db", "c"),
             index=FieldIndex((("_id", 1),), name="other"),
         )
     assert len(client.open_calls) == 1
@@ -200,7 +200,7 @@ def test_batch_reuses_client_and_reports_partial_failure(client):
             database="db",
         )
     assert caught.value.completed == {"one": ["a"], "two": ["b"]}
-    assert (caught.value.target, caught.value.position) == ("two", 1)
+    assert (caught.value.collection, caught.value.position) == ("two", 1)
     assert str(caught.value.__cause__) == "server failed"
     assert len(client.open_calls) == 1
     client.close.assert_called_once()
@@ -230,7 +230,7 @@ def test_couchbase_ddl_paths_expressions_and_wait(client):
     conn = CouchbaseConnection("couchbase://example", "u", "p")
     target = CouchbaseCollectionRef("buck`et", "scope", "things")
     shared = FieldIndex((("item.brandId", -1),), name="brand`index")
-    assert cb_create(conn, target=target, index=shared) == "brand`index"
+    assert cb_create(conn, collection=target, index=shared) == "brand`index"
     ddl = client.query.call_args.args[0]
     assert "`buck``et`.`scope`.`things`" in ddl
     assert "`brand``index`" in ddl and "(`item`.`brandId` DESC)" in ddl
@@ -244,7 +244,7 @@ def test_couchbase_ddl_paths_expressions_and_wait(client):
         condition="`active` = TRUE",
         include_missing=True,
     )
-    cb_create(conn, target=target, index=native)
+    cb_create(conn, collection=target, index=native)
     ddl = client.query.call_args.args[0]
     assert "END ASC INCLUDE MISSING" in ddl
     assert 'WHERE `active` = TRUE WITH {"defer_build": false}' in ddl
@@ -255,7 +255,7 @@ def test_wrong_connection_and_nonfinite_timeout(client):
         with pytest.raises((TypeError, ValueError)):
             create_index(
                 MongoConnection("mongodb://example"),
-                target=MongoCollectionRef("db", "c"),
+                collection=MongoCollectionRef("db", "c"),
                 index=FieldIndex((("x", 1),)),
                 timeout=timeout,
             )
@@ -297,16 +297,13 @@ def test_generated_name_collision_and_mutated_batch_preflight(client):
     assert not client.open_calls
 
 
-def test_connection_reexports_and_deployment_credentials(tmp_path):
-    from bondi.connection import normalize_connection
-    from bondi.data import MongoConnection as DataMongoConnection
+def test_deployment_connection_credentials(tmp_path):
     from bondi.deployment import Deployment
 
-    assert DataMongoConnection is MongoConnection
     deployment = Deployment(
         "test", 27019, "mongo:8.0.16", tmp_path, "test", username="researcher", password="secret"
     )
-    conn = normalize_connection(deployment)
+    conn = deployment.connection
     assert conn.uri == deployment.uri
     assert (conn.username, conn.password) == ("researcher", "secret")
     assert "secret" not in repr(conn)
@@ -320,7 +317,7 @@ def test_owned_mongo_client_closes_on_failure(monkeypatch):
     with pytest.raises(RuntimeError, match="failed"):
         create_index(
             MongoConnection("mongodb://example", username="u", password="p"),
-            target=MongoCollectionRef("db", "c"),
+            collection=MongoCollectionRef("db", "c"),
             index=FieldIndex((("x", 1),)),
         )
     fake.close.assert_called_once()

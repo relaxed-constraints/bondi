@@ -14,18 +14,16 @@ pytestmark = pytest.mark.live
 def test_generate_load_live(backend, live_deployments):
     deployment = live_deployments(backend)
     if backend == "mongodb":
-        executor = MongoExecutor.from_uri(
-            deployment.uri,
+        executor = MongoExecutor.from_connection(
+            deployment.connection,
             concurrency=3,
             timeout_seconds=5,
             health_check_timeout_seconds=2,
         )
         query = MongoFindQuery(MongoCollectionRef("demo", "business"), {})
     else:
-        executor = CouchbaseExecutor.from_uri(
-            deployment.uri,
-            username=deployment.username,
-            password=deployment.password,
+        executor = CouchbaseExecutor.from_connection(
+            deployment.connection,
             concurrency=3,
             timeout_seconds=5,
             health_check_timeout_seconds=2,

@@ -8,6 +8,7 @@ Couchbase estimation is not implemented yet.
 ## Reuse a sample
 
 ```python
+from bondi import MongoConnection
 from bondi.mongodb import (
     MongoCollectionRef,
     MongoExecutor,
@@ -15,10 +16,10 @@ from bondi.mongodb import (
     MongoSampleEstimator,
 )
 
-target = MongoCollectionRef("demo", "business")
-with MongoExecutor.from_uri("mongodb://127.0.0.1:27017") as executor:
-    with MongoSampleEstimator(executor, target, sample_size=4, persist=True) as estimator:
-        estimate = estimator.estimate(MongoFindQuery(target, {"city": "Sydney"}))
+collection = MongoCollectionRef("demo", "business")
+with MongoExecutor.from_connection(MongoConnection("mongodb://127.0.0.1:27017")) as executor:
+    with MongoSampleEstimator(executor, collection, sample_size=4, persist=True) as estimator:
+        estimate = estimator.estimate(MongoFindQuery(collection, {"city": "Sydney"}))
         print(estimate.cardinality, estimate.selectivity)
         print(estimate.sample_matches, estimate.sample_size)
 ```

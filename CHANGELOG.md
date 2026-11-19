@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Standardize database access on `MongoConnection` and `CouchbaseConnection` settings
+  exported from `bondi`. Add `Deployment.connection`; replace all executor
+  `from_uri()` factories with `from_connection()`. Loaders and index operations
+  require connection settings instead of accepting deployments.
+  Rename loader `target=` to `connection=` and remove connection exports from
+  `bondi.data`. MongoDB executor credentials belong to the connection settings,
+  not `client_kwargs`. Validate credential types consistently with `TypeError`
+  (breaking change).
+- Standardize collection arguments and attributes on `collection`, including
+  queries, patterns, workload generators, estimators and single-index operations.
+  Rename estimator `sample_target` to `sample_collection` and index error `target`
+  to `collection`. Saved query and pattern envelopes and fingerprints retain
+  their existing formats (breaking change).
+- Return the same deployment handle from `Deployment.start()` and `.stop()`;
+  `.remove()` continues to return `None`.
+
 - Upgrade relcon-docs to 0.1.7 and apply shared Markdown defaults, including SmartSymbols arrows.
 
 - Allow manual documentation publishing alongside release-triggered deployment.
@@ -147,7 +163,7 @@
   Use `remove(keep_data=True)` to retain them. Remove the `delete_data` argument.
   This aligns Python removal with the CLI (issue #9).
 - Move demo loading from `Deployment.load_demo_data()` to
-  `bondi.data.load_demo_data(target=..., collection=...)`.
+  `bondi.data.load_demo_data(connection=..., collection=...)`.
   Replace `bondi load-demo-data` with `bondi dataset load-demo`.
   Use an explicit collection reference and the shared `LoadDataResult`.
   The default mode requires an empty collection. Use upsert for repeat loads.

@@ -7,8 +7,9 @@ import pytest
 
 pytest.importorskip("couchbase")
 
+from bondi import CouchbaseConnection
 from bondi.couchbase import CouchbaseCollectionRef
-from bondi.data import CouchbaseConnection, LoadDataError, load_documents
+from bondi.data import LoadDataError, load_documents
 from bondi.data._writers import CouchbaseWriter
 
 DEST = ("travel", "_default", "users")
@@ -110,7 +111,7 @@ def test_public_loader_reports_original_error_type_without_credentials(writer, m
     with pytest.raises(LoadDataError, match="destination preparation: OriginalScanError") as caught:
         load_documents(
             [{"_id": "a"}],
-            target=CouchbaseConnection("couchbase://unused", "user", "secret"),
+            connection=CouchbaseConnection("couchbase://unused", "user", "secret"),
             collection=CouchbaseCollectionRef(*DEST),
             mode="replace",
         )

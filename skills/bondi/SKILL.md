@@ -19,8 +19,10 @@ it is not a query translator or an experiment-tracking framework.
 
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
-and dependency constraints before using an API. This skill describes the 0.3.8 API.
-It includes sustained load generation, pattern selection, workload callbacks,
+and dependency constraints before using an API. This skill describes the current checkout API.
+Use `deployment.connection` or settings imported from `bondi` for database access.
+Executors use `from_connection()`, loaders use `connection=`, and collection
+arguments and attributes use `collection`. It includes sustained load generation, pattern selection, workload callbacks,
 MongoDB memory limits and executor health checks. Check installed signatures before
 using these features. Online documentation can be newer than the installed package.
 Inspect matching source when versions differ. Do not upgrade silently.
@@ -95,7 +97,7 @@ Image and Created; older deployments have no creation timestamp and display —.
 Use `bondi dataset` for dataset commands. Python deployment creation still uses
 `deploy_mongodb()` and `deploy_couchbase()`.
 
-Load packaged demo businesses with `bondi.data.load_demo_data(target=deployment, collection=ref)`
+Load packaged demo businesses with `bondi.data.load_demo_data(connection=deployment.connection, collection=ref)`
 or `bondi dataset load-demo`. Use the dataset loader for all data sources.
 
 ## Index definitions
@@ -104,7 +106,7 @@ Use `FieldIndex` and `IndexSet` from `bondi`, and native `MongoIndex` or
 `CouchbaseIndex` from their backend modules. Definitions support versioned JSON
 `.save()` / `.load()`; `IndexSet.from_dict()` accepts config mappings with
 `fields` shorthand. Generic `bondi.create_index()` / `bondi.create_indexes()` dispatch from a
-deployment or connection settings. Single creation uses a collection reference;
+connection settings. Single creation uses a collection reference;
 batch creation uses IndexSet collection names and a database or bucket/scope. Batch failures expose
 completed names through `IndexCreationError`; no rollback is performed. See
 [index definitions](https://relaxed-constraints.github.io/bondi/indexes/).

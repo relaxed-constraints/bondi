@@ -25,7 +25,7 @@ class MongoAggregateQuery:
     are representable: this class does not promise read-only execution.
 
     Args:
-        target: Starting collection, independent of a deployment. References to
+        collection: Starting collection, independent of a deployment. References to
             additional collections remain in the native pipeline.
         pipeline: Required ordered list of single-key stage dictionaries. An empty
             list is allowed. Each key must start with $ and contain a name after it.
@@ -48,7 +48,7 @@ class MongoAggregateQuery:
 
     backend: ClassVar[str] = "mongodb"
 
-    target: MongoCollectionRef
+    collection: MongoCollectionRef
     pipeline: list[dict[str, Any]]
 
     def __post_init__(self) -> None:
@@ -56,7 +56,7 @@ class MongoAggregateQuery:
         self.pipeline = deepcopy(self.pipeline)
 
     def validate(self) -> None:
-        """Check current target and top-level stage structure without mutation.
+        """Check current collection and top-level stage structure without mutation.
 
         Raises:
             TypeError: Target, pipeline, stage or stage key has an incorrect type.
@@ -65,8 +65,8 @@ class MongoAggregateQuery:
         Does not validate stage arguments, supported operators, nested pipelines,
         BSON encodability or whether a pipeline writes data.
         """
-        if not isinstance(self.target, MongoCollectionRef):
-            raise TypeError("target must be a MongoCollectionRef")
+        if not isinstance(self.collection, MongoCollectionRef):
+            raise TypeError("collection must be a MongoCollectionRef")
         if not isinstance(self.pipeline, list):
             raise TypeError("pipeline must be a list")
         for position, stage in enumerate(self.pipeline):
@@ -107,7 +107,10 @@ class MongoAggregateQuery:
             {
                 "format_version": 1,
                 "query_kind": "mongodb.aggregate",
-                "target": {"database": self.target.database, "collection": self.target.collection},
+                "target": {
+                    "database": self.collection.database,
+                    "collection": self.collection.collection,
+                },
                 "pipeline": self.pipeline,
             },
             ("pipeline",),
@@ -136,7 +139,7 @@ class MongoAggregateQuery:
     def fingerprint(self) -> str:
         """Compute SHA-256 of the current serialized representation after validation.
 
-        Includes version, kind, target and pipeline; preserves stage and document
+        Includes version, kind, collection and pipeline; preserves stage and document
         order. Recomputed on every call. Does not identify semantic equivalence or
         deployment state. Raises the same errors as to_json.
 

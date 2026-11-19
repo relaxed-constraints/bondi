@@ -69,7 +69,7 @@ def test_pool_reuses_owned_deployment_and_restores_registry(tmp_path, monkeypatc
         db.remove.assert_not_called()
     assert calls == [("live-mongodb", {"port": 27117}, str(tmp_path))]
     loader.assert_called_once_with(
-        target=db, collection=conftest.MongoCollectionRef("demo", "business")
+        connection=db.connection, collection=conftest.MongoCollectionRef("demo", "business")
     )
     db.remove.assert_called_once_with(keep_data=False)
 

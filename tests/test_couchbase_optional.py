@@ -31,7 +31,7 @@ with TemporaryDirectory() as directory:
     assert IndexSet.load(path).to_dict() == indexes.to_dict()
 try:
     create_index(CouchbaseConnection("couchbase://example", "u", "p"),
-                 target=CouchbaseCollectionRef("b", "s", "c"), index=index)
+                 collection=CouchbaseCollectionRef("b", "s", "c"), index=index)
 except ImportError as error:
     assert 'uv sync --extra couchbase' in str(error)
 else:

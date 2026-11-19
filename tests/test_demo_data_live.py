@@ -24,12 +24,12 @@ def test_demo_modes_and_cli(live_deployments, backend, monkeypatch):
         else CouchbaseCollectionRef("demo", "_default", collection)
     )
     label = "demo." + collection if backend == "mongodb" else "demo._default." + collection
-    assert load_demo_data(target=db, collection=ref).destinations == {label: 8}
+    assert load_demo_data(connection=db.connection, collection=ref).destinations == {label: 8}
     with pytest.raises(LoadDataError, match="empty"):
-        load_demo_data(target=db, collection=ref)
+        load_demo_data(connection=db.connection, collection=ref)
     load_documents(
         [{"_id": "keep", "value": 42}, {"_id": "demo-001", "name": "changed"}],
-        target=db,
+        connection=db.connection,
         collection=ref,
         mode="upsert",
     )
@@ -55,7 +55,7 @@ def test_demo_modes_and_cli(live_deployments, backend, monkeypatch):
             assert stored.count_documents({}) == 9
             assert stored.find_one({"_id": "keep"})["value"] == 42
             assert stored.find_one({"_id": "demo-001"})["name"] == "Harbour Cafe"
-            load_demo_data(target=db, collection=ref, mode="replace")
+            load_demo_data(connection=db.connection, collection=ref, mode="replace")
             assert stored.count_documents({}) == 8
     else:
         from couchbase.auth import PasswordAuthenticator
@@ -69,7 +69,7 @@ def test_demo_modes_and_cli(live_deployments, backend, monkeypatch):
             stored = cluster.bucket("demo").default_scope().collection(collection)
             assert stored.get(document_key("keep")).content_as[dict]["value"] == 42
             assert stored.get(document_key("demo-001")).content_as[dict]["name"] == "Harbour Cafe"
-            load_demo_data(target=db, collection=ref, mode="replace")
+            load_demo_data(connection=db.connection, collection=ref, mode="replace")
             with pytest.raises(DocumentNotFoundException):
                 stored.get(document_key("keep"))
         finally:

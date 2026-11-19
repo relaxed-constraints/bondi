@@ -33,7 +33,7 @@ def test_mongodb_indexes(live_mongodb, tmp_path):
     )
     indexes.save(tmp_path / "indexes.json")
     names = create_indexes(
-        live_mongodb, indexes=IndexSet.load(tmp_path / "indexes.json"), database="demo"
+        live_mongodb.connection, indexes=IndexSet.load(tmp_path / "indexes.json"), database="demo"
     )
     assert names["business"][0] == "_id_"
     with MongoClient(live_mongodb.uri) as client:
@@ -46,7 +46,7 @@ def test_mongodb_indexes(live_mongodb, tmp_path):
         with pytest.raises(DuplicateKeyError):
             collection.insert_one({"name": collection.find_one()["name"]})
     assert (
-        create_index(live_mongodb, target=target, index=indexes["business"][2])
+        create_index(live_mongodb.connection, collection=target, index=indexes["business"][2])
         == "bondi_city_stars"
     )
 
@@ -58,10 +58,13 @@ def test_couchbase_indexes(live_deployments, tmp_path):
     from couchbase.options import ClusterOptions
 
     db = live_deployments("community")
-    target = CouchbaseCollectionRef("demo", "_default", "business")
+    target = CouchbaseCollectionRef("demo", "_default", "ddl_records")
+    from bondi.data import load_demo_data
+
+    load_demo_data(connection=db.connection, collection=target)
     indexes = IndexSet(
         {
-            "business": [
+            "ddl_records": [
                 FieldIndex((("city", 1), ("stars", -1)), name="bondi_shared"),
                 FieldIndex((("Model Year", 1), ("item.Model Year", -1)), name="spaced_fields"),
                 CouchbaseIndex(
@@ -80,17 +83,20 @@ def test_couchbase_indexes(live_deployments, tmp_path):
     )
     indexes.save(tmp_path / "indexes.json")
     result = cb_many(
-        db, indexes=IndexSet.load(tmp_path / "indexes.json"), bucket="demo", scope="_default"
+        db.connection,
+        indexes=IndexSet.load(tmp_path / "indexes.json"),
+        bucket="demo",
+        scope="_default",
     )
     cluster = Cluster(db.uri, ClusterOptions(PasswordAuthenticator(db.username, db.password)))
     try:
-        manager = cluster.bucket("demo").scope("_default").collection("business").query_indexes()
+        manager = cluster.bucket("demo").scope("_default").collection("ddl_records").query_indexes()
         observed = {index.name: index for index in manager.get_all_indexes()}
-        assert all(observed[name].state == "online" for name in result["business"])
+        assert all(observed[name].state == "online" for name in result["ddl_records"])
         assert observed["bondi_functional"].condition
         assert "DISTINCT" in observed["bondi_array"].index_key[0].upper()
         with pytest.raises(Exception):
-            cb_create(db, target=target, index=indexes["business"][0])
+            cb_create(db.connection, collection=target, index=indexes["ddl_records"][0])
     finally:
         cluster.close()
 
@@ -107,25 +113,33 @@ def test_mongodb_index_lifecycle(live_mongodb):
         collection.create_index("external", name="external")
         client.lifecycle.untouched.insert_one({"x": 1})
         client.lifecycle.untouched.create_index("x", name="keep")
-        create_index(live_mongodb, target=target, index=old)
+        create_index(live_mongodb.connection, collection=target, index=old)
         assert create_indexes(
-            live_mongodb, database="lifecycle", indexes=IndexSet({"records": [new]}), replace=True
+            live_mongodb.connection,
+            database="lifecycle",
+            indexes=IndexSet({"records": [new]}),
+            replace=True,
         ) == {"records": ["new"]}
         assert set(collection.index_information()) == {"_id_", "new"}
         assert "keep" in client.lifecycle.untouched.index_information()
-        assert remove_index(live_mongodb, target=target, index=new)
-        assert not remove_index(live_mongodb, target=target, index=new)
-        create_index(live_mongodb, target=target, index=new)
+        assert remove_index(live_mongodb.connection, collection=target, index=new)
+        assert not remove_index(live_mongodb.connection, collection=target, index=new)
+        create_index(live_mongodb.connection, collection=target, index=new)
         assert remove_indexes(
-            live_mongodb, database="lifecycle", indexes=IndexSet({"records": [new]})
+            live_mongodb.connection, database="lifecycle", indexes=IndexSet({"records": [new]})
         ) == {"records": ["new"]}
-        create_index(live_mongodb, target=target, index=new)
+        create_index(live_mongodb.connection, collection=target, index=new)
         create_indexes(
-            live_mongodb, database="lifecycle", indexes=IndexSet({"records": []}), replace=True
+            live_mongodb.connection,
+            database="lifecycle",
+            indexes=IndexSet({"records": []}),
+            replace=True,
         )
         assert set(collection.index_information()) == {"_id_"}
         with pytest.raises(ValueError, match="protected"):
-            remove_index(live_mongodb, target=target, index=FieldIndex((("_id", 1),)))
+            remove_index(
+                live_mongodb.connection, collection=target, index=FieldIndex((("_id", 1),))
+            )
 
 
 def test_couchbase_index_lifecycle(live_deployments):
@@ -139,32 +153,52 @@ def test_couchbase_index_lifecycle(live_deployments):
     from bondi import remove_index, remove_indexes
 
     db = live_deployments("community")
-    target = CouchbaseCollectionRef("demo", "_default", "business")
+    target = CouchbaseCollectionRef("demo", "_default", "lifecycle_records")
+    from bondi.data import load_demo_data
+
+    load_demo_data(connection=db.connection, collection=target)
     cluster = Cluster(db.uri, ClusterOptions(PasswordAuthenticator(db.username, db.password)))
     try:
-        manager = cluster.bucket("demo").scope("_default").collection("business").query_indexes()
+        manager = (
+            cluster.bucket("demo").scope("_default").collection("lifecycle_records").query_indexes()
+        )
         cluster.query(
-            "CREATE PRIMARY INDEX `lifecycle_primary` ON `demo`.`_default`.`business`"
+            "CREATE PRIMARY INDEX `lifecycle_primary` ON `demo`.`_default`.`lifecycle_records`"
         ).execute()
         new = FieldIndex((("city", -1),), name="lifecycle_new")
         result = cb_many(
-            db, bucket="demo", scope="_default", indexes=IndexSet({"business": [new]}), replace=True
+            db.connection,
+            bucket="demo",
+            scope="_default",
+            indexes=IndexSet({"lifecycle_records": [new]}),
+            replace=True,
         )
-        assert result == {"business": ["lifecycle_new"]}
+        assert result == {"lifecycle_records": ["lifecycle_new"]}
         observed = manager.get_all_indexes()
         assert {i.name for i in observed if not i.is_primary} == {"lifecycle_new"}
         assert any(i.name == "lifecycle_primary" and i.is_primary for i in observed)
         with pytest.raises(ValueError, match="protected"):
-            remove_index(db, target=target, index=FieldIndex((("x", 1),), name="lifecycle_primary"))
-        assert remove_index(db, target=target, index=new)
-        assert not remove_index(db, target=target, index=new)
-        cb_create(db, target=target, index=new)
+            remove_index(
+                db.connection,
+                collection=target,
+                index=FieldIndex((("x", 1),), name="lifecycle_primary"),
+            )
+        assert remove_index(db.connection, collection=target, index=new)
+        assert not remove_index(db.connection, collection=target, index=new)
+        cb_create(db.connection, collection=target, index=new)
         assert remove_indexes(
-            db, bucket="demo", scope="_default", indexes=IndexSet({"business": [new]})
-        ) == {"business": ["lifecycle_new"]}
-        cb_create(db, target=target, index=new)
+            db.connection,
+            bucket="demo",
+            scope="_default",
+            indexes=IndexSet({"lifecycle_records": [new]}),
+        ) == {"lifecycle_records": ["lifecycle_new"]}
+        cb_create(db.connection, collection=target, index=new)
         cb_many(
-            db, bucket="demo", scope="_default", indexes=IndexSet({"business": []}), replace=True
+            db.connection,
+            bucket="demo",
+            scope="_default",
+            indexes=IndexSet({"lifecycle_records": []}),
+            replace=True,
         )
         assert all(i.is_primary for i in manager.get_all_indexes())
     finally:

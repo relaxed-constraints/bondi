@@ -17,7 +17,7 @@ from bondi.mongodb import MongoCollectionRef
 from bondi.deployment import deploy_mongodb
 
 deployment = deploy_mongodb()
-load_demo_data(target=deployment, collection=MongoCollectionRef("demo", "business"))
+load_demo_data(connection=deployment.connection, collection=MongoCollectionRef("demo", "business"))
 ```
 
 The defaults use deployment name `mongodb` and port `27017`; pass `port=<port>`
@@ -46,7 +46,7 @@ workload = Workload(
     ]
 )
 
-with MongoExecutor.from_uri(deployment.uri, continue_on_error=True) as executor:
+with MongoExecutor.from_connection(deployment.connection, continue_on_error=True) as executor:
     results = executor.run_workload(workload, collect_results=True)
 
 for result in results:
@@ -85,7 +85,7 @@ from bondi.mongodb import MongoCollectionRef, MongoExecutor, MongoFindQuery, sum
 
 query = MongoFindQuery(MongoCollectionRef("demo", "business"), {"city": "Sydney"})
 
-with MongoExecutor.from_uri(deployment.uri) as executor:
+with MongoExecutor.from_connection(deployment.connection) as executor:
     plan = summarize(executor.explain(query).raw)
     profile = summarize(executor.profile(query).raw)
     print(plan.plan_stages)
@@ -155,7 +155,7 @@ from bondi.mongodb import MongoSampleEstimator, MongoCollectionRef, MongoExecuto
 
 business = MongoCollectionRef("demo", "business")
 
-with MongoExecutor.from_uri(deployment.uri) as executor:
+with MongoExecutor.from_connection(deployment.connection) as executor:
     with MongoSampleEstimator(executor, business, sample_size=4) as estimator:
         # how many documents have city "Sydney", based on a 4-doc sample
         estimate = estimator.estimate(MongoFindQuery(business, {"city": "Sydney"}))
@@ -209,14 +209,14 @@ from bondi.schema import Schema
 
 # read the demo.business collection and parse its schema
 business = MongoCollectionRef("demo", "business")
-with MongoExecutor.from_uri(deployment.uri) as executor:
+with MongoExecutor.from_connection(deployment.connection) as executor:
     result = executor.run(MongoFindQuery(business, {}), collect_results=True)
 
 schema = Schema.from_documents(result.documents, values="distinct")
 
 # create the workload generator with the target collection and schema
 generator = MongoWorkloadGenerator(
-    target=business, schema=schema, config=MongoGenerationConfig(max_predicates=2)
+    collection=business, schema=schema, config=MongoGenerationConfig(max_predicates=2)
 )
 workload, patterns = generator.generate(
     num_patterns=3, instances_per_pattern=2, return_patterns=True, seed=33

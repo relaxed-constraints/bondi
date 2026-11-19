@@ -12,7 +12,7 @@ class _SyncExecutor:
     """Own an async executor on a background loop; calls stay on the owner thread."""
 
     def __init__(self):
-        raise TypeError("Use from_uri() to create an owned executor")
+        raise TypeError("Use from_connection() to create an owned executor")
 
     @classmethod
     def _create(cls, factory):

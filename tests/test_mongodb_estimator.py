@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from bondi import MongoConnection
 from bondi.estimation import CardinalityEstimate
 from bondi.mongodb import (
     AsyncMongoExecutor,
@@ -58,7 +59,7 @@ def test_fresh_sample_actual_denominator_and_query_scope():
             pipeline = ex.calls[-1].pipeline
             assert pipeline[0] == {"$sample": {"size": 10}}
             assert pipeline[1]["$facet"]["matches"][0] == {"$match": {"x": 1}}
-            assert estimator.sample_target is None
+            assert estimator.sample_collection is None
         assert not ex._closed
         with pytest.raises(RuntimeError, match="closed"):
             await estimator.estimate(QUERY)
@@ -70,13 +71,13 @@ def test_persisted_count_and_cleanup():
     async def run():
         ex = FakeExecutor([[{"count": 100}], [], [{"count": 9}], [{"count": 3}]])
         async with AsyncMongoSampleEstimator(ex, TARGET, sample_size=10, persist=True) as est:
-            target = est.sample_target
+            target = est.sample_collection
             assert target.database == "bondi_samples"
             assert target != TARGET
             assert est.sample_size == 9
             result = await est.estimate(QUERY)
             assert result.cardinality == pytest.approx(100 / 3)
-            assert ex.calls[-1].target == target
+            assert ex.calls[-1].collection == target
             assert ex.calls[-1].pipeline == [{"$match": QUERY.filter}, {"$count": "count"}]
         assert ex.dropped == [target.collection]
         await est.close()
@@ -95,7 +96,7 @@ def test_retained_sample_and_reprepare():
         await est.prepare()
         await est.close()
         assert not ex.dropped
-        assert est.sample_target
+        assert est.sample_collection
         await est.drop_sample()
         assert len(ex.dropped) == 1
 
@@ -148,7 +149,7 @@ def test_empty_population_and_full_mode():
                 result = await est.estimate(QUERY)
                 assert result.cardinality == result.selectivity == 0
                 assert result.sample_size == count
-                assert est.sample_target is None
+                assert est.sample_collection is None
                 assert all("$sample" not in stage for q in ex.calls for stage in q.pipeline)
 
     asyncio.run(run())
@@ -162,7 +163,7 @@ def test_population_limit_and_query_validation():
         ) as est:
             with pytest.raises(TypeError):
                 await est.estimate(MongoAggregateQuery(TARGET, []))
-            with pytest.raises(ValueError, match="target"):
+            with pytest.raises(ValueError, match="collection"):
                 await est.estimate(MongoFindQuery(MongoCollectionRef("other", "items"), {}))
             await est.estimate(QUERY)
         assert all(q.pipeline[0] == {"$limit": 20} for q in ex.calls)
@@ -180,7 +181,7 @@ def test_creation_failure_cleanup_and_estimate_failure_context():
         with pytest.raises(ValueError, match="creation failed"):
             await est.prepare()
         assert len(ex.dropped) == 1
-        assert est.sample_target is None
+        assert est.sample_collection is None
         ex = FakeExecutor([[{"count": 100}], [], [{"count": 10}], ValueError("estimate failed")])
         with pytest.raises(ValueError, match="estimate failed"):
             async with AsyncMongoSampleEstimator(ex, TARGET, sample_size=10, persist=True) as est:
@@ -200,12 +201,12 @@ def test_sync_uses_executor_loop_and_keeps_executor_open(monkeypatch):
 
     monkeypatch.setattr(
         AsyncMongoExecutor,
-        "from_uri",
+        "from_connection",
         lambda *a, **kw: LoopExecutor(
             [[{"count": 10}], [{"sample": [{"count": 5}], "matches": [{"count": 2}]}]]
         ),
     )
-    with MongoExecutor.from_uri("unused") as executor:
+    with MongoExecutor.from_connection(MongoConnection("unused")) as executor:
         with MongoSampleEstimator(executor, TARGET, sample_size=5) as est:
             assert est.estimate(QUERY) == CardinalityEstimate(4.0, 10, 2, 5)
         assert not executor._closed
@@ -228,12 +229,12 @@ def test_drop_invalidates_preparation_and_new_sample_has_unique_name():
         )
         est = AsyncMongoSampleEstimator(ex, TARGET, sample_size=10, persist=True)
         await est.prepare()
-        first = est.sample_target
+        first = est.sample_collection
         await est.drop_sample()
         with pytest.raises(RuntimeError, match="prepare"):
             await est.estimate(QUERY)
         await est.prepare()
-        second = est.sample_target
+        second = est.sample_collection
         assert first != second
         result = await est.estimate(QUERY)
         assert result == CardinalityEstimate(0.0, 100, 0, 10)
@@ -248,7 +249,7 @@ def test_cleanup_failure_can_be_retried():
         ex = FakeExecutor([[{"count": 100}], [], [{"count": 10}]])
         est = AsyncMongoSampleEstimator(ex, TARGET, sample_size=10, persist=True)
         await est.prepare()
-        target = est.sample_target
+        target = est.sample_collection
         original = ex.drop_collection
 
         async def fail(name):
@@ -257,9 +258,9 @@ def test_cleanup_failure_can_be_retried():
         ex.drop_collection = fail
         with pytest.raises(RuntimeError, match="drop failed"):
             await est.close()
-        assert est.sample_target == target
+        assert est.sample_collection == target
         ex.drop_collection = original
         await est.close()
-        assert est.sample_target is None
+        assert est.sample_collection is None
 
     asyncio.run(run())

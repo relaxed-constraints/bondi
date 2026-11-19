@@ -38,7 +38,7 @@ def test_dispatch_preserves_arguments_results_and_errors(
             backend=backend,
             username="u",
             password="p",
-        )
+        ).connection
     target = (
         mongodb.MongoCollectionRef("db", "c")
         if backend == "mongodb"
@@ -52,7 +52,7 @@ def test_dispatch_preserves_arguments_results_and_errors(
         if action == "create_indexes":
             args["replace"] = True
     else:
-        args.update(target=target, index=index)
+        args.update(collection=target, index=index)
     operation = getattr(bondi, action)
     assert operation(connection, **args) is native.return_value
     assert native.call_args.kwargs == args
@@ -93,10 +93,10 @@ def test_invalid_namespace_never_connects(action, conn, namespace, monkeypatch):
 def test_mismatched_target_never_connects(action, monkeypatch):
     client = MagicMock()
     monkeypatch.setattr(core, "_client", client)
-    with pytest.raises(TypeError, match="target"):
+    with pytest.raises(TypeError, match="collection"):
         action(
             MongoConnection("mongodb://x"),
-            target=couchbase.CouchbaseCollectionRef("b", "s", "c"),
+            collection=couchbase.CouchbaseCollectionRef("b", "s", "c"),
             index=FieldIndex((("x", 1),)),
         )
     client.assert_not_called()
@@ -109,5 +109,5 @@ def test_backend_modules_have_no_compatibility_aliases():
 
 
 def test_unsupported_connection_is_rejected():
-    with pytest.raises(TypeError, match="Expected Deployment"):
+    with pytest.raises(TypeError, match="Expected MongoConnection"):
         bondi.create_indexes("mongodb://x", indexes=IndexSet({}), database="db")

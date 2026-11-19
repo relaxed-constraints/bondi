@@ -4,17 +4,17 @@ import json
 from importlib.resources import files
 from typing import Any
 
+from bondi.connection import CouchbaseConnection, MongoConnection
 from bondi.couchbase.collection import CouchbaseCollectionRef
-from bondi.deployment import Deployment
 from bondi.mongodb import MongoCollectionRef
 
 from ._loader import load_documents
-from ._types import CouchbaseConnection, LoadDataResult, MongoConnection
+from ._types import LoadDataResult
 
 
 def load_demo_data(
     *,
-    target: Deployment | MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection,
     collection: MongoCollectionRef | CouchbaseCollectionRef,
     id_field: str | None = "business_id",
     **options: Any,
@@ -25,8 +25,8 @@ def load_demo_data(
     Couchbase requires the optional SDK, as with other dataset sources.
 
     Args:
-        target: Managed deployment or explicit connection.
-        collection: Exact destination reference matching the target backend.
+        connection: Connection settings for the destination instance.
+        collection: Exact destination reference matching the connection backend.
         id_field: Field used for document IDs. Defaults to business_id.
         **options: Options accepted by load_documents, including mode and on_progress.
             The default mode, create, requires an empty destination.
@@ -37,12 +37,12 @@ def load_demo_data(
 
     Raises:
         ValueError: Invalid loading options.
-        TypeError: Invalid target or collection reference.
+        TypeError: Invalid connection or collection reference.
         LoadDataError: Loading failed. result contains partial progress.
 
     This function creates no indexes. Create query indexes separately.
     """
     documents = json.loads(files("bondi.data").joinpath("business.json").read_text())
     return load_documents(
-        documents, target=target, collection=collection, id_field=id_field, **options
+        documents, connection=connection, collection=collection, id_field=id_field, **options
     )

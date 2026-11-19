@@ -9,7 +9,7 @@ from time import monotonic
 import pymongo
 from pymongo import IndexModel, MongoClient
 
-from bondi.connection import CouchbaseConnection, MongoConnection, normalize_connection
+from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
 from bondi.indexes import FieldIndex, IndexCreationError, IndexRemovalError, IndexSet
 
 
@@ -28,7 +28,7 @@ def _validate(backend, connection, indexes, targets, timeout):
     indexes.validate()
     if not isinstance(targets, Mapping) or set(targets) != set(indexes):
         raise ValueError("targets must map exactly the collection names in indexes")
-    conn = normalize_connection(connection)
+    conn = _validate_connection(connection)
     native, ref, credentials = (
         (MongoIndex, MongoCollectionRef, MongoConnection)
         if backend == "mongodb"
@@ -38,7 +38,7 @@ def _validate(backend, connection, indexes, targets, timeout):
         raise TypeError(f"Connection must be for {backend}")
     for collection_name, definitions in indexes.items():
         if not isinstance(targets[collection_name], ref):
-            raise TypeError(f"Incorrect target type for {collection_name}")
+            raise TypeError(f"Incorrect collection type for {collection_name}")
         names = set()
         for index in definitions:
             if type(index) not in (FieldIndex, native):
@@ -79,7 +79,7 @@ def _quote(identifier):
     return "`" + identifier.replace("`", "``") + "`"
 
 
-def _couchbase_statement(target, index):
+def _couchbase_statement(collection, index):
     expressions = []
     for position, (key, direction) in enumerate(index.keys):
         if type(index) is FieldIndex:
@@ -88,7 +88,9 @@ def _couchbase_statement(target, index):
         if index.kind == "couchbase" and index.include_missing and position == 0:
             key += " INCLUDE MISSING"
         expressions.append(key)
-    path = ".".join(_quote(value) for value in (target.bucket, target.scope, target.collection))
+    path = ".".join(
+        _quote(value) for value in (collection.bucket, collection.scope, collection.collection)
+    )
     statement = f"CREATE INDEX {_quote(index.resolved_name)} ON {path} ({', '.join(expressions)})"
     if index.kind == "couchbase" and index.condition is not None:
         statement += " WHERE " + index.condition
@@ -124,54 +126,56 @@ def _client(backend, conn, timeout):
         client.close()
 
 
-def _create(backend, client, target, index, timeout):
+def _create(backend, client, collection, index, timeout):
     if backend == "mongodb":
         with pymongo.timeout(timeout):
-            collection = client[target.database][target.collection]
+            native_collection = client[collection.database][collection.collection]
             model = _mongo_model(index)
             if model is None:
                 # Confirm the built-in index exists, rather than inventing a success.
-                existing = collection.index_information().get("_id_")
+                existing = native_collection.index_information().get("_id_")
                 if existing is None or list(existing["key"]) != [("_id", 1)]:
                     raise ValueError("Target has no compatible built-in _id index")
                 return "_id_"
-            return collection.create_indexes([model])[0]
+            return native_collection.create_indexes([model])[0]
 
     from couchbase.options import QueryOptions
 
     deadline = monotonic() + timeout
     client.query(
-        _couchbase_statement(target, index), QueryOptions(timeout=timedelta(seconds=timeout))
+        _couchbase_statement(collection, index), QueryOptions(timeout=timedelta(seconds=timeout))
     ).execute()
     remaining = deadline - monotonic()
     if remaining <= 0:
         raise TimeoutError("Index creation exhausted the readiness deadline")
-    collection = client.bucket(target.bucket).scope(target.scope).collection(target.collection)
-    collection.query_indexes().watch_indexes(
+    native_collection = (
+        client.bucket(collection.bucket).scope(collection.scope).collection(collection.collection)
+    )
+    native_collection.query_indexes().watch_indexes(
         [index.resolved_name], timeout=timedelta(seconds=remaining)
     )
     return index.resolved_name
 
 
-def create_one(backend, connection, target, index, timeout):
+def create_one(backend, connection, collection, index, timeout):
     indexes = IndexSet({"target": [index]})
-    conn = _validate(backend, connection, indexes, {"target": target}, timeout)
+    conn = _validate(backend, connection, indexes, {"target": collection}, timeout)
     with _client(backend, conn, timeout) as client:
-        return _create(backend, client, target, indexes["target"][0], timeout)
+        return _create(backend, client, collection, indexes["target"][0], timeout)
 
 
-def _existing(backend, client, target, timeout):
+def _existing(backend, client, collection, timeout):
     """Return name-to-protected flags, including indexes created outside BONDI."""
     if backend == "mongodb":
         with pymongo.timeout(timeout):
             return {
                 name: name == "_id_"
-                for name in client[target.database][target.collection].index_information()
+                for name in client[collection.database][collection.collection].index_information()
             }
     manager = (
-        client.bucket(target.bucket)
-        .scope(target.scope)
-        .collection(target.collection)
+        client.bucket(collection.bucket)
+        .scope(collection.scope)
+        .collection(collection.collection)
         .query_indexes()
     )
     return {
@@ -180,12 +184,12 @@ def _existing(backend, client, target, timeout):
     }
 
 
-def _drop(backend, client, target, name, timeout):
+def _drop(backend, client, collection, name, timeout):
     """Return whether the server acknowledged removal; tolerate only missing indexes."""
     if backend == "mongodb":
         try:
             with pymongo.timeout(timeout):
-                client[target.database][target.collection].drop_index(name)
+                client[collection.database][collection.collection].drop_index(name)
         except pymongo.errors.OperationFailure as exc:
             if exc.code not in (26, 27):  # NamespaceNotFound or IndexNotFound
                 raise
@@ -194,9 +198,9 @@ def _drop(backend, client, target, name, timeout):
         from couchbase.exceptions import QueryIndexNotFoundException
 
         manager = (
-            client.bucket(target.bucket)
-            .scope(target.scope)
-            .collection(target.collection)
+            client.bucket(collection.bucket)
+            .scope(collection.scope)
+            .collection(collection.collection)
             .query_indexes()
         )
         try:
@@ -276,16 +280,16 @@ def _check_protected(existing, definitions):
             raise ValueError(f"Cannot remove protected primary index: {index.resolved_name}")
 
 
-def remove_one(backend, connection, target, index, timeout):
+def remove_one(backend, connection, collection, index, timeout):
     conn, indexes, _ = _removal_inputs(
-        backend, connection, IndexSet({"target": [index]}), {"target": target}, timeout
+        backend, connection, IndexSet({"target": [index]}), {"target": collection}, timeout
     )
     definition = indexes["target"][0]
     with _client(backend, conn, timeout) as client:
-        existing = _existing(backend, client, target, timeout)
+        existing = _existing(backend, client, collection, timeout)
         _check_protected(existing, [definition])
         return definition.resolved_name in existing and _drop(
-            backend, client, target, definition.resolved_name, timeout
+            backend, client, collection, definition.resolved_name, timeout
         )
 
 

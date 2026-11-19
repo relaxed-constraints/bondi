@@ -29,7 +29,7 @@ def test_display_typed_slots_fixed_literals_and_query_options():
         "| sort={'stars': -1, 'city': 1} | projection={'_id': 0, 'city': 1} "
         "| skip=5 | limit=20"
     )
-    assert repr(pattern).startswith("MongoQueryPattern(target=MongoCollectionRef(")
+    assert repr(pattern).startswith("MongoQueryPattern(collection=MongoCollectionRef(")
 
 
 def test_print_omits_defaults_and_does_not_expose_sampled_values(capsys):

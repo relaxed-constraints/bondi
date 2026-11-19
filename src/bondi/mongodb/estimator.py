@@ -22,7 +22,7 @@ class AsyncMongoSampleEstimator:
 
     Args:
         executor: Borrowed async executor providing connection and timeouts.
-        target: Source collection; estimate queries must target this collection.
+        collection: Source collection; estimate queries must collection this collection.
         sample_size: Positive requested size, capped at population size with a warning.
         sample_ratio: Alternative fraction in (0, 1]; rounded to nearest integer,
             with a minimum of one for nonempty populations (warning when adjusted).
@@ -41,7 +41,7 @@ class AsyncMongoSampleEstimator:
     def __init__(
         self,
         executor: AsyncMongoExecutor,
-        target: MongoCollectionRef,
+        collection: MongoCollectionRef,
         *,
         sample_size: int | None = None,
         sample_ratio: float | None = None,
@@ -52,8 +52,8 @@ class AsyncMongoSampleEstimator:
     ) -> None:
         if not isinstance(executor, AsyncMongoExecutor):
             raise TypeError("executor must be an AsyncMongoExecutor")
-        if not isinstance(target, MongoCollectionRef):
-            raise TypeError("target must be a MongoCollectionRef")
+        if not isinstance(collection, MongoCollectionRef):
+            raise TypeError("collection must be a MongoCollectionRef")
         if sample_size is not None and sample_ratio is not None:
             raise ValueError("Use only one of sample_size or sample_ratio")
         for name, value in (("sample_size", sample_size), ("population_limit", population_limit)):
@@ -69,7 +69,7 @@ class AsyncMongoSampleEstimator:
             raise TypeError("persist and cleanup_on_exit must be bool")
         MongoCollectionRef(sample_database, "validate")
         self._executor = executor
-        self._target = target
+        self._collection = collection
         self._requested_size = sample_size
         self._ratio = sample_ratio
         self._persist = persist
@@ -78,7 +78,7 @@ class AsyncMongoSampleEstimator:
         self._cleanup = cleanup_on_exit
         self._population_size: int | None = None
         self._sample_size: int | None = None
-        self._sample_target: MongoCollectionRef | None = None
+        self._sample_collection: MongoCollectionRef | None = None
         self._prepared = False
         self._closed = False
 
@@ -93,9 +93,9 @@ class AsyncMongoSampleEstimator:
         return self._sample_size
 
     @property
-    def sample_target(self) -> MongoCollectionRef | None:
+    def sample_collection(self) -> MongoCollectionRef | None:
         """Owned sample collection, or None when no materialized sample exists."""
-        return self._sample_target
+        return self._sample_collection
 
     def _prefix(self) -> list[dict]:
         return [{"$limit": self._limit}] if self._limit is not None else []
@@ -105,9 +105,9 @@ class AsyncMongoSampleEstimator:
             raise RuntimeError("Estimator is closed")
         self._executor._check_open()
 
-    async def _run(self, target, pipeline):
+    async def _run(self, collection, pipeline):
         result = await self._executor.run(
-            MongoAggregateQuery(target, pipeline), collect_results=True
+            MongoAggregateQuery(collection, pipeline), collect_results=True
         )
         return result.documents
 
@@ -124,9 +124,9 @@ class AsyncMongoSampleEstimator:
         self._check_open()
         if self._prepared:
             return self
-        if self._sample_target is not None:
+        if self._sample_collection is not None:
             raise RuntimeError("Call drop_sample() to clean up the previous failed preparation")
-        rows = await self._run(self._target, self._prefix() + [{"$count": "count"}])
+        rows = await self._run(self._collection, self._prefix() + [{"$count": "count"}])
         population = rows[0]["count"] if rows else 0
         size = population
         if self._requested_size is not None:
@@ -151,19 +151,19 @@ class AsyncMongoSampleEstimator:
         self._population_size = population
         self._sample_size = size
         if self._persist and 0 < size < population:
-            target = MongoCollectionRef(self._sample_database, f"sample_{uuid4().hex}")
-            self._sample_target = target
+            collection = MongoCollectionRef(self._sample_database, f"sample_{uuid4().hex}")
+            self._sample_collection = collection
             try:
                 # UUID names keep ownership separate from source and other estimators.
                 await self._run(
-                    self._target,
+                    self._collection,
                     self._prefix()
                     + [
                         {"$sample": {"size": size}},
-                        {"$out": {"db": target.database, "coll": target.collection}},
+                        {"$out": {"db": collection.database, "coll": collection.collection}},
                     ],
                 )
-                rows = await self._run(target, [{"$count": "count"}])
+                rows = await self._run(collection, [{"$count": "count"}])
                 self._sample_size = rows[0]["count"] if rows else 0
                 if not self._sample_size:
                     raise RuntimeError("Sample became empty during preparation; source changed")
@@ -189,14 +189,14 @@ class AsyncMongoSampleEstimator:
         if not isinstance(query, MongoFindQuery):
             raise TypeError("query must be a MongoFindQuery")
         query.validate()
-        if query.target != self._target:
-            raise ValueError("query target must match the estimator's source collection")
+        if query.collection != self._collection:
+            raise ValueError("query collection must match the estimator's source collection")
         population = self._population_size
         if population == 0:
             return CardinalityEstimate(0.0, 0, 0, 0)
-        if self._sample_target is not None:
+        if self._sample_collection is not None:
             rows = await self._run(
-                self._sample_target,
+                self._sample_collection,
                 [
                     {"$match": query.filter},
                     {"$count": "count"},
@@ -216,7 +216,7 @@ class AsyncMongoSampleEstimator:
                     }
                 }
             )
-            rows = await self._run(self._target, pipeline)
+            rows = await self._run(self._collection, pipeline)
             counts = rows[0] if rows else {"sample": [], "matches": []}
             size = counts["sample"][0]["count"] if counts["sample"] else 0
             matches = counts["matches"][0]["count"] if counts["matches"] else 0
@@ -230,13 +230,13 @@ class AsyncMongoSampleEstimator:
         Dropping an active sample invalidates preparation. Call prepare() again
         to create a new sample. The borrowed executor must remain open.
         """
-        if self._sample_target is None:
+        if self._sample_collection is None:
             return
         self._executor._check_open()
-        target = self._sample_target
+        collection = self._sample_collection
         with self._executor._timeout():
-            await self._executor.client[target.database].drop_collection(target.collection)
-        self._sample_target = None
+            await self._executor.client[collection.database].drop_collection(collection.collection)
+        self._sample_collection = None
         self._prepared = False
 
     async def close(self) -> None:
@@ -265,7 +265,7 @@ class MongoSampleEstimator:
     def __init__(
         self,
         executor: MongoExecutor,
-        target: MongoCollectionRef,
+        collection: MongoCollectionRef,
         *,
         sample_size: int | None = None,
         sample_ratio: float | None = None,
@@ -280,7 +280,7 @@ class MongoSampleEstimator:
         self._executor = executor
         self._estimator = AsyncMongoSampleEstimator(
             executor._executor,
-            target,
+            collection,
             sample_size=sample_size,
             sample_ratio=sample_ratio,
             persist=persist,
@@ -300,9 +300,9 @@ class MongoSampleEstimator:
         return self._estimator.sample_size
 
     @property
-    def sample_target(self) -> MongoCollectionRef | None:
+    def sample_collection(self) -> MongoCollectionRef | None:
         """Owned sample collection, or None."""
-        return self._estimator.sample_target
+        return self._estimator.sample_collection
 
     def _call(self, method, *args):
         self._executor._check()
@@ -331,7 +331,7 @@ class MongoSampleEstimator:
 
     def drop_sample(self) -> None:
         """Drop the owned sample, including after close if it was retained."""
-        if self.sample_target is not None:
+        if self.sample_collection is not None:
             self._call("drop_sample")
 
     def close(self) -> None:

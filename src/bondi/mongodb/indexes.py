@@ -4,7 +4,9 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import ClassVar
 
-from bondi.indexes import _Definition
+from bondi.connection import MongoConnection
+from bondi.indexes import FieldIndex, IndexSet, _Definition
+from bondi.mongodb.collection import MongoCollectionRef
 
 
 @dataclass
@@ -45,13 +47,19 @@ class MongoIndex(_Definition):
             raise ValueError("sparse and partial_filter cannot be combined")
 
 
-def create_mongo_index(connection, *, target, index, timeout=300.0):
+def create_mongo_index(
+    connection: MongoConnection,
+    *,
+    collection: MongoCollectionRef,
+    index: FieldIndex | MongoIndex,
+    timeout: float = 300.0,
+) -> str:
     """Create one index and return its name after the initial build completes.
 
     Args:
-        connection (Deployment | MongoConnection): Deployment or connection settings.
+        connection (MongoConnection): Connection settings.
             A client is owned per call.
-        target (MongoCollectionRef): MongoCollectionRef destination.
+        collection (MongoCollectionRef): MongoCollectionRef destination.
         index (FieldIndex | MongoIndex): FieldIndex or MongoIndex definition.
         timeout (float): Positive finite timeout in seconds for this operation.
 
@@ -61,14 +69,21 @@ def create_mongo_index(connection, *, target, index, timeout=300.0):
     """
     from bondi._index_creation import create_one
 
-    return create_one("mongodb", connection, target, index, timeout)
+    return create_one("mongodb", connection, collection, index, timeout)
 
 
-def create_mongo_indexes(connection, *, indexes, database, timeout=300.0, replace=False):
+def create_mongo_indexes(
+    connection: MongoConnection,
+    *,
+    indexes: IndexSet,
+    database: str,
+    timeout: float = 300.0,
+    replace: bool = False,
+) -> dict[str, list[str]]:
     """Create an IndexSet using one client; return collection-to-name lists.
 
     Args:
-        connection (Deployment | MongoConnection): Deployment or MongoConnection settings.
+        connection (MongoConnection): MongoDB connection settings.
         indexes (IndexSet): IndexSet of shared or MongoDB definitions.
         database (str): Database containing the IndexSet collections.
         timeout (float): Positive finite seconds per inspection, removal or creation operation.
@@ -83,8 +98,6 @@ def create_mongo_indexes(connection, *, indexes, database, timeout=300.0, replac
     No rollback is attempted. Run without concurrent index administration.
     """
     from bondi._index_creation import create_many
-    from bondi.indexes import IndexSet
-    from bondi.mongodb.collection import MongoCollectionRef
 
     if not isinstance(indexes, IndexSet):
         raise TypeError("indexes must be an IndexSet")
@@ -94,12 +107,18 @@ def create_mongo_indexes(connection, *, indexes, database, timeout=300.0, replac
     return create_many("mongodb", connection, indexes, targets, timeout, replace)
 
 
-def remove_mongo_index(connection, *, target, index, timeout=300.0):
+def remove_mongo_index(
+    connection: MongoConnection,
+    *,
+    collection: MongoCollectionRef,
+    index: FieldIndex | MongoIndex,
+    timeout: float = 300.0,
+) -> bool:
     """Remove one named index; return True if removed, False if already absent.
 
     Args:
-        connection (Deployment | MongoConnection): Deployment or connection settings.
-        target (MongoCollectionRef): Destination collection.
+        connection (MongoConnection): Connection settings.
+        collection (MongoCollectionRef): Destination collection.
         index (FieldIndex | MongoIndex): Definition identifying an explicit or generated name.
         timeout (float): Positive finite seconds per inspection or removal operation.
 
@@ -108,14 +127,20 @@ def remove_mongo_index(connection, *, target, index, timeout=300.0):
     """
     from bondi._index_creation import remove_one
 
-    return remove_one("mongodb", connection, target, index, timeout)
+    return remove_one("mongodb", connection, collection, index, timeout)
 
 
-def remove_mongo_indexes(connection, *, indexes, database, timeout=300.0):
+def remove_mongo_indexes(
+    connection: MongoConnection,
+    *,
+    indexes: IndexSet,
+    database: str,
+    timeout: float = 300.0,
+) -> dict[str, list[str]]:
     """Remove named definitions; return collection-to-removed-name lists.
 
     Args:
-        connection (Deployment | MongoConnection): Deployment or connection settings.
+        connection (MongoConnection): Connection settings.
         indexes (IndexSet): Definitions identifying explicit or generated names.
         database (str): Database containing the IndexSet collections.
         timeout (float): Positive finite seconds per inspection or removal operation.
@@ -127,8 +152,6 @@ def remove_mongo_indexes(connection, *, indexes, database, timeout=300.0):
     IndexRemovalError with completed removals; no rollback is attempted.
     """
     from bondi._index_creation import remove_many
-    from bondi.indexes import IndexSet
-    from bondi.mongodb.collection import MongoCollectionRef
 
     if not isinstance(indexes, IndexSet):
         raise TypeError("indexes must be an IndexSet")

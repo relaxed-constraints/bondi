@@ -6,6 +6,7 @@ configuration supplied by relcon-docs; see [Building the documentation](document
 
 | Area | Reference |
 | --- | --- |
+| Connection settings | [Connections API](reference/connection.md) |
 | Database deployment | [Deployment API](reference/deployment.md) |
 | Dataset loading | [Dataset API](reference/data.md) |
 | Shared data | [Queries and workloads](reference/queries.md), [index definitions](reference/indexes.md), [results and summaries](reference/results.md) |

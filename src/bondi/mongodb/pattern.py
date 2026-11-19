@@ -105,13 +105,13 @@ class MongoQueryPattern:
 
     Field/operator/type/membership length and all query options identify a pattern.
     Filter and projection order are canonicalized; sort order is significant.
-    Use print(pattern) for a readable target, typed predicates and query options.
+    Use print(pattern) for a readable collection, typed predicates and query options.
     Patterns may be inspected or extracted from saved queries with from_query().
     Logical expressions, object/array equality and multiple operators on one field
     are outside this initial subset. They remain representable as MongoFindQuery.
     """
 
-    target: MongoCollectionRef
+    collection: MongoCollectionRef
     predicates: tuple[MongoPredicateTemplate, ...]
     sort: tuple[tuple[str, int], ...] = ()
     projection: tuple[tuple[str, int], ...] | None = None
@@ -131,7 +131,7 @@ class MongoQueryPattern:
         object.__setattr__(
             self, "predicates", tuple(sorted(self.predicates, key=lambda p: p.field))
         )
-        MongoFindQuery(self.target, {}, sort=self.sort, skip=self.skip, limit=self.limit)
+        MongoFindQuery(self.collection, {}, sort=self.sort, skip=self.skip, limit=self.limit)
         if len({p[0] for p in self.sort}) != len(self.sort):
             raise ValueError("Duplicate sort field")
         for name, _ in self.sort:
@@ -158,7 +158,7 @@ class MongoQueryPattern:
     def to_dict(self) -> dict:
         """Return an independent, JSON-compatible version-1 pattern envelope.
 
-        Sort/projection pairs become lists; target and predicate templates become
+        Sort/projection pairs become lists; collection and predicate templates become
         dictionaries. Patterns contain type labels and fixed bool/string operands,
         not sampled BSON values, so ordinary JSON is sufficient.
 
@@ -168,7 +168,7 @@ class MongoQueryPattern:
         return {
             "format_version": 1,
             "pattern_kind": "mongodb.find",
-            "target": asdict(self.target),
+            "target": asdict(self.collection),
             "predicates": [asdict(predicate) for predicate in self.predicates],
             "sort": [list(pair) for pair in self.sort],
             "projection": None if self.projection is None else [list(p) for p in self.projection],
@@ -230,7 +230,7 @@ class MongoQueryPattern:
             )
             predicates.append(MongoPredicateTemplate(**predicate))
         return cls(
-            target=MongoCollectionRef(**value["target"]),
+            collection=MongoCollectionRef(**value["target"]),
             predicates=tuple(predicates),
             sort=pairs(value["sort"], "sort"),
             projection=None
@@ -276,7 +276,7 @@ class MongoQueryPattern:
         )
 
     def __str__(self) -> str:
-        """Format the target, typed predicates and configured query options for display.
+        """Format the collection, typed predicates and configured query options for display.
 
         Sampled operands appear as <type>, or <arity × type> for membership.
         Fixed exists/type operands retain their Python literal representation.
@@ -285,7 +285,7 @@ class MongoQueryPattern:
         not an executable query or persistence format; repr retains the dataclass view.
 
         Returns:
-            A display string with the target, typed predicates, and query options.
+            A display string with the collection, typed predicates, and query options.
         """
         predicates = []
         for predicate in self.predicates:
@@ -296,7 +296,9 @@ class MongoQueryPattern:
             else:
                 operand = f"<{predicate.value_type}>"
             predicates.append(f"{predicate.field} ${predicate.operator} {operand}")
-        parts = [f"{self.target.database}.{self.target.collection}: " + " AND ".join(predicates)]
+        parts = [
+            f"{self.collection.database}.{self.collection.collection}: " + " AND ".join(predicates)
+        ]
         if self.sort:
             parts.append(f"sort={dict(self.sort)!r}")
         if self.projection is not None:
@@ -342,7 +344,7 @@ class MongoQueryPattern:
                 predicate = MongoPredicateTemplate(name, op, kind, len(values))
             predicates.append(predicate)
         return cls(
-            query.target,
+            query.collection,
             tuple(predicates),
             query.sort,
             None if query.projection is None else tuple(query.projection.items()),

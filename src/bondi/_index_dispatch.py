@@ -1,12 +1,23 @@
-"""Public index operations dispatched from deployment or connection settings."""
+"""Public index operations dispatched from connection settings."""
 
-from bondi.connection import MongoConnection, normalize_connection
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
+from bondi.indexes import FieldIndex, IndexSet
+
+if TYPE_CHECKING:
+    from bondi.couchbase.collection import CouchbaseCollectionRef
+    from bondi.couchbase.indexes import CouchbaseIndex
+    from bondi.mongodb.collection import MongoCollectionRef
+    from bondi.mongodb.indexes import MongoIndex
 
 
 def _operation(connection, action):
     from bondi import couchbase, mongodb
 
-    conn = normalize_connection(connection)
+    conn = _validate_connection(connection)
     module, prefix = (
         (mongodb, "mongo") if isinstance(conn, MongoConnection) else (couchbase, "couchbase")
     )
@@ -23,12 +34,18 @@ def _namespace(conn, database, bucket, scope):
     return {"bucket": bucket, "scope": scope}
 
 
-def create_index(connection, *, target, index, timeout=300.0) -> str:
-    """Create one index using the deployment or connection's backend.
+def create_index(
+    connection: MongoConnection | CouchbaseConnection,
+    *,
+    collection: MongoCollectionRef | CouchbaseCollectionRef,
+    index: FieldIndex | MongoIndex | CouchbaseIndex,
+    timeout: float = 300.0,
+) -> str:
+    """Create one index using the connection's backend.
 
     Args:
-        connection (Deployment | MongoConnection | CouchbaseConnection): Connection settings.
-        target (MongoCollectionRef | CouchbaseCollectionRef): Collection matching the backend.
+        connection (MongoConnection | CouchbaseConnection): Connection settings.
+        collection (MongoCollectionRef | CouchbaseCollectionRef): Collection matching the backend.
         index (FieldIndex | MongoIndex | CouchbaseIndex): Shared or matching native definition.
         timeout (float): Positive finite seconds for creation and readiness.
 
@@ -39,16 +56,23 @@ def create_index(connection, *, target, index, timeout=300.0) -> str:
     readiness and native errors are preserved. No index replacement is performed.
     """
     conn, operation = _operation(connection, "create_index")
-    return operation(conn, target=target, index=index, timeout=timeout)
+    return operation(conn, collection=collection, index=index, timeout=timeout)
 
 
 def create_indexes(
-    connection, *, indexes, database=None, bucket=None, scope=None, timeout=300.0, replace=False
+    connection: MongoConnection | CouchbaseConnection,
+    *,
+    indexes: IndexSet,
+    database: str | None = None,
+    bucket: str | None = None,
+    scope: str | None = None,
+    timeout: float = 300.0,
+    replace: bool = False,
 ) -> dict[str, list[str]]:
-    """Create an IndexSet using the deployment or connection's backend.
+    """Create an IndexSet using the connection's backend.
 
     Args:
-        connection (Deployment | MongoConnection | CouchbaseConnection): Connection settings.
+        connection (MongoConnection | CouchbaseConnection): Connection settings.
         indexes (IndexSet): Collection-keyed shared or matching native definitions.
         database (str | None): Required for MongoDB; omit for Couchbase.
         bucket (str | None): Required for Couchbase; omit for MongoDB.
@@ -67,12 +91,18 @@ def create_indexes(
     return operation(conn, indexes=indexes, timeout=timeout, replace=replace, **namespace)
 
 
-def remove_index(connection, *, target, index, timeout=300.0) -> bool:
-    """Remove one named index using the deployment or connection's backend.
+def remove_index(
+    connection: MongoConnection | CouchbaseConnection,
+    *,
+    collection: MongoCollectionRef | CouchbaseCollectionRef,
+    index: FieldIndex | MongoIndex | CouchbaseIndex,
+    timeout: float = 300.0,
+) -> bool:
+    """Remove one named index using the connection's backend.
 
     Args:
-        connection (Deployment | MongoConnection | CouchbaseConnection): Connection settings.
-        target (MongoCollectionRef | CouchbaseCollectionRef): Collection matching the backend.
+        connection (MongoConnection | CouchbaseConnection): Connection settings.
+        collection (MongoCollectionRef | CouchbaseCollectionRef): Collection matching the backend.
         index (FieldIndex | MongoIndex | CouchbaseIndex): Definition identifying the index name.
         timeout (float): Positive finite seconds per inspection or removal.
 
@@ -83,16 +113,22 @@ def remove_index(connection, *, target, index, timeout=300.0) -> bool:
     ValueError. Selection uses the explicit or generated name, not key equivalence.
     """
     conn, operation = _operation(connection, "remove_index")
-    return operation(conn, target=target, index=index, timeout=timeout)
+    return operation(conn, collection=collection, index=index, timeout=timeout)
 
 
 def remove_indexes(
-    connection, *, indexes, database=None, bucket=None, scope=None, timeout=300.0
+    connection: MongoConnection | CouchbaseConnection,
+    *,
+    indexes: IndexSet,
+    database: str | None = None,
+    bucket: str | None = None,
+    scope: str | None = None,
+    timeout: float = 300.0,
 ) -> dict[str, list[str]]:
-    """Remove named definitions using the deployment or connection's backend.
+    """Remove named definitions using the connection's backend.
 
     Args:
-        connection (Deployment | MongoConnection | CouchbaseConnection): Connection settings.
+        connection (MongoConnection | CouchbaseConnection): Connection settings.
         indexes (IndexSet): Collection-keyed definitions identifying index names.
         database (str | None): Required for MongoDB; omit for Couchbase.
         bucket (str | None): Required for Couchbase; omit for MongoDB.

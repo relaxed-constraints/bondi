@@ -18,7 +18,7 @@ uv run bondi deployment start lesson
 ```
 
 Choose an unused name and port; do not assume a student's existing deployment is
-disposable. Deployments start empty. Use `bondi.data.load_demo_data(target=deployment,
+disposable. Deployments start empty. Use `bondi.data.load_demo_data(connection=deployment.connection,
 collection=ref)` or `bondi dataset load-demo` to load eight fictional businesses.
 Use a MongoCollectionRef or CouchbaseCollectionRef for the exact destination.
 The default create mode requires an empty collection. Use mode="upsert" or
@@ -31,7 +31,7 @@ Create query indexes separately. Demo loading creates no indexes.
 Inspect `uv run bondi --help` and subcommand help for installed CLI options.
 `python -m bondi` is also supported. Python equivalents live in
 `bondi.deployment`: `deploy_mongodb`, `deploy_couchbase`, `get_deployment`
-and `list_deployments`. A deployment handle exposes connection details and
+and `list_deployments`. A deployment handle exposes `connection` settings and
 lifecycle methods; loading a handle does not start the database.
 
 Closing an executor does not stop Docker. CLI `bondi deployment remove NAME` deletes data
@@ -67,10 +67,10 @@ each load. Cache locations follow `HF_HOME`, `HF_HUB_CACHE` and
 Metadata resolution still contacts the Hub, so caching is not an offline guarantee.
 
 AptMQL loaders (0.3.5+; check installed exports) use the fixed
-`MongoDB/AptMQL-Bench` repository. `load_aptmql_dataset("beer_factory", target=...)`
+`MongoDB/AptMQL-Bench` repository. `load_aptmql_dataset("beer_factory", connection=...)`
 loads all related collections into a MongoDB database or Couchbase scope named
 `beer_factory`. Single-dataset calls allow `database` or `scope` overrides.
-`load_aptmql_repository(target=...)` loads all datasets under their source names.
+`load_aptmql_repository(connection=...)` loads all datasets under their source names.
 Couchbase requires `bucket` for either function. The CLI commands are
 `bondi dataset load-aptmql beer_factory` and `bondi dataset load-aptmql-repository`.
 Both accept `--revision` and standard destination/write options. Pin a commit for
@@ -205,7 +205,7 @@ from bondi.deployment import get_deployment
 from bondi.mongodb import MongoExecutor, summarize
 
 deployment = get_deployment("lesson")
-with MongoExecutor.from_uri(deployment.uri) as executor:
+with MongoExecutor.from_connection(deployment.connection) as executor:
     result = executor.run(query, collect_results=True)
     results = executor.run_workload(restored)
     summary = summarize(executor.profile(query).raw)
@@ -241,7 +241,7 @@ the full population; a sample estimates cardinality and selectivity before query
 skip, limit or projection. Small samples can miss rare matches. Read the estimation
 guide before choosing fresh versus persisted sampling.
 
-`MongoWorkloadGenerator` takes a target, a schema, `MongoGenerationConfig` and,
+`MongoWorkloadGenerator` takes a collection, a schema, `MongoGenerationConfig` and,
 optionally, a prepared estimator. It does not manage the estimator's lifecycle.
 `generate(num_patterns=..., instances_per_pattern=..., seed=...)` produces a
 workload; `return_patterns=True` also returns patterns. Instances may repeat.
@@ -363,7 +363,7 @@ containers automatically. See the
 
 `FieldIndex`, `MongoIndex`, `CouchbaseIndex` and `IndexSet` define reusable indexes.
 The generic `bondi.create_indexes()` accepts an IndexSet plus MongoDB `database` or
-Couchbase `bucket`/`scope`, and a deployment or connection configuration.
+Couchbase `bucket`/`scope`, and a connection configuration.
 These lifecycle extensions require BONDI 0.3.8 or newer.
 
 `create_indexes(..., replace=True)` removes all secondary indexes on the collections
@@ -372,7 +372,7 @@ set. An empty collection list clears secondary indexes; omitted collections are
 untouched. MongoDB `_id_` and Couchbase primary indexes are preserved. This is
 non-atomic and must not run alongside concurrent index administration.
 
-`remove_index(..., target=ref, index=definition)` returns whether removal was
+`remove_index(..., collection=ref, index=definition)` returns whether removal was
 confirmed. `remove_indexes(..., indexes=index_set, database=...)` returns confirmed
 removed names by collection; Couchbase uses bucket/scope. Removal uses explicit or
 generated names, not semantic equivalence. Missing names are skipped; protected
@@ -385,7 +385,7 @@ reference in the matching checkout for exact fields and timeout semantics.
 
 
 Generic `bondi.create_index`, `create_indexes`, `remove_index` and `remove_indexes`
-dispatch from the deployment or connection type. Explicit backend functions are
+dispatch from the connection type. Explicit backend functions are
 `create_mongo_index[es]` / `remove_mongo_index[es]` in `bondi.mongodb` and
 `create_couchbase_index[es]` / `remove_couchbase_index[es]` in `bondi.couchbase`.
 There are no old-name backend aliases. Namespace arguments must match the backend.

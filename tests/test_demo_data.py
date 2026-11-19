@@ -1,13 +1,15 @@
 """The demo uses the general loader and its public CLI contract."""
 
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
 
+from bondi import CouchbaseConnection, MongoConnection
 from bondi._cli import cli
 from bondi.couchbase import CouchbaseCollectionRef
-from bondi.data import CouchbaseConnection, LoadDataResult, MongoConnection, load_demo_data
+from bondi.data import LoadDataResult, load_demo_data
 from bondi.deployment import Deployment
 from bondi.mongodb import MongoCollectionRef
 
@@ -30,7 +32,7 @@ def test_packaged_documents_and_loader_options(target, ref, tmp_path, monkeypatc
 
     with patch("bondi.data._demo.load_documents") as load:
         result = load_demo_data(
-            target=target, collection=ref, mode="upsert", on_progress=callback, batch_size=2
+            connection=target, collection=ref, mode="upsert", on_progress=callback, batch_size=2
         )
     assert result is load.return_value
     rows = load.call_args.args[0]
@@ -38,7 +40,7 @@ def test_packaged_documents_and_loader_options(target, ref, tmp_path, monkeypatc
     assert len({row["business_id"] for row in rows}) == 8
     assert rows[0]["name"] == "Harbour Cafe"
     assert load.call_args.kwargs == {
-        "target": target,
+        "connection": target,
         "collection": ref,
         "id_field": "business_id",
         "mode": "upsert",
@@ -50,7 +52,7 @@ def test_packaged_documents_and_loader_options(target, ref, tmp_path, monkeypatc
 def test_demo_uses_loader_defaults():
     with patch("bondi.data._demo.load_documents") as load:
         load_demo_data(
-            target=MongoConnection("mongodb://unused"),
+            connection=MongoConnection("mongodb://unused"),
             collection=MongoCollectionRef("demo", "business"),
         )
     assert "mode" not in load.call_args.kwargs
@@ -74,7 +76,7 @@ def test_demo_cli(backend):
     )
     destination = ["--database", "demo"] if backend == "mongodb" else ["--bucket", "demo"]
     with (
-        patch("bondi.deployment.get_deployment", return_value=target),
+        patch("bondi.deployment.get_deployment", return_value=SimpleNamespace(connection=target)),
         patch("bondi.data._cli.load_demo_data", return_value=LoadDataResult(backend)) as load,
     ):
         result = CliRunner().invoke(
@@ -92,7 +94,7 @@ def test_demo_cli(backend):
             ],
         )
     assert result.exit_code == 0, result.output
-    assert load.call_args.kwargs["target"] is target
+    assert load.call_args.kwargs["connection"] is target
     assert load.call_args.kwargs["mode"] == "upsert"
     assert load.call_args.kwargs["id_field"] == "business_id"
     assert load.call_args.kwargs["collection"].collection == "business"

@@ -1,9 +1,7 @@
-"""Connections and observations for dataset loading."""
+"""Observations and errors for dataset loading."""
 
 from dataclasses import dataclass, field
 from typing import Any
-
-from bondi.connection import CouchbaseConnection, MongoConnection  # noqa: F401
 
 
 @dataclass

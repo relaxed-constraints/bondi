@@ -2,6 +2,10 @@
 
 Use `MongoExecutor` or `CouchbaseExecutor` in both scripts and notebooks. They manage
 connections and expose the same operations for individual queries and workloads.
+Create an executor with `from_connection(connection, ...)`, using
+`deployment.connection` or explicit [connection settings](connections.md).
+The executor owns its SDK client and closes it on context exit. A settings object
+itself has no open resources and needs no cleanup.
 Start with the [quickstart](quickstart.md) for a complete MongoDB example.
 
 ## Connect to Couchbase
@@ -11,13 +15,14 @@ Load your data into `demo._default.business` before running this query.
 These credentials are the defaults for a managed local deployment:
 
 ```python
+from bondi import CouchbaseConnection
 from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
 
 query = CouchbaseQuery("SELECT RAW b FROM `demo`.`_default`.`business` b LIMIT 5")
-with CouchbaseExecutor.from_uri(
-    "couchbase://127.0.0.1?network=external",
-    username="Administrator",
-    password="bondi-local",
+with CouchbaseExecutor.from_connection(
+    CouchbaseConnection(
+        "couchbase://127.0.0.1?network=external", username="Administrator", password="bondi-local"
+    ),
     timeout_seconds=10,
 ) as executor:
     result = executor.run(query, collect_results=True)
@@ -29,10 +34,11 @@ with CouchbaseExecutor.from_uri(
 Given a `workload` built with the [workload guide](workloads.md):
 
 ```python
+from bondi import MongoConnection
 from bondi.mongodb import MongoExecutor
 
-with MongoExecutor.from_uri(
-    "mongodb://127.0.0.1:27017",
+with MongoExecutor.from_connection(
+    MongoConnection("mongodb://127.0.0.1:27017"),
     concurrency=4,
     timeout_seconds=30,
     continue_on_error=True,
@@ -217,11 +223,12 @@ references. Continue with [explain and profile](profiling.md) for diagnostic ope
 Use an explicit probe before starting work, or opt into one before each operation:
 
 ```python
+from bondi import MongoConnection
 from bondi.execution import DatabaseUnavailableError
 from bondi.mongodb import MongoExecutor
 
-with MongoExecutor.from_uri(
-    "mongodb://localhost:27017/",
+with MongoExecutor.from_connection(
+    MongoConnection("mongodb://localhost:27017/"),
     timeout_seconds=600,
     health_check_timeout_seconds=5,
     continue_on_error=True,

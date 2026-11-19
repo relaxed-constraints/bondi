@@ -130,6 +130,6 @@ def test_invalid_query_contract():
 
 
 def test_backend_is_not_a_dataclass_field():
-    for query in [find(), MongoAggregateQuery(find().target, []), CouchbaseQuery("SELECT 1")]:
+    for query in [find(), MongoAggregateQuery(find().collection, []), CouchbaseQuery("SELECT 1")]:
         assert "backend" not in {f.name for f in fields(query)}
         assert type(query).from_json(query.to_json()).backend == query.backend

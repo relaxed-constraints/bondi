@@ -19,8 +19,8 @@ def test_healthy_and_stopped_probe(tmp_path, monkeypatch, live_ports, backend):
     try:
         if backend == "mongodb":
             db = deploy_mongodb("health-mongo", port=live_ports.claim("mongodb")[0])
-            executor = MongoExecutor.from_uri(
-                db.uri,
+            executor = MongoExecutor.from_connection(
+                db.connection,
                 timeout_seconds=600,
                 health_check_timeout_seconds=0.2,
                 client_kwargs={"serverSelectionTimeoutMS": 600000, "connectTimeoutMS": 600000},
@@ -33,10 +33,8 @@ def test_healthy_and_stopped_probe(tmp_path, monkeypatch, live_ports, backend):
             db = deploy_couchbase(
                 "health-couchbase", management_port=management, query_port=query, kv_port=kv
             )
-            executor = CouchbaseExecutor.from_uri(
-                db.uri,
-                username=db.username,
-                password=db.password,
+            executor = CouchbaseExecutor.from_connection(
+                db.connection,
                 timeout_seconds=600,
                 health_check_timeout_seconds=0.2,
             )

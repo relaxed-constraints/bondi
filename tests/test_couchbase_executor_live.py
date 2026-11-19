@@ -24,10 +24,8 @@ def test_live_couchbase(edition, live_deployments):
     db = live_deployments(edition)
 
     async def scenario():
-        async with await AsyncCouchbaseExecutor.from_uri(
-            db.uri,
-            username=db.username,
-            password=db.password,
+        async with await AsyncCouchbaseExecutor.from_connection(
+            db.connection,
             concurrency=2,
             continue_on_error=True,
             timeout_seconds=10,

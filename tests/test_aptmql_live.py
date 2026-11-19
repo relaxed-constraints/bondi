@@ -27,7 +27,11 @@ def test_pinned_beer_factory(backend, live_deployments):
     deployment = live_deployments(backend)
     kwargs = {} if backend == "mongodb" else {"bucket": deployment.bucket}
     results = load_aptmql_dataset(
-        "beer_factory", target=deployment, revision=REVISION, batch_size=500, **kwargs
+        "beer_factory",
+        connection=deployment.connection,
+        revision=REVISION,
+        batch_size=500,
+        **kwargs,
     )
     assert {key: sum(value.destinations.values()) for key, value in results.items()} == COUNTS
     if backend == "mongodb":

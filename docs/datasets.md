@@ -23,7 +23,7 @@ from bondi.deployment import get_deployment
 from bondi.mongodb import MongoCollectionRef
 
 result = load_demo_data(
-    target=get_deployment("mongo-demo"),
+    connection=get_deployment("mongo-demo"),
     collection=MongoCollectionRef("demo", "business"),
 )
 print(result.destinations)  # {"demo.business": 8}
@@ -35,7 +35,7 @@ For Couchbase, install `bondi[couchbase]` and use a Couchbase collection referen
 from bondi.couchbase import CouchbaseCollectionRef
 
 result = load_demo_data(
-    target=get_deployment("cb-demo"),
+    connection=get_deployment("cb-demo"),
     collection=CouchbaseCollectionRef("demo", "_default", "business"),
 )
 ```
@@ -57,9 +57,7 @@ For the Couchbase query examples, create a primary index after loading:
 from bondi.couchbase import CouchbaseExecutor, CouchbaseQuery
 
 deployment = get_deployment("cb-demo")
-with CouchbaseExecutor.from_uri(
-    deployment.uri, username=deployment.username, password=deployment.password
-) as executor:
+with CouchbaseExecutor.from_connection(deployment.connection) as executor:
     executor.run(
         CouchbaseQuery("CREATE PRIMARY INDEX IF NOT EXISTS ON `demo`.`_default`.`business`")
     )
@@ -98,14 +96,14 @@ business = MongoCollectionRef("demo", "business")
 
 result = load_file(
     "dev/business.json",
-    target=deployment,
+    connection=deployment.connection,
     collection=business,
     id_field="business_id",
 )
 print(result.destinations)  # {"demo.business": 8}
 ```
 
-`target` selects the server connection.
+`connection` selects the server connection settings.
 `collection` gives the exact destination.
 `get_deployment()` reads saved settings but does not start a stopped database.
 
@@ -131,7 +129,7 @@ from bondi.data import load_documents
 
 result = load_documents(
     [{"_id": "a", "name": "Harbour Cafe"}, {"_id": "b", "name": "Garden Books"}],
-    target=deployment,
+    connection=deployment.connection,
     collection=MongoCollectionRef("demo", "shops"),
 )
 print(result.destinations)
@@ -162,7 +160,7 @@ from bondi.data import load_hf_dataset
 result = load_hf_dataset(
     "origami-ml/jsynth-data",
     dataset="adult",
-    target=deployment,
+    connection=deployment.connection,
     collection=MongoCollectionRef("demo", "adult"),
 )
 print(result.destinations)
@@ -190,7 +188,7 @@ result = load_hf_dataset(
     "origami-ml/jsynth-data",
     dataset="adult",
     split=["train", "test"],
-    target=deployment,
+    connection=deployment.connection,
     collection=MongoCollectionRef("demo", "adult_selected"),
 )
 ```
@@ -272,7 +270,7 @@ bondi dataset load-hf-repository our-org/forum-data \
 result = load_hf_dataset(
     "origami-ml/jsynth-data",
     dataset="adult",
-    target=deployment,
+    connection=deployment.connection,
     collection=MongoCollectionRef("demo", "adult"),
     streaming=True,
 )
@@ -310,7 +308,7 @@ from bondi.data import load_hf_repository
 
 results = load_hf_repository(
     "our-org/forum-data",
-    target=deployment,
+    connection=deployment.connection,
     database="forum",
 )
 for dataset_name, result in results.items():
@@ -343,7 +341,7 @@ from bondi.couchbase import CouchbaseCollectionRef
 couchbase = get_deployment("cb-demo")
 result = load_file(
     "dev/business.json",
-    target=couchbase,
+    connection=couchbase.connection,
     collection=CouchbaseCollectionRef("demo", "_default", "business"),
     id_field="business_id",
 )
@@ -357,7 +355,7 @@ bondi dataset load-file dev/business.json \
   --id-field business_id
 ```
 
-Use a collection reference that matches the target backend.
+Use a collection reference that matches the connection backend.
 For repository loading, supply `bucket` and `scope` instead of `database`.
 
 BONDI creates missing scopes and collections.
@@ -369,19 +367,19 @@ Loading uses range scans and requires Couchbase Server 7.6 or later.
 ## Load into an external database
 
 You do not need a BONDI-managed deployment.
-Pass an explicit connection as `target`:
+Pass explicit settings as `connection`:
 
 ```python
-from bondi.data import MongoConnection
+from bondi import MongoConnection
 
-target = MongoConnection(
+connection = MongoConnection(
     "mongodb://localhost/?authSource=admin",
     username="researcher",
     password=password,
 )
 load_file(
     "dev/business.json",
-    target=target,
+    connection=connection,
     collection=MongoCollectionRef("demo", "business"),
     id_field="business_id",
 )
@@ -394,9 +392,9 @@ Explicit credentials override the corresponding values in the URI.
 For Couchbase, use `CouchbaseConnection`:
 
 ```python
-from bondi.data import CouchbaseConnection
+from bondi import CouchbaseConnection
 
-target = CouchbaseConnection(
+connection = CouchbaseConnection(
     "couchbase://localhost",
     username="Administrator",
     password=password,
@@ -436,7 +434,7 @@ For local files and Python documents, supply a namespace when IDs are missing:
 ```python
 load_documents(
     [{"city": "Sydney"}, {"city": "Melbourne"}],
-    target=deployment,
+    connection=deployment.connection,
     collection=MongoCollectionRef("demo", "cities"),
     namespace="my-cities",
 )
@@ -523,7 +521,7 @@ def report_progress(result):
 
 result = load_file(
     "dev/business.json",
-    target=deployment,
+    connection=deployment.connection,
     collection=business,
     id_field="business_id",
     mode="replace",
@@ -587,14 +585,14 @@ from bondi.deployment import get_deployment
 
 results = load_aptmql_dataset(
     "beer_factory",
-    target=get_deployment("mongo-demo"),
+    connection=get_deployment("mongo-demo"),
     database="beer_experiment",
 )
 print(results["brands"].destinations)  # {"beer_experiment.brands": 24}
 
 # A different destination for the complete repository:
 all_results = load_aptmql_repository(
-    target=get_deployment("cb-demo"),
+    connection=get_deployment("cb-demo"),
     bucket="demo",
 )
 print(all_results["beer_factory"]["brands"].destinations)

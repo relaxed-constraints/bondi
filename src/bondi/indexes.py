@@ -183,8 +183,8 @@ class IndexSet(Mapping):
 
     def validate(self):
         """Validate every definition and per-collection explicit name uniqueness."""
-        for target, definitions in self.items():
-            _name(target)
+        for collection, definitions in self.items():
+            _name(collection)
             if not isinstance(definitions, list):
                 raise TypeError("Each collection must map to a list of definitions")
             names = set()
@@ -194,13 +194,16 @@ class IndexSet(Mapping):
                 index.validate()
                 if index.name is not None:
                     if index.name in names:
-                        raise ValueError(f"Duplicate index name for {target}: {index.name}")
+                        raise ValueError(f"Duplicate index name for {collection}: {index.name}")
                     names.add(index.name)
 
     def to_dict(self):
         """Return a canonical config mapping, without a file envelope."""
         self.validate()
-        return {target: [index.to_dict() for index in indexes] for target, indexes in self.items()}
+        return {
+            collection: [index.to_dict() for index in indexes]
+            for collection, indexes in self.items()
+        }
 
     @classmethod
     def from_dict(cls, data):
@@ -208,10 +211,10 @@ class IndexSet(Mapping):
         if not isinstance(data, dict):
             raise TypeError("IndexSet configuration must be a dictionary")
         result = {}
-        for target, definitions in data.items():
+        for collection, definitions in data.items():
             if not isinstance(definitions, list):
                 raise TypeError("Each collection must map to a list")
-            result[target] = [_from_dict(index) for index in definitions]
+            result[collection] = [_from_dict(index) for index in definitions]
         return cls(result)
 
     def save(self, path):
@@ -232,7 +235,7 @@ class IndexCreationError(RuntimeError):
 
     Attributes:
         completed: Collection names mapped to confirmed index names.
-        target: Collection name of the failed operation.
+        collection: Collection name of the failed operation.
         position: Zero-based definition position during creation; None otherwise.
         removed: Collection names mapped to confirmed removals during replacement.
         phase: The failing phase: inspect, remove, or create.
@@ -243,14 +246,14 @@ class IndexCreationError(RuntimeError):
     """
 
     def __init__(
-        self, completed, target, position, *, removed=None, phase="create", index_name=None
+        self, completed, collection, position, *, removed=None, phase="create", index_name=None
     ):
-        super().__init__(f"Index creation failed during {phase} at {target}[{position}]")
+        super().__init__(f"Index creation failed during {phase} at {collection}[{position}]")
         self.removed = deepcopy(removed if removed is not None else {})
         self.phase = phase
         self.index_name = index_name
         self.completed = deepcopy(completed)
-        self.target = target
+        self.collection = collection
         self.position = position
 
 
@@ -259,7 +262,7 @@ class IndexRemovalError(RuntimeError):
 
     Attributes:
         completed: Collection names mapped to confirmed removed names; absent names omitted.
-        target: Collection name of the failed operation.
+        collection: Collection name of the failed operation.
         position: Zero-based definition position, or None during collection inspection.
         phase: The failing phase: inspect or remove.
         index_name: Requested name, or None during inspection.
@@ -267,10 +270,10 @@ class IndexRemovalError(RuntimeError):
     The original exception is __cause__. The failed operation may have taken effect.
     """
 
-    def __init__(self, completed, target, position, *, phase="remove", index_name=None):
-        super().__init__(f"Index removal failed during {phase} at {target}[{position}]")
+    def __init__(self, completed, collection, position, *, phase="remove", index_name=None):
+        super().__init__(f"Index removal failed during {phase} at {collection}[{position}]")
         self.completed = deepcopy(completed)
-        self.target = target
+        self.collection = collection
         self.position = position
         self.phase = phase
         self.index_name = index_name

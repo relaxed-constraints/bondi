@@ -32,7 +32,7 @@ class MongoFindQuery:
     it does not validate MongoDB operators, BSON encodability or server acceptance.
 
     Args:
-        target: Logical collection to query, independent of a deployment.
+        collection: Logical collection to query, independent of a deployment.
         filter: Required predicate dictionary; use an empty dictionary explicitly
             to describe an unrestricted query.
         projection: Optional projection dictionary. None means no explicit projection.
@@ -60,7 +60,7 @@ class MongoFindQuery:
 
     backend: ClassVar[str] = "mongodb"
 
-    target: MongoCollectionRef
+    collection: MongoCollectionRef
     filter: dict[str, Any]
     projection: dict[str, Any] | None = None
     sort: tuple[tuple[str, int], ...] = ()
@@ -81,8 +81,8 @@ class MongoFindQuery:
 
         BSON encoding and MongoDB operator validity are not checked here.
         """
-        if not isinstance(self.target, MongoCollectionRef):
-            raise TypeError("target must be a MongoCollectionRef")
+        if not isinstance(self.collection, MongoCollectionRef):
+            raise TypeError("collection must be a MongoCollectionRef")
         if not isinstance(self.filter, dict):
             raise TypeError("filter must be a dictionary")
         if self.projection is not None and not isinstance(self.projection, dict):
@@ -120,7 +120,7 @@ class MongoFindQuery:
 
         Stages follow filter, sort, skip, limit, projection order. Empty filters,
         sorts and projections, zero skip and absent limits produce no stage.
-        The target is preserved and all mutable pipeline contents are deep-copied.
+        The collection is preserved and all mutable pipeline contents are deep-copied.
         Array projections may expand into $set and/or computed $project stages.
         Element matching translations require MongoDB 5.0 or newer.
         No database connection is needed. As with the query constructors, this
@@ -159,7 +159,7 @@ class MongoFindQuery:
         if self.limit is not None:
             pipeline.append({"$limit": self.limit})
         pipeline.extend(projection_stages(self.projection, self.filter))
-        return MongoAggregateQuery(self.target, pipeline)
+        return MongoAggregateQuery(self.collection, pipeline)
 
     def to_json(self) -> str:
         """Serialize a version-2 envelope with BSON-aware filter and projection.
@@ -190,7 +190,10 @@ class MongoFindQuery:
         envelope = {
             "format_version": 2,
             "query_kind": "mongodb.find",
-            "target": {"database": self.target.database, "collection": self.target.collection},
+            "target": {
+                "database": self.collection.database,
+                "collection": self.collection.collection,
+            },
             "filter": self.filter,
             "projection": self.projection,
             "sort": self.sort,
@@ -224,13 +227,13 @@ class MongoFindQuery:
             ("filter", "projection"),
             versions=(1, 2),
         )
-        target = data["target"]
+        collection = data["target"]
         sort = data["sort"]
         if not isinstance(sort, list) or any(not isinstance(pair, list) for pair in sort):
             raise TypeError("Serialized sort must be an array of arrays")
 
         query = cls(
-            target=MongoCollectionRef(**target),
+            collection=MongoCollectionRef(**collection),
             filter=data["filter"],
             projection=data["projection"],
             sort=tuple(tuple(pair) for pair in sort),
@@ -250,7 +253,7 @@ class MongoFindQuery:
         """Return the SHA-256 hex digest of the current serialized representation.
 
         Computed on every call after validation. Includes the format version,
-        target and all query options; preserves document order. Identifies the
+        collection and all query options; preserves document order. Identifies the
         serialized representation, not semantic equivalence or deployment state.
         Raises the same errors as to_json.
 

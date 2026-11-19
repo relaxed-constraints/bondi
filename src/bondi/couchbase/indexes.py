@@ -3,7 +3,9 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from bondi.indexes import _Definition
+from bondi.connection import CouchbaseConnection
+from bondi.couchbase.collection import CouchbaseCollectionRef
+from bondi.indexes import FieldIndex, IndexSet, _Definition
 
 
 @dataclass
@@ -44,12 +46,18 @@ class CouchbaseIndex(_Definition):
             raise ValueError("condition must be nonempty SQL++ or None")
 
 
-def create_couchbase_index(connection, *, target, index, timeout=300.0):
+def create_couchbase_index(
+    connection: CouchbaseConnection,
+    *,
+    collection: CouchbaseCollectionRef,
+    index: FieldIndex | CouchbaseIndex,
+    timeout: float = 300.0,
+) -> str:
     """Create an index, wait until online and return its name.
 
     Args:
-        connection (Deployment | CouchbaseConnection): Deployment or CouchbaseConnection settings.
-        target (CouchbaseCollectionRef): CouchbaseCollectionRef destination.
+        connection (CouchbaseConnection): Couchbase connection settings.
+        collection (CouchbaseCollectionRef): CouchbaseCollectionRef destination.
         index (FieldIndex | CouchbaseIndex): FieldIndex or CouchbaseIndex definition.
         timeout (float): Positive finite seconds covering DDL and readiness waiting.
 
@@ -60,14 +68,22 @@ def create_couchbase_index(connection, *, target, index, timeout=300.0):
     """
     from bondi._index_creation import create_one
 
-    return create_one("couchbase", connection, target, index, timeout)
+    return create_one("couchbase", connection, collection, index, timeout)
 
 
-def create_couchbase_indexes(connection, *, indexes, bucket, scope, timeout=300.0, replace=False):
+def create_couchbase_indexes(
+    connection: CouchbaseConnection,
+    *,
+    indexes: IndexSet,
+    bucket: str,
+    scope: str,
+    timeout: float = 300.0,
+    replace: bool = False,
+) -> dict[str, list[str]]:
     """Create an IndexSet using one cluster; return collection-to-name lists.
 
     Args:
-        connection (Deployment | CouchbaseConnection): Deployment or CouchbaseConnection settings.
+        connection (CouchbaseConnection): Couchbase connection settings.
         indexes (IndexSet): IndexSet of shared or Couchbase definitions.
         bucket (str): Bucket containing the IndexSet collections.
         scope (str): Scope containing the IndexSet collections.
@@ -75,7 +91,7 @@ def create_couchbase_indexes(connection, *, indexes, bucket, scope, timeout=300.
         replace (bool): Remove all secondary indexes on included collections before creation.
             Preserve primary indexes; empty collection lists clear secondary indexes.
 
-    Preflight validates every definition and target before connecting. Server
+    Preflight validates every definition and collection before connecting. Server
     failures raise IndexCreationError with completed names. Creation is non-atomic.
     Replacement includes indexes created outside BONDI, leaves omitted collections
     untouched and is non-atomic. Inspect all collections, then remove, then create.
@@ -83,8 +99,6 @@ def create_couchbase_indexes(connection, *, indexes, bucket, scope, timeout=300.
     No rollback is attempted. Run without concurrent index administration.
     """
     from bondi._index_creation import create_many
-    from bondi.couchbase.collection import CouchbaseCollectionRef
-    from bondi.indexes import IndexSet
 
     if not isinstance(indexes, IndexSet):
         raise TypeError("indexes must be an IndexSet")
@@ -94,12 +108,18 @@ def create_couchbase_indexes(connection, *, indexes, bucket, scope, timeout=300.
     return create_many("couchbase", connection, indexes, targets, timeout, replace)
 
 
-def remove_couchbase_index(connection, *, target, index, timeout=300.0):
+def remove_couchbase_index(
+    connection: CouchbaseConnection,
+    *,
+    collection: CouchbaseCollectionRef,
+    index: FieldIndex | CouchbaseIndex,
+    timeout: float = 300.0,
+) -> bool:
     """Remove one named index; return True if removed, False if already absent.
 
     Args:
-        connection (Deployment | CouchbaseConnection): Deployment or connection settings.
-        target (CouchbaseCollectionRef): Destination collection.
+        connection (CouchbaseConnection): Connection settings.
+        collection (CouchbaseCollectionRef): Destination collection.
         index (FieldIndex | CouchbaseIndex): Definition identifying an explicit or generated name.
         timeout (float): Positive finite seconds per inspection or removal operation.
 
@@ -108,14 +128,21 @@ def remove_couchbase_index(connection, *, target, index, timeout=300.0):
     """
     from bondi._index_creation import remove_one
 
-    return remove_one("couchbase", connection, target, index, timeout)
+    return remove_one("couchbase", connection, collection, index, timeout)
 
 
-def remove_couchbase_indexes(connection, *, indexes, bucket, scope, timeout=300.0):
+def remove_couchbase_indexes(
+    connection: CouchbaseConnection,
+    *,
+    indexes: IndexSet,
+    bucket: str,
+    scope: str,
+    timeout: float = 300.0,
+) -> dict[str, list[str]]:
     """Remove named definitions; return collection-to-removed-name lists.
 
     Args:
-        connection (Deployment | CouchbaseConnection): Deployment or connection settings.
+        connection (CouchbaseConnection): Connection settings.
         indexes (IndexSet): Definitions identifying explicit or generated names.
         bucket (str): Bucket containing the IndexSet collections.
         scope (str): Scope containing the IndexSet collections.
@@ -128,8 +155,6 @@ def remove_couchbase_indexes(connection, *, indexes, bucket, scope, timeout=300.
     IndexRemovalError with completed removals; no rollback is attempted.
     """
     from bondi._index_creation import remove_many
-    from bondi.couchbase.collection import CouchbaseCollectionRef
-    from bondi.indexes import IndexSet
 
     if not isinstance(indexes, IndexSet):
         raise TypeError("indexes must be an IndexSet")

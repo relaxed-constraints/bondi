@@ -1,11 +1,13 @@
-"""Connection settings shared by dataset loading and index administration."""
+"""Immutable connection settings shared by database operations."""
 
 from dataclasses import dataclass, field
+
+__all__ = ["MongoConnection", "CouchbaseConnection"]
 
 
 @dataclass(frozen=True)
 class MongoConnection:
-    """Connect to MongoDB without a managed deployment.
+    """MongoDB connection settings; construction does not open a client.
 
     Args:
         uri: MongoDB connection string. Can include authSource and URI credentials.
@@ -13,7 +15,7 @@ class MongoConnection:
         password: Optional password passed directly to PyMongo, without URI encoding.
 
     Supplied fields override the corresponding URI credentials. Omitted fields
-    retain URI settings. Credentials are excluded from repr and load reports.
+    retain URI settings. URI and credentials are excluded from repr and operation reports.
     """
 
     uri: str = field(repr=False)
@@ -23,34 +25,34 @@ class MongoConnection:
     def __post_init__(self) -> None:
         for value in (self.username, self.password):
             if value is not None and not isinstance(value, str):
-                raise ValueError("MongoDB username and password must be strings or None")
+                raise TypeError("MongoDB username and password must be strings or None")
 
 
 @dataclass(frozen=True)
 class CouchbaseConnection:
-    """Connect to Couchbase without a managed deployment.
+    """Couchbase connection settings; construction does not open a client.
 
     Args:
         uri: SDK connection string, including custom port mappings if needed.
-        username: Account with permissions for the requested load operations.
-        password: Account password. Excluded from repr and load reports.
+        username: Account with permissions for the requested operations.
+        password: Account password.
+
+    URI and credentials are excluded from repr and operation reports.
     """
 
     uri: str = field(repr=False)
     username: str = field(repr=False)
     password: str = field(repr=False)
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.username, str) or not isinstance(self.password, str):
+            raise TypeError("Couchbase username and password must be strings")
 
-def normalize_connection(target):
-    """Resolve connection settings without opening a client."""
-    if isinstance(target, (MongoConnection, CouchbaseConnection)):
-        return target
-    from bondi.deployment import Deployment
 
-    if not isinstance(target, Deployment):
-        raise TypeError("Expected Deployment, MongoConnection or CouchbaseConnection")
-    if target.backend == "mongodb":
-        return MongoConnection(target.uri, target.username, target.password)
-    if target.backend == "couchbase":
-        return CouchbaseConnection(target.uri, target.username, target.password)
-    raise ValueError(f"Unsupported deployment backend: {target.backend}")
+def _validate_connection(
+    connection: MongoConnection | CouchbaseConnection,
+) -> MongoConnection | CouchbaseConnection:
+    """Validate settings without opening a client."""
+    if not isinstance(connection, (MongoConnection, CouchbaseConnection)):
+        raise TypeError("Expected MongoConnection or CouchbaseConnection")
+    return connection

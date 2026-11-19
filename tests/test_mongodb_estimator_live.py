@@ -5,6 +5,7 @@ import asyncio
 import pytest
 from pymongo import MongoClient
 
+from bondi import MongoConnection
 from bondi.mongodb import (
     AsyncMongoExecutor,
     AsyncMongoSampleEstimator,
@@ -27,7 +28,7 @@ def test_estimator_live(live_mongodb):
         assert count > 4, "Initialize the Docker demo fixture first"
         exact = client.demo.business.count_documents(query.filter)
         owned = []
-        with MongoExecutor.from_uri(uri, timeout_seconds=10) as executor:
+        with MongoExecutor.from_connection(MongoConnection(uri), timeout_seconds=10) as executor:
             with MongoSampleEstimator(executor, target) as est:
                 assert est.estimate(query).cardinality == exact
             for persist in (False, True):
@@ -36,7 +37,7 @@ def test_estimator_live(live_mongodb):
                     assert result.sample_size == 4
                     assert 0 <= result.sample_matches <= 4
                     if persist:
-                        ref = est.sample_target
+                        ref = est.sample_collection
                         owned.append(ref)
                         assert (
                             client[ref.database][ref.collection].count_documents(query.filter)
@@ -45,7 +46,9 @@ def test_estimator_live(live_mongodb):
                         assert est.estimate(query) == result
 
         async def run():
-            async with AsyncMongoExecutor.from_uri(uri, timeout_seconds=10) as executor:
+            async with AsyncMongoExecutor.from_connection(
+                MongoConnection(uri), timeout_seconds=10
+            ) as executor:
                 for persist in (False, True):
                     async with AsyncMongoSampleEstimator(
                         executor,
@@ -53,8 +56,8 @@ def test_estimator_live(live_mongodb):
                         sample_ratio=0.5,
                         persist=persist,
                     ) as est:
-                        if est.sample_target:
-                            owned.append(est.sample_target)
+                        if est.sample_collection:
+                            owned.append(est.sample_collection)
                         result = await est.estimate(query)
                         assert result.population_size == count
                         assert result.sample_size == round(count * 0.5)

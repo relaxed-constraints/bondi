@@ -5,6 +5,7 @@ from typing import Any, Self
 
 from bondi._callbacks import _SyncResultCallback
 from bondi._sync import _SyncExecutor
+from bondi.connection import CouchbaseConnection
 from bondi.couchbase.executor import AsyncCouchbaseExecutor
 from bondi.couchbase.query import CouchbaseQuery
 from bondi.execution import ExecutionResult
@@ -15,7 +16,7 @@ from bondi.workload import Workload
 class CouchbaseExecutor(_SyncExecutor):
     """Synchronous database executor with an owned connection.
 
-    Create with from_uri(). Use with or explicitly call close() when finished.
+    Create with from_connection(). Use with or explicitly call close() when finished.
     Calls retain one private event loop and must stay on the creating thread.
     Works in notebooks: the owned event loop runs on a dedicated background thread.
     Operation options, results, concurrency and errors match the async executor.
@@ -26,12 +27,10 @@ class CouchbaseExecutor(_SyncExecutor):
     """
 
     @classmethod
-    def from_uri(
+    def from_connection(
         cls,
-        uri: str,
+        connection: CouchbaseConnection,
         *,
-        username: str,
-        password: str,
         concurrency: int = 1,
         continue_on_error: bool = False,
         timeout_seconds: float | None = None,
@@ -43,15 +42,21 @@ class CouchbaseExecutor(_SyncExecutor):
         Accepts the same connection options as the async executor.
         Close explicitly or use a with block.
 
+        Args:
+            connection: CouchbaseConnection settings for the instance. No client is borrowed.
+            concurrency: Positive maximum number of in-flight workload entries.
+            continue_on_error: Schedule remaining entries after database operation errors.
+            timeout_seconds: Optional positive finite deadline per query operation.
+            health_check_timeout_seconds: Optional positive finite preflight deadline.
+            cluster_kwargs: Native driver options. Authentication comes from connection settings.
+
         Returns:
             A [`CouchbaseExecutor`][bondi.couchbase.CouchbaseExecutor] that owns its connection.
         """
 
         async def connect():
-            return await AsyncCouchbaseExecutor.from_uri(
-                uri,
-                username=username,
-                password=password,
+            return await AsyncCouchbaseExecutor.from_connection(
+                connection,
                 concurrency=concurrency,
                 continue_on_error=continue_on_error,
                 timeout_seconds=timeout_seconds,

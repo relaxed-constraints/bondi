@@ -30,17 +30,17 @@ def test_generation_live(tmp_path, live_mongodb):
         with MongoClient(live_mongodb.uri, serverSelectionTimeoutMS=3000) as client:
             before = list(client.demo.business.find().sort("_id", 1))
             assert len(before) >= 4, "Initialize the Docker demo collection first"
-            with MongoExecutor.from_uri(
-                live_mongodb.uri, concurrency=4, timeout_seconds=10
+            with MongoExecutor.from_connection(
+                live_mongodb.connection, concurrency=4, timeout_seconds=10
             ) as executor:
                 docs = executor.run(MongoFindQuery(target, {}), collect_results=True).documents
                 with MongoSampleEstimator(
                     executor, target, sample_size=4, persist=True
                 ) as estimator:
-                    sample = estimator.sample_target
+                    sample = estimator.sample_collection
                     assert sample is not None
                     gen = MongoWorkloadGenerator(
-                        target=target,
+                        collection=target,
                         schema=Schema.from_documents(docs, values="full"),
                         estimator=estimator,
                         config=config,

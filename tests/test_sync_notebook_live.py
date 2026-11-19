@@ -19,13 +19,13 @@ def test_notebook_live(backend, live_deployments, monkeypatch):
 
     async def notebook():
         if backend == "mongo":
-            executor = MongoExecutor.from_uri(db.uri, concurrency=2, timeout_seconds=10)
+            executor = MongoExecutor.from_connection(
+                db.connection, concurrency=2, timeout_seconds=10
+            )
             query = MongoFindQuery(MongoCollectionRef("demo", "business"), {}, limit=3)
         else:
-            executor = CouchbaseExecutor.from_uri(
-                db.uri,
-                username=db.username,
-                password=db.password,
+            executor = CouchbaseExecutor.from_connection(
+                db.connection,
                 concurrency=2,
                 timeout_seconds=10,
             )

@@ -7,20 +7,25 @@ from threading import Event
 
 import pytest
 
+from bondi import CouchbaseConnection, MongoConnection
 from bondi.couchbase import AsyncCouchbaseExecutor, CouchbaseExecutor
 from bondi.mongodb import AsyncMongoExecutor, MongoExecutor
 from tests._interrupt import interrupt_sync_wait
 
 PAIRS = [
-    (MongoExecutor, AsyncMongoExecutor, {}),
-    (CouchbaseExecutor, AsyncCouchbaseExecutor, {"username": "u", "password": "p"}),
+    (MongoExecutor, AsyncMongoExecutor, MongoConnection("mongodb://unused")),
+    (
+        CouchbaseExecutor,
+        AsyncCouchbaseExecutor,
+        CouchbaseConnection("couchbase://unused", "u", "p"),
+    ),
 ]
 METHODS = ("run", "explain", "profile", "run_workload", "explain_workload", "profile_workload")
 
 
 @pytest.fixture(params=PAIRS)
 def adapter(request, monkeypatch):
-    sync, asynchronous, options = request.param
+    sync, asynchronous, connection = request.param
     created = []
 
     class Fake:
@@ -52,15 +57,15 @@ def adapter(request, monkeypatch):
 
     monkeypatch.setattr(
         asynchronous,
-        "from_uri",
+        "from_connection",
         async_factory if asynchronous is AsyncCouchbaseExecutor else factory,
     )
-    return sync, options, created
+    return sync, connection, created
 
 
 def test_operations_and_cleanup(adapter):
-    sync, options, created = adapter
-    executor = sync.from_uri("unused", **options)
+    sync, connection, created = adapter
+    executor = sync.from_connection(connection)
     for name in METHODS:
         result = getattr(executor, name)("input", query_kwargs={"test": 1})
         assert result[:2] == (name, ("input",))
@@ -73,9 +78,9 @@ def test_operations_and_cleanup(adapter):
         executor.run("input")
 
 
-@pytest.mark.parametrize("sync,asynchronous,options", PAIRS)
-def test_signature_parity(sync, asynchronous, options):
-    for name in (*METHODS, "from_uri"):
+@pytest.mark.parametrize("sync,asynchronous,connection", PAIRS)
+def test_signature_parity(sync, asynchronous, connection):
+    for name in (*METHODS, "from_connection"):
         sync_signature = inspect.signature(getattr(sync, name), eval_str=True)
         async_signature = inspect.signature(getattr(asynchronous, name), eval_str=True)
         # Only async executors accept awaitable callbacks; all other options match.
@@ -89,20 +94,20 @@ def test_signature_parity(sync, asynchronous, options):
 
 
 def test_exception_cleanup(adapter):
-    sync, options, created = adapter
+    sync, connection, created = adapter
     with pytest.raises(ValueError, match="query failed"):
-        with sync.from_uri("unused", **options) as executor:
+        with sync.from_connection(connection) as executor:
             executor.run("fail")
     assert created[0].closed == 1
     assert created[0].loop.is_closed()
 
 
 def test_guards(adapter):
-    sync, options, created = adapter
-    executor = sync.from_uri("unused", **options)
+    sync, connection, created = adapter
+    executor = sync.from_connection(connection)
 
     async def check():
-        with sync.from_uri("unused", **options) as notebook_executor:
+        with sync.from_connection(connection) as notebook_executor:
             assert notebook_executor.run("input")[0] == "run"
             assert notebook_executor._loop is not asyncio.get_running_loop()
         assert executor.run("input")[0] == "run"
@@ -114,8 +119,8 @@ def test_guards(adapter):
     executor.close()
 
 
-@pytest.mark.parametrize("sync,asynchronous,options", PAIRS)
-def test_failed_factory_closes_loop(sync, asynchronous, options, monkeypatch):
+@pytest.mark.parametrize("sync,asynchronous,connection", PAIRS)
+def test_failed_factory_closes_loop(sync, asynchronous, connection, monkeypatch):
     loops = []
 
     def fail(*args, **kwargs):
@@ -126,17 +131,19 @@ def test_failed_factory_closes_loop(sync, asynchronous, options, monkeypatch):
         return fail()
 
     monkeypatch.setattr(
-        asynchronous, "from_uri", async_fail if asynchronous is AsyncCouchbaseExecutor else fail
+        asynchronous,
+        "from_connection",
+        async_fail if asynchronous is AsyncCouchbaseExecutor else fail,
     )
     with pytest.raises(ValueError, match="connection failed"):
-        sync.from_uri("unused", **options)
+        sync.from_connection(connection)
     assert loops[0].is_closed()
 
 
 @pytest.mark.parametrize("during_close", [False, True])
 def test_interrupt_waits_for_cleanup(adapter, monkeypatch, during_close):
-    sync, options, created = adapter
-    executor = sync.from_uri("unused", **options)
+    sync, connection, created = adapter
+    executor = sync.from_connection(connection)
     started = Event()
     cleaned = Event()
 
@@ -166,8 +173,8 @@ def test_interrupt_waits_for_cleanup(adapter, monkeypatch, during_close):
     assert executor._loop.is_closed()
 
 
-@pytest.mark.parametrize("sync,asynchronous,options", PAIRS)
-def test_interrupted_factory_unwinds(sync, asynchronous, options, monkeypatch):
+@pytest.mark.parametrize("sync,asynchronous,connection", PAIRS)
+def test_interrupted_factory_unwinds(sync, asynchronous, connection, monkeypatch):
     started, cleaned = Event(), Event()
     loops = []
 
@@ -190,8 +197,8 @@ def test_interrupted_factory_unwinds(sync, asynchronous, options, monkeypatch):
 
 
 def test_close_error_still_stops_thread(adapter, monkeypatch):
-    sync, options, created = adapter
-    executor = sync.from_uri("unused", **options)
+    sync, connection, created = adapter
+    executor = sync.from_connection(connection)
 
     async def fail():
         raise ValueError("close failed")
@@ -205,7 +212,7 @@ def test_close_error_still_stops_thread(adapter, monkeypatch):
 
 
 def test_ping_adapter(adapter):
-    sync, options, created = adapter
-    with sync.from_uri("unused", health_check_timeout_seconds=2, **options) as executor:
+    sync, connection, created = adapter
+    with sync.from_connection(connection, health_check_timeout_seconds=2) as executor:
         assert executor.ping(timeout_seconds=0.5) == ("ping", (), {"timeout_seconds": 0.5})
     assert created[0].closed == 1

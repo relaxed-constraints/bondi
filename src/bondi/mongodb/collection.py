@@ -25,12 +25,12 @@ class MongoCollectionRef:
         ValueError: Either name is empty or contains a null character.
 
     Examples:
-        >>> target = MongoCollectionRef("research", "businesses")
-        >>> target.database
+        >>> collection = MongoCollectionRef("research", "businesses")
+        >>> collection.database
         'research'
-        >>> target == MongoCollectionRef("research", "businesses")
+        >>> collection == MongoCollectionRef("research", "businesses")
         True
-        >>> len({target, MongoCollectionRef("research", "businesses")})
+        >>> len({collection, MongoCollectionRef("research", "businesses")})
         1
     """
 
