@@ -213,6 +213,10 @@ print(result.documents)
 print(summary.plan_stages)
 ```
 
+For direct synchronous SDK operations, use `MongoExecutor.client` or
+`CouchbaseExecutor.cluster`. First access opens a separate connection pool,
+and the executor closes the handle.
+
 Executors consume all rows; `collect_results=True` additionally retains them.
 Use context managers for owned connections. `MongoExecutor` and
 `CouchbaseExecutor` are synchronous; `AsyncMongoExecutor` and

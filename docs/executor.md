@@ -29,6 +29,25 @@ with CouchbaseExecutor.from_connection(
     print(result.documents)
 ```
 
+## Use the synchronous SDK directly
+
+Use `executor.client` for native PyMongo operations such as counting documents:
+
+```python
+from bondi.mongodb import MongoExecutor
+
+with MongoExecutor.from_connection(deployment.connection) as executor:
+    count = executor.client["demo"]["business"].count_documents({})
+```
+
+On a `CouchbaseExecutor`, use `executor.cluster` to access the synchronous SDK,
+for example `executor.cluster.bucket("demo").default_collection()`.
+
+First access creates a synchronous handle with the same connection settings and
+SDK options as the executor. It uses a separate connection pool from the async
+driver that runs BONDI queries. Subsequent accesses reuse the handle. Keep it
+open for the executor to close on context exit or explicit `close()`.
+
 ## Execute a workload
 
 Given a `workload` built with the [workload guide](workloads.md):

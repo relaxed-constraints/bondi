@@ -1,7 +1,7 @@
 """Synchronous couchbase execution through the async implementation."""
 
 from collections.abc import Mapping
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from bondi._callbacks import _SyncResultCallback
 from bondi._sync import _SyncExecutor
@@ -11,6 +11,9 @@ from bondi.couchbase.query import CouchbaseQuery
 from bondi.execution import ExecutionResult
 from bondi.load import LoadResult, Selection, SyncLoadCallback
 from bondi.workload import Workload
+
+if TYPE_CHECKING:
+    from couchbase.cluster import Cluster
 
 
 class CouchbaseExecutor(_SyncExecutor):
@@ -54,6 +57,9 @@ class CouchbaseExecutor(_SyncExecutor):
             A [`CouchbaseExecutor`][bondi.couchbase.CouchbaseExecutor] that owns its connection.
         """
 
+        if isinstance(cluster_kwargs, Mapping):
+            cluster_kwargs = dict(cluster_kwargs)
+
         async def connect():
             return await AsyncCouchbaseExecutor.from_connection(
                 connection,
@@ -64,7 +70,31 @@ class CouchbaseExecutor(_SyncExecutor):
                 cluster_kwargs=cluster_kwargs,
             )
 
-        return cls._create(connect)
+        executor = cls._create(connect)
+        executor._connection = connection
+        executor._cluster_kwargs = cluster_kwargs or {}
+        return executor
+
+    @property
+    def cluster(self) -> "Cluster":
+        """Return the synchronous SDK cluster for direct database operations.
+
+        First access creates a separate connection pool using the executor's
+        connection settings and SDK options. The executor reuses this handle
+        and closes it on context exit or explicit close().
+        """
+        self._check()
+        if self._sync_handle is None:
+            connection = self._connection
+            from couchbase.auth import PasswordAuthenticator
+            from couchbase.cluster import Cluster
+            from couchbase.options import ClusterOptions
+
+            auth = PasswordAuthenticator(connection.username, connection.password)
+            self._sync_handle = Cluster.connect(
+                connection.uri, ClusterOptions(auth, **self._cluster_kwargs)
+            )
+        return self._sync_handle
 
     def ping(self, *, timeout_seconds: float = 5) -> None:
         """Synchronously probe; options and errors match AsyncCouchbaseExecutor.ping."""

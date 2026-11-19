@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add lazy synchronous SDK handles on `MongoExecutor.client` and
+  `CouchbaseExecutor.cluster`. Each uses a separate connection pool and closes
+  with its executor.
+
 - Standardize database access on `MongoConnection` and `CouchbaseConnection` settings
   exported from `bondi`. Add `Deployment.connection`; replace all executor
   `from_uri()` factories with `from_connection()`. Loaders and index operations

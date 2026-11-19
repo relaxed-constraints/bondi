@@ -216,3 +216,65 @@ def test_ping_adapter(adapter):
     with sync.from_connection(connection, health_check_timeout_seconds=2) as executor:
         assert executor.ping(timeout_seconds=0.5) == ("ping", (), {"timeout_seconds": 0.5})
     assert created[0].closed == 1
+
+
+def test_lazy_mongo_client(monkeypatch):
+    from unittest.mock import Mock
+
+    factory = Mock()
+    monkeypatch.setattr("bondi.mongodb.sync_executor.MongoClient", factory)
+    connection = MongoConnection("mongodb://unused", "user", "pass")
+    options = {"appname": "bondi"}
+    with MongoExecutor.from_connection(connection, client_kwargs=options) as executor:
+        options.clear()
+        factory.assert_not_called()
+        assert executor.client is executor.client is factory.return_value
+        factory.assert_called_once_with(
+            connection.uri, username="user", password="pass", appname="bondi"
+        )
+
+    executor.close()
+    factory.return_value.close.assert_called_once_with()
+    with pytest.raises(RuntimeError, match="closed"):
+        _ = executor.client
+
+
+def test_lazy_couchbase_cluster(monkeypatch):
+    from unittest.mock import AsyncMock, Mock
+
+    pytest.importorskip("couchbase.cluster")
+    monkeypatch.setattr(AsyncCouchbaseExecutor, "from_connection", AsyncMock())
+    connect, auth, options = Mock(), Mock(), Mock()
+    monkeypatch.setattr("couchbase.cluster.Cluster.connect", connect)
+    monkeypatch.setattr("couchbase.auth.PasswordAuthenticator", auth)
+    monkeypatch.setattr("couchbase.options.ClusterOptions", options)
+    connection = CouchbaseConnection("couchbase://unused", "u", "p")
+    with CouchbaseExecutor.from_connection(
+        connection, cluster_kwargs={"enable_tls": True}
+    ) as executor:
+        connect.assert_not_called()
+        assert executor.cluster is executor.cluster is connect.return_value
+        auth.assert_called_once_with("u", "p")
+        options.assert_called_once_with(auth.return_value, enable_tls=True)
+        connect.assert_called_once_with(connection.uri, options.return_value)
+
+    executor.close()
+    connect.return_value.close.assert_called_once_with()
+    with pytest.raises(RuntimeError, match="closed"):
+        _ = executor.cluster
+
+
+def test_native_close_failure_still_releases_worker(adapter, monkeypatch):
+    from unittest.mock import Mock
+
+    sync, connection, created = adapter
+    executor = sync.from_connection(connection)
+    handle = Mock()
+    handle.close.side_effect = ValueError("close failed")
+    monkeypatch.setattr(executor, "_sync_handle", handle)
+    with pytest.raises(ValueError, match="close failed"):
+        executor.close()
+    executor.close()
+    handle.close.assert_called_once_with()
+    assert created[0].closed == 1
+    assert created[0].loop.is_closed()

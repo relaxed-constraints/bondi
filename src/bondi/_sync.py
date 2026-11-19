@@ -21,6 +21,7 @@ class _SyncExecutor:
         self._closed = False
         self._in_callback = False
         self._executor = None
+        self._sync_handle = None
         ready = Event()
 
         def serve():
@@ -156,14 +157,18 @@ class _SyncExecutor:
                 continue
 
     def close(self) -> None:
-        """Close the connection, stop its loop and join its thread; idempotent."""
+        """Close both connections if opened, stop the loop and join its thread."""
         if self._closed:
             return
         self._check()
         try:
             self._submit(self._executor.close, cancel_on_interrupt=False)
         finally:
-            self._shutdown()
+            try:
+                if self._sync_handle is not None:
+                    self._sync_handle.close()
+            finally:
+                self._shutdown()
 
     def __enter__(self) -> Self:
         self._check()

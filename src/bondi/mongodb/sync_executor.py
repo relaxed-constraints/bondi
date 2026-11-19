@@ -3,6 +3,8 @@
 from collections.abc import Mapping
 from typing import Any, Self
 
+from pymongo import MongoClient
+
 from bondi._callbacks import _SyncResultCallback
 from bondi._sync import _SyncExecutor
 from bondi.connection import MongoConnection
@@ -53,6 +55,9 @@ class MongoExecutor(_SyncExecutor):
             A [`MongoExecutor`][bondi.mongodb.MongoExecutor] that owns its connection.
         """
 
+        if isinstance(client_kwargs, Mapping):
+            client_kwargs = dict(client_kwargs)
+
         async def connect():
             return AsyncMongoExecutor.from_connection(
                 connection,
@@ -63,7 +68,29 @@ class MongoExecutor(_SyncExecutor):
                 client_kwargs=client_kwargs,
             )
 
-        return cls._create(connect)
+        executor = cls._create(connect)
+        executor._connection = connection
+        executor._client_kwargs = client_kwargs or {}
+        return executor
+
+    @property
+    def client(self) -> MongoClient:
+        """Return the synchronous SDK client for direct database operations.
+
+        First access creates a separate connection pool using the executor's
+        connection settings and SDK options. The executor reuses this handle
+        and closes it on context exit or explicit close().
+        """
+        self._check()
+        if self._sync_handle is None:
+            connection = self._connection
+            options = self._client_kwargs.copy()
+            if connection.username is not None:
+                options["username"] = connection.username
+            if connection.password is not None:
+                options["password"] = connection.password
+            self._sync_handle = MongoClient(connection.uri, **options)
+        return self._sync_handle
 
     def ping(self, *, timeout_seconds: float = 5) -> None:
         """Synchronously probe; options and errors match AsyncMongoExecutor.ping."""
