@@ -6,15 +6,36 @@ render_macros: true
 
 ## Current release
 
-Version {{ bondi_version }} adds generic index lifecycle dispatchers, secondary-index
-replacement and repeatable named removal. Explicit backend functions now use
-`create_mongo_index[es]` / `remove_mongo_index[es]` and
-`create_couchbase_index[es]` / `remove_couchbase_index[es]`. The old unprefixed
-backend names have been removed; use the top-level `bondi` functions for dispatch.
+Version {{ bondi_version }} standardizes database access on `MongoConnection` and
+`CouchbaseConnection` settings. Managed databases expose `deployment.connection`;
+executors use `from_connection()`, loaders accept `connection=`, and collection
+arguments and attributes use `collection` throughout the Python API.
 
-See the [index guide](indexes.md) and [changelog](changelog.md) for details.
+Synchronous executors also expose lazy native `client` (MongoDB) and `cluster`
+(Couchbase) handles. Each has a separate connection pool that closes with its executor.
+Deployment `start()` and `stop()` return the handle; `remove()` returns `None`.
+
+This is a breaking SDK release. Saved query and pattern formats remain unchanged.
+See the [connection guide](connections.md), [executor guide](executor.md) and
+[changelog](changelog.md) for the public API and breaking changes.
 Release artifacts are available on [PyPI](https://pypi.org/project/bondi/{{ bondi_version }}/)
 and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v{{ bondi_version }}).
+
+## 0.4.0 verification
+
+On 2026-11-20, all 1,634 offline tests passed. The 201 live cases passed across
+MongoDB, Couchbase Community and Couchbase Enterprise: the full run passed 200
+cases, and a focused rerun passed after correcting a stale AptMQL test helper import.
+The rerun also exercised direct synchronous SDK handles on all three backends.
+Coverage included deployment restarts, loading and BSON conversion, execution,
+health checks, index lifecycle, sustained load, estimation and query conversion.
+Test-owned deployments were removed; existing deployments were retained.
+
+Ruff lint and whole-repository formatting, shared documentation configuration,
+the strict documentation build, wheel/source builds and Twine checks passed.
+A fresh wheel installation with the Couchbase extra passed dependency and CLI
+checks, connection/factory checks, query/index/schema persistence and synchronous
+MongoDB native-handle lifecycle checks.
 
 ## 0.3.8 verification
 

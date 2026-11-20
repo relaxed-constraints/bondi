@@ -363,12 +363,12 @@ Keep checkpoint/rerun decisions downstream; do not add retries or restart
 containers automatically. See the
 [health-check guide](https://relaxed-constraints.github.io/bondi/executor/#bounded-health-checks).
 
-## Index lifecycle (0.3.8+)
+## Index lifecycle
 
 `FieldIndex`, `MongoIndex`, `CouchbaseIndex` and `IndexSet` define reusable indexes.
 The generic `bondi.create_indexes()` accepts an IndexSet plus MongoDB `database` or
 Couchbase `bucket`/`scope`, and a connection configuration.
-These lifecycle extensions require BONDI 0.3.8 or newer.
+These examples use the BONDI 0.4.0 connection settings API.
 
 `create_indexes(..., replace=True)` removes all secondary indexes on the collections
 included in the set, including indexes created outside BONDI, then creates the new

@@ -19,7 +19,7 @@ it is not a query translator or an experiment-tracking framework.
 
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
-and dependency constraints before using an API. This skill describes the current checkout API.
+and dependency constraints before using an API. This skill describes the 0.4.0 API.
 Use `deployment.connection` or settings imported from `bondi` for database access.
 Executors use `from_connection()`, loaders use `connection=`, and collection
 arguments and attributes use `collection`. It includes sustained load generation, pattern selection, workload callbacks,

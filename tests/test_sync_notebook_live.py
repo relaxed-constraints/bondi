@@ -32,6 +32,16 @@ def test_notebook_live(backend, live_deployments, monkeypatch):
             query = CouchbaseQuery("SELECT RAW b FROM demo._default.business b LIMIT 3")
         try:
             assert executor._loop is not asyncio.get_running_loop()
+            # Direct SDK access uses the synchronous handle, alongside async-backed execution.
+            if backend == "mongo":
+                assert executor.client.demo.business.count_documents({}) == 8
+                assert executor.client is executor.client
+            else:
+                rows = executor.cluster.query(
+                    "SELECT RAW COUNT(*) FROM demo._default.business"
+                ).rows()
+                assert list(rows) == [8]
+                assert executor.cluster is executor.cluster
             workload = Workload([WorkloadEntry(query), WorkloadEntry(query)])
             for method in (
                 "run",

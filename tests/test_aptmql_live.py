@@ -43,7 +43,7 @@ def test_pinned_beer_factory(backend, live_deployments):
         from couchbase.cluster import Cluster
         from couchbase.options import ClusterOptions
 
-        from bondi.data._writers import CouchbaseWriter, connection
+        from bondi.data._writers import CouchbaseWriter
 
         client = Cluster(
             deployment.uri,
@@ -67,7 +67,7 @@ def test_pinned_beer_factory(backend, live_deployments):
                 assert stored == {row["_id"]: row for row in originals}
                 assert list(coll.index_information()) == ["_id_"]
             else:
-                writer = CouchbaseWriter(connection(deployment))
+                writer = CouchbaseWriter(deployment.connection)
                 try:
                     scan = writer._scan((deployment.bucket, "beer_factory", collection))
                     try:

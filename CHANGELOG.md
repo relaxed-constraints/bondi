@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.4.0 — 2026-11-20
+
 - Add lazy synchronous SDK handles on `MongoExecutor.client` and
   `CouchbaseExecutor.cluster`. Each uses a separate connection pool and closes
   with its executor.
@@ -13,8 +15,7 @@
   Rename loader `target=` to `connection=` and remove connection exports from
   `bondi.data`. MongoDB executor credentials belong to the connection settings,
   not `client_kwargs`, regardless of option-name case. Validate URI and credential
-  types consistently with `TypeError`
-  (breaking change).
+  types consistently with `TypeError` (breaking change).
 - Standardize collection arguments and attributes on `collection`, including
   queries, patterns, workload generators, estimators and single-index operations.
   Rename estimator `sample_target` to `sample_collection` and index error `target`
