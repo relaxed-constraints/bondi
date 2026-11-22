@@ -240,6 +240,11 @@ class Schema:
         Accepts generators and empty iterables. Each document is validated before
         accumulation; input dictionaries and lists are not modified or retained.
 
+        Args:
+            documents: Root dictionaries to inspect, in iteration order.
+            values: Retain counts only ("none"), distinct primitive values ("distinct"),
+                or exact frequencies ("full").
+
         Returns:
             The accumulated observations with the selected value retention mode.
         """
@@ -283,7 +288,13 @@ class Schema:
         )
 
     def __getitem__(self, path: str | Path) -> FieldSchema:
-        """Look up an exact path; raise KeyError if absent. Arrays require explicit [].
+        """Look up a field or array element by its exact path.
+
+        Args:
+            path: Escaped dotted path or tuple of literal keys and ARRAY_ELEMENT steps.
+
+        Raises:
+            KeyError: The path has no observations.
 
         Returns:
             The field schema at the requested path.
@@ -293,9 +304,18 @@ class Schema:
     def update(self, documents: Iterable[dict]) -> None:
         """Add a batch, keeping earlier documents if a later one fails validation.
 
-        TypeError reports unsupported values or keys; ValueError reports cycles or
-        nonfinite values. A failing document contributes nothing. Iterator failures
-        also preserve earlier documents. Calls are synchronous and not thread-safe.
+        Calls are synchronous and not thread-safe. If iteration fails, observations
+        from earlier documents are preserved.
+
+        Args:
+            documents: Root dictionaries to add to the current observations.
+
+        Returns:
+            None. Updates this schema in place.
+
+        Raises:
+            TypeError: A document, key, or value has an unsupported type.
+            ValueError: A document contains a cycle, a nonfinite number, or excessive nesting.
         """
         for document in documents:
             if not isinstance(document, dict):
@@ -310,7 +330,11 @@ class Schema:
         """Export a fresh Draft 2020-12 schema describing observed document structure.
 
         Args:
-            representation: Target ordinary JSON or MongoDB Canonical Extended JSON v2.
+            representation: Use "json" for ordinary JSON or "canonical_extended_json"
+                for MongoDB Canonical Extended JSON v2.
+
+        Returns:
+            A new JSON Schema dictionary describing the observed document structure.
 
         Raises:
             ValueError: Unknown representation or a field type without a supported encoding.
@@ -327,6 +351,12 @@ class Schema:
         mutate the schema while saving. Failed saves preserve an existing file.
         Datetimes retain microseconds, offset and fold, but not timezone identity.
 
+        Args:
+            path: Destination file in an existing directory.
+
+        Returns:
+            None. The snapshot is written to the destination file.
+
         Raises:
             ValueError: Observations cannot be serialized as a valid snapshot.
             OSError: File creation, writing or replacement fails.
@@ -342,6 +372,9 @@ class Schema:
         Rebuild parent links, paths and flat indexes from the saved tree. Unknown
         versions, malformed records and inconsistent counts are rejected. See
         the schema persistence guide for scalar fidelity and format details.
+
+        Args:
+            path: File containing a BONDI schema snapshot.
 
         Returns:
             The restored [`Schema`][bondi.schema.Schema], ready for further updates.
@@ -390,8 +423,14 @@ class Schema:
 def validate_json_schema(schema: dict | bool, data: Any) -> None:
     """Validate a single object or each object in a list against a JSON Schema.
 
-    Pass data already encoded in the representation described by the schema.
-    Returns None on success. Uses the declared draft or Draft 2020-12 by default.
+    Args:
+        schema: JSON Schema dictionary or boolean schema. A dictionary may specify the
+            draft with `$schema`. The default is Draft 2020-12.
+        data: A single value or a list of values to validate individually. Supply
+            values already encoded in the representation described by the schema.
+
+    Returns:
+        None if the schema is valid and every supplied value passes validation.
 
     Raises:
         jsonschema.ValidationError: The data violates the schema.
