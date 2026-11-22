@@ -15,6 +15,11 @@
       show_root_heading: true
       heading_level: 2
 
+::: bondi.schema.validate_json_schema
+    options:
+      show_root_heading: true
+      heading_level: 2
+
 ## Array paths and value retention
 
 `ARRAY_ELEMENT` identifies an array-element step in tuple paths, for example
@@ -163,9 +168,7 @@ print(list(schema.primitive_fields))
 ```
 
 Retrieve whole document bodies: projections change the schema you observe. Save
-sampled documents when an experiment must reuse exactly the same input. No database
-sampling helper, merging, or validation-schema export is
-introduced here.
+sampled documents when an experiment must reuse exactly the same input.
 
 Run `notebooks/schema_demo.ipynb` to explore all modes using a tiny in-memory dataset;
 no database or Couchbase SDK is needed.

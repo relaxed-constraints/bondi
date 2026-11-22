@@ -192,3 +192,44 @@ Accessing `Schema.save` through the class leaves the schema argument for Yanex t
 supply; no wrapper function or static method is needed.
 
 Artifact dependency selection and sampling remain responsibilities of the consumer.
+
+## Export and validate JSON Schema
+
+`Schema.to_json_schema()` returns a fresh Draft 2020-12 dictionary. A key is
+required when every observed immediate parent object contains it. Explicit nulls
+contribute a type. Each array element may take any type observed at that location.
+Arrays observed only empty accept any item, and observed document objects allow
+additional properties. Export works with every value-retention mode and saved snapshots.
+
+```python
+from bondi.schema import Schema, validate_json_schema
+
+documents = [{"items": [{"name": "tea"}]}, {"items": [None, {"name": "coffee"}]}]
+rules = Schema.from_documents(documents).to_json_schema()
+validate_json_schema(rules, documents)
+validate_json_schema(rules, {"items": []})
+```
+
+A top-level list is a batch. The helper checks the schema once and returns
+`None` on success, including for an empty batch. The first invalid item raises
+`jsonschema.ValidationError` with its document-relative path and a traceback
+note giving the zero-based batch index. Invalid schemas raise `jsonschema.SchemaError`.
+Use self-contained schemas with local references for offline validation.
+
+For BSON data, infer from native values and validate the encoded documents:
+
+```python
+import json
+from bson import ObjectId, json_util
+
+document = {"_id": ObjectId()}
+rules = Schema.from_documents([document]).to_json_schema(representation="canonical_extended_json")
+encoded = json.loads(json_util.dumps(document, json_options=json_util.CANONICAL_JSON_OPTIONS))
+validate_json_schema(rules, encoded)
+```
+
+Canonical export describes wrapper structure for integers, floats, ObjectId,
+datetime, bytes, Binary, and UUID (configure a UUID representation when encoding).
+Python integers allow either BSON integer width. Wrapper payload strings are
+checked for type only. Ordinary JSON maps Int64 to integer. Unsupported types,
+including Python date and Decimal in either mode, raise ValueError with their field path.

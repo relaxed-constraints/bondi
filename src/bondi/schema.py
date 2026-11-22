@@ -304,6 +304,21 @@ class Schema:
             self._count += 1
             self._object(document, self, ())
 
+    def to_json_schema(
+        self, *, representation: Literal["json", "canonical_extended_json"] = "json"
+    ) -> dict[str, Any]:
+        """Export a fresh Draft 2020-12 schema describing observed document structure.
+
+        Args:
+            representation: Target ordinary JSON or MongoDB Canonical Extended JSON v2.
+
+        Raises:
+            ValueError: Unknown representation or a field type without a supported encoding.
+        """
+        from ._json_schema import export
+
+        return export(self, representation)
+
     def save(self, path: str | PathLike[str]) -> None:
         """Atomically save a version-1 UTF-8 JSON schema snapshot.
 
@@ -370,3 +385,34 @@ class Schema:
             variant._retained[value] += 1
         elif self._mode == "distinct":
             variant._retained.add(value)
+
+
+def validate_json_schema(schema: dict | bool, data: Any) -> None:
+    """Validate a single object or each object in a list against a JSON Schema.
+
+    Pass data already encoded in the representation described by the schema.
+    Returns None on success. Uses the declared draft or Draft 2020-12 by default.
+
+    Raises:
+        jsonschema.ValidationError: The data violates the schema.
+        jsonschema.SchemaError: The schema is invalid or specifies an unknown dialect.
+    """
+    from jsonschema import Draft202012Validator, SchemaError, ValidationError
+    from jsonschema.validators import validator_for
+    from referencing import Registry
+
+    validator = Draft202012Validator
+    if isinstance(schema, dict) and "$schema" in schema:
+        validator = validator_for(schema, default=None)
+        if validator is None:
+            raise SchemaError(f"Unknown JSON Schema dialect: {schema['$schema']!r}")
+    validator.check_schema(schema)
+    compiled = validator(schema, registry=Registry())
+    batch = isinstance(data, list)
+    for index, item in enumerate(data if batch else [data]):
+        try:
+            compiled.validate(item)
+        except ValidationError as error:
+            if batch:
+                error.add_note(f"Batch item index: {index}")
+            raise

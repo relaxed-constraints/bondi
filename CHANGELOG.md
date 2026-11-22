@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Export observed schemas to Draft 2020-12 for ordinary JSON or Canonical Extended JSON,
+  and validate individual documents or batches with `validate_json_schema()`.
+
 ## 0.4.0 — 2026-11-20
 
 - Add lazy synchronous SDK handles on `MongoExecutor.client` and
