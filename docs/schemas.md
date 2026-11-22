@@ -195,11 +195,9 @@ Artifact dependency selection and sampling remain responsibilities of the consum
 
 ## Export and validate JSON Schema
 
-`Schema.to_json_schema()` returns a fresh Draft 2020-12 dictionary. A key is
-required when every observed immediate parent object contains it. Explicit nulls
-contribute a type. Each array element may take any type observed at that location.
-Arrays observed only empty accept any item, and observed document objects allow
-additional properties. Export works with every value-retention mode and saved snapshots.
+Call `to_json_schema()` to get a JSON Schema (Draft 2020-12) as a Python
+dictionary. Pass that schema and either one document or a list of documents to
+`validate_json_schema()`.
 
 ```python
 from bondi.schema import Schema, validate_json_schema
@@ -210,13 +208,28 @@ validate_json_schema(rules, documents)
 validate_json_schema(rules, {"items": []})
 ```
 
-A top-level list is a batch. The helper checks the schema once and returns
-`None` on success, including for an empty batch. The first invalid item raises
-`jsonschema.ValidationError` with its document-relative path and a traceback
-note giving the zero-based batch index. Invalid schemas raise `jsonschema.SchemaError`.
-Use self-contained schemas with local references for offline validation.
+Both calls pass. Every example document has an `items` field, so the schema
+requires it. The array can be empty. Each item can be `null` or an object with
+a string `name`. Every object in these arrays had a `name`, so an item like
+`{}` would fail.
 
-For BSON data, infer from native values and validate the encoded documents:
+A field can be required even if its value is sometimes `null`. A field that
+was missing from some objects is optional. Documents can include extra fields.
+If every array at a field was empty, the schema accepts any item type there.
+You can also export a saved snapshot, with or without retained values.
+
+Validation checks the schema once per call. It returns `None` if all documents
+pass, including for an empty list. An invalid schema raises
+`jsonschema.SchemaError`. An invalid document raises `jsonschema.ValidationError`.
+The error shows where validation failed. For a list, it also gives the index of
+the first failing document, starting at zero. For offline validation, keep all
+schema references local.
+
+### Validate MongoDB documents
+
+For BSON values such as `ObjectId`, choose `canonical_extended_json` when you
+export the schema. Then use PyMongo to encode the document in the same format
+before validating it.
 
 ```python
 import json
@@ -228,8 +241,14 @@ encoded = json.loads(json_util.dumps(document, json_options=json_util.CANONICAL_
 validate_json_schema(rules, encoded)
 ```
 
-Canonical export describes wrapper structure for integers, floats, ObjectId,
-datetime, bytes, Binary, and UUID (configure a UUID representation when encoding).
-Python integers allow either BSON integer width. Wrapper payload strings are
-checked for type only. Ordinary JSON maps Int64 to integer. Unsupported types,
-including Python date and Decimal in either mode, raise ValueError with their field path.
+For example, if BONDI saw a Python `int`, the ordinary JSON schema accepts
+`7`. The canonical schema accepts `{"$numberInt": "7"}` or
+`{"$numberLong": "7"}`. If BONDI saw a BSON `Int64`, its canonical schema
+accepts only the `$numberLong` form. The validator checks that the wrapped
+value is a string. It does not parse the string as a number.
+
+Canonical export also supports floats, `ObjectId`, `datetime`, `bytes`,
+BSON `Binary`, and `UUID`. For UUIDs, choose a UUID representation when
+encoding with PyMongo. If a type has no supported encoding, export raises
+`ValueError` and names the field. This includes Python `date` and `Decimal`
+in both modes.
