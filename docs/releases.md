@@ -6,20 +6,20 @@ render_macros: true
 
 ## Current release
 
-Version {{ bondi_version }} standardizes database access on `MongoConnection` and
-`CouchbaseConnection` settings. Managed databases expose `deployment.connection`;
-executors use `from_connection()`, loaders accept `connection=`, and collection
-arguments and attributes use `collection` throughout the Python API.
+Version {{ bondi_version }} adds JSON Schema export and validation. Use
+`Schema.to_json_schema()` to describe observed document types, required fields,
+nested structures and polymorphic fields in ordinary JSON or Canonical Extended JSON.
+Use `validate_json_schema()` to check a single document or a batch.
 
-Synchronous executors also expose lazy native `client` (MongoDB) and `cluster`
-(Couchbase) handles. Each has a separate connection pool that closes with its executor.
-Deployment `start()` and `stop()` return the handle; `remove()` returns `None`.
-
-This is a breaking SDK release. Saved query and pattern formats remain unchanged.
-See the [connection guide](connections.md), [executor guide](executor.md) and
-[changelog](changelog.md) for the public API and breaking changes.
+See the [schema guide](schemas.md#export-and-validate-json-schema) for examples.
 Release artifacts are available on [PyPI](https://pypi.org/project/bondi/{{ bondi_version }}/)
 and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v{{ bondi_version }}).
+
+## 0.4.1 verification
+
+A MongoDB smoke test inferred a separate schema for each of the six AptMQL
+`beer_factory` collections. All 7,724 documents passed validation after encoding
+with PyMongo’s Canonical Extended JSON serializer.
 
 ## 0.4.0 verification
 
