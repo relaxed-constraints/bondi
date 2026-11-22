@@ -195,7 +195,7 @@ Artifact dependency selection and sampling remain responsibilities of the consum
 
 ## Export and validate JSON Schema
 
-Call `to_json_schema()` to get a JSON Schema (Draft 2020-12) as a Python
+Call `to_json_schema()` to get a [Draft 2020-12 JSON Schema](https://json-schema.org/draft/2020-12) as a Python
 dictionary. Pass that schema and either one document or a list of documents to
 `validate_json_schema()`.
 
