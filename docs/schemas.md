@@ -21,6 +21,17 @@ print(schema["city"].types["str"].value_counts)  # Sydney: 2, Melbourne: 1
 paths. Each field has a `types` mapping whose entries contain counts and optional
 values. Null is a present value, distinct from a missing field.
 
+## Supported input
+
+Pass decoded Python documents. Parse JSON text before calling
+`Schema.from_documents()`.
+
+Objects are dictionaries (including subclasses), arrays are lists. Supported scalars
+are `str`, `bool`, `int`, finite `float`, `None`, `bytes`, `datetime`, `date`, finite
+`Decimal`, `UUID`, and BSON `ObjectId`, `Int64`, `Binary`. Type names follow Python
+class names except `object`, `array`, and `null`. Unsupported BSON types such as
+`Decimal128` currently raise `TypeError`; they are not silently normalized.
+
 ## Choose value retention
 
 | Mode | Retained information |
@@ -44,18 +55,132 @@ print(price.count, price.missing_count)  # 2, 1
 ```
 
 Missingness is measured against immediate parent objects. Array-element counts can
-exceed the number of root documents. Tuple paths using `ARRAY_ELEMENT` handle keys
-that contain literal dots or brackets; see the [reference](reference/schema.md).
+exceed the number of root documents. A field obtained before an `update()` continues to reflect later observations.
+
+You can pass a generator. The parser neither retains nor modifies the source documents. Each
+document is validated before accumulation. If a later document or the input iterator
+fails, earlier documents remain, but an invalid document contributes no counts.
+Nesting beyond 128 levels, cycles, non-string keys and unsupported values are rejected.
+Calls are synchronous and not thread-safe; do not modify input during ingestion.
+
+Treat field and type objects as inspection objects and
+do not assign their counters or internals. Mapping properties are read-only;
+`fields`, `types` and `value_counts` are live views. `flat_fields` and
+`primitive_fields` have snapshot keys referencing live field objects; request them
+again to discover newly added paths. `.values` is an immutable snapshot.
+
+### Look up a field by path
+
+```python
+from bondi.schema import ARRAY_ELEMENT
+
+schema["items.[].price"]
+schema[("items", ARRAY_ELEMENT, "price")]  # Same lookup, without string syntax.
+```
+
+Tuple paths distinguish literal keys from structural separators. For a document
+containing both `{"a.b": 1}` and `{"a": {"b": 2}}`:
+
+```python
+schema[("a.b",)]  # Literal dotted key.
+schema[("a", "b")]  # Nested key; equivalent to schema["a.b"].
+```
+
+`flat_fields` uses escaped display strings: backslash escapes dots, opening brackets
+and backslashes in literal keys. Every displayed key can be passed back to
+`schema[path]`. For example, `r"a\.b"` selects the literal dotted key; `r"\[]"`
+selects a literal key named `[]`. Empty-string keys remain supported. Unknown paths
+raise `KeyError`; no implicit MongoDB-style array traversal occurs.
 
 ## Read from a database
 
-Use a bounded query and pass `result.documents` to `Schema.from_documents`. MongoDB
-supports both `MongoFindQuery(collection, {}, limit=1000)` and a random sample through
-`MongoAggregateQuery(collection, [{"$sample": {"size": 1000}}])`.
+The following queries use the business collection from the
+[demo deployment](deployment.md#demo-data). Choose a query for your backend,
+then run it with the corresponding [executor](executor.md).
 
-For Couchbase use `SELECT RAW b FROM ... b LIMIT 1000` so rows are the documents,
-not wrappers. `ORDER BY RANDOM() LIMIT 1000` selects random rows but can scan and
-sort a large input; it is not equivalent in cost to MongoDB's `$sample`.
+### MongoDB: a bounded preview
+
+```python
+from bondi.mongodb import MongoCollectionRef, MongoFindQuery
+
+sample_query = MongoFindQuery(
+    MongoCollectionRef("demo", "business"),
+    filter={},
+    limit=100,
+)
+```
+
+This returns up to 100 whole documents. A limit alone is not a random sample;
+without an explicit sort, do not assume a stable selection or representative coverage.
+
+### MongoDB: random sampling
+
+```python
+from bondi.mongodb import MongoAggregateQuery, MongoCollectionRef
+
+sample_query = MongoAggregateQuery(
+    MongoCollectionRef("demo", "business"),
+    pipeline=[{"$sample": {"size": 100}}],
+)
+```
+
+MongoDB's [`$sample`](https://www.mongodb.com/docs/v8.0/reference/operator/aggregation/sample/)
+selects documents randomly. With `$sample` first, a collection larger than 100 documents
+and a requested sample smaller than 5% of the collection, MongoDB can use a
+pseudo-random cursor; otherwise sampling can require scanning and a random top-k sort.
+The tiny demo collection contains only eight documents, so it cannot supply 100
+distinct source documents. Repeated sampling calls need not return the same documents.
+
+### Couchbase: a bounded preview
+
+```python
+from bondi.couchbase import CouchbaseQuery
+
+sample_query = CouchbaseQuery("SELECT RAW b FROM `demo`.`_default`.`business` AS b LIMIT 100")
+```
+
+`SELECT RAW b` returns whole document bodies rather than `{ "b": ... }` alias wrappers.
+This matters because the parser would otherwise infer an extra field named `b`.
+As with MongoDB's limit, this is a bounded preview, not random sampling.
+
+### Couchbase: random selection through SQL++
+
+For the current SQL++ executor, random ordering followed by a limit is an option:
+
+```python
+sample_query = CouchbaseQuery(
+    "SELECT RAW b FROM `demo`.`_default`.`business` AS b ORDER BY RANDOM() LIMIT 100"
+)
+```
+
+[`RANDOM()`](https://docs.couchbase.com/server/7.6/n1ql/n1ql-language-reference/numericfun.html)
+produces pseudo-random numbers. This query is useful for small datasets but may
+scan and randomly sort a large candidate set; LIMIT bounds the output, not the
+amount of database work. It is not an efficient sampling primitive equivalent to
+MongoDB's random-cursor path. This query was checked against both local 7.6.2 editions.
+
+Couchbase also offers a dedicated
+[`SamplingScan`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_rangescan.html)
+with a limit and optional seed, via the SDK's key-value collection scan API.
+It is not a SQL++ query operator and is not currently exposed by
+`AsyncCouchbaseExecutor`. Supporting that would be a separate sampling feature;
+its suitability and statistical properties should be evaluated before adopting it.
+
+### Inspect the query results
+
+```python
+from bondi.schema import Schema
+
+result = executor.run(sample_query, collect_results=True)
+schema = Schema.from_documents(result.documents)
+print(schema.document_count)
+print(list(schema.primitive_fields))
+```
+
+Retrieve whole document bodies: projections change the schema you observe. Save
+sampled documents when an experiment must reuse exactly the same input.
+
+### Scan a full collection
 
 Executors collect requested rows in memory. For a full large-collection scan, feed
 a synchronous PyMongo cursor directly into the parser:
@@ -68,8 +193,8 @@ with MongoClient("mongodb://127.0.0.1:27017") as client:
         schema = Schema.from_documents(documents, values="none")
 ```
 
-The parser consumes iterables incrementally. Follow the
-[dataset inspection tutorial](tutorials.md#inspect-the-schema-of-a-dataset) for an executable notebook.
+Follow the
+[dataset inspection tutorial](tutorials.md#inspect-the-schema-of-a-dataset) for a notebook you can run without a database.
 
 ## Save and reuse a snapshot
 
