@@ -1,6 +1,6 @@
 # PostgreSQL backend spike
 
-**Status (2026-11-22).** Design proposal. The API names and storage layout below are candidates for review. Live experiments are pending.
+**Status (2026-11-22).** Design proposal. The API names and storage layout below are candidates for review. The first live experiment is recorded under Findings and decisions.
 
 The question for this spike is whether a researcher can load the same document dataset used with MongoDB and Couchbase, express a workload in native PostgreSQL, create the intended indexes, and interpret the results using BONDI's existing contracts. The first milestone is one repeatable end-to-end example.
 
@@ -78,3 +78,28 @@ Match the predicate and index expression in each experiment. Numeric casts can f
 ## Findings and decisions
 
 Append an entry after each experiment. Include the date, PostgreSQL image tag and driver version, dataset or fixture, reproduction command or artifact link, observation, and the decision or remaining question. Move accepted decisions into the relevant section above and retain their evidence here.
+
+### 2026-11-22 · AptMQL beer_factory
+
+The public `load_aptmql_dataset` function loaded a fresh MongoDB 8.0.16 deployment at AptMQL revision `06ba1f0f29b1947e67a343c204e6a9b5eede6b17`. A spike-only Psycopg 3.3.9 COPY writer transferred the documents to the official `postgres:17.5` Docker image. Each collection received a table with a text primary key and a JSONB object column. The probe retained the original string `_id` inside each document and compared every decoded PostgreSQL document, keyed by ID, with its MongoDB source. All 7,724 matched: 24 brands, 554 customers, 118 inventory items, 3 locations, 713 reviews, and 6,312 transactions. This fixture exercises string IDs. Mixed BSON identity types remain open.
+
+The probe ran ANALYZE, bound query parameters through Psycopg, compared complete result sets with independent MongoDB filters or aggregation, and captured estimated and actual JSON plans. It repeated all four queries after adding three secondary indexes and refreshing statistics. The planner chose indexes without hints.
+
+| Query on transactions | Matching output | Before secondary indexes | After secondary indexes |
+| --- | ---: | --- | --- |
+| Customer ID equals 864896 (string) | 13 IDs | Sequential scan | Bitmap index scan on expression B-tree tx_customer, then heap scan |
+| Numeric purchase price below 2 | 220 IDs | Sequential scan | Index scan on numeric expression B-tree tx_price |
+| Document contains nested item brand ID 10016 (string) | 537 IDs | Sequential scan | Bitmap index scan on whole-document GIN tx_doc, then heap scan |
+| Group by location ID and count | 2 groups | Aggregate over sequential scan | Aggregate over sequential scan |
+
+**Design implications.** The numeric expression index also changed the range cardinality estimate from 2,104 rows to 220, exactly the observed count. The aggregate's child scan produced 6,312 rows and its root produced two, illustrating why the summary parser must read final cardinality at the root. These results support keeping the indexed expression and access method in a native index definition. The next loader decision is how to encode mixed-type IDs and BSON-only values before claiming support across AptMQL datasets.
+
+**Lifecycle observation.** The PostgreSQL container retained all 6,312 transactions after restart. On the first attempt, a readiness check using the original Docker-assigned host port failed. Resolving the port again after restart succeeded on the repeat run. A BONDI-managed deployment should pin its configured host port. Both runs used disposable containers and cleaned them up.
+
+**Reproduction.** Supply `SPIKE_MONGO_URI` and `SPIKE_PG_DSN` for fresh disposable databases, then run the command below from the repository root with Docker services already running. The probe creates the beer_factory MongoDB database and PostgreSQL schema. The caller owns the service lifecycle. The JSON artifact contains all 16 estimated and actual plans across both phases. Elapsed times are single observations.
+
+```sh
+uv run --with 'psycopg[binary]==3.3.9' python dev/probes/postgresql_beer_factory.py /tmp/beer-plans.json
+```
+
+[Executable probe](../dev/probes/postgresql_beer_factory.py) · [Recorded plans and counts](../dev/probes/postgresql-beer-factory.json)

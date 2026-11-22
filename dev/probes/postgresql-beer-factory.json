@@ -1,0 +1,731 @@
+{
+  "revision": "06ba1f0f29b1947e67a343c204e6a9b5eede6b17",
+  "driver": "3.3.9",
+  "postgres": "17.5 (Debian 17.5-1.pgdg130+1)",
+  "counts": {
+    "brands": 24,
+    "customers": 554,
+    "inventory": 118,
+    "locations": 3,
+    "reviews": 713,
+    "transactions": 6312
+  },
+  "phases": {
+    "before": {
+      "equality": {
+        "rows": 13,
+        "explain": [
+          {
+            "Plan": {
+              "Node Type": "Seq Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 0.0,
+              "Total Cost": 622.68,
+              "Plan Rows": 32,
+              "Plan Width": 7,
+              "Filter": "((doc ->> 'customerId'::text) = '864896'::text)"
+            }
+          }
+        ],
+        "profile": [
+          {
+            "Plan": {
+              "Node Type": "Seq Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 0.0,
+              "Total Cost": 622.68,
+              "Plan Rows": 32,
+              "Plan Width": 7,
+              "Actual Startup Time": 0.004,
+              "Actual Total Time": 0.577,
+              "Actual Rows": 13,
+              "Actual Loops": 1,
+              "Filter": "((doc ->> 'customerId'::text) = '864896'::text)",
+              "Rows Removed by Filter": 6299,
+              "Shared Hit Blocks": 528,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.011,
+            "Triggers": [],
+            "Execution Time": 0.58
+          }
+        ]
+      },
+      "range": {
+        "rows": 220,
+        "explain": [
+          {
+            "Plan": {
+              "Node Type": "Seq Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 0.0,
+              "Total Cost": 654.24,
+              "Plan Rows": 2104,
+              "Plan Width": 7,
+              "Filter": "(((doc #>> '{payment,purchasePrice}'::text[]))::numeric < '2'::numeric)"
+            }
+          }
+        ],
+        "profile": [
+          {
+            "Plan": {
+              "Node Type": "Seq Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 0.0,
+              "Total Cost": 654.24,
+              "Plan Rows": 2104,
+              "Plan Width": 7,
+              "Actual Startup Time": 0.021,
+              "Actual Total Time": 1.17,
+              "Actual Rows": 220,
+              "Actual Loops": 1,
+              "Filter": "(((doc #>> '{payment,purchasePrice}'::text[]))::numeric < '2'::numeric)",
+              "Rows Removed by Filter": 6092,
+              "Shared Hit Blocks": 528,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.011,
+            "Triggers": [],
+            "Execution Time": 1.178
+          }
+        ]
+      },
+      "containment": {
+        "rows": 537,
+        "explain": [
+          {
+            "Plan": {
+              "Node Type": "Seq Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 0.0,
+              "Total Cost": 606.9,
+              "Plan Rows": 574,
+              "Plan Width": 7,
+              "Filter": "(doc @> '{\"item\": {\"brandId\": \"10016\"}}'::jsonb)"
+            }
+          }
+        ],
+        "profile": [
+          {
+            "Plan": {
+              "Node Type": "Seq Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 0.0,
+              "Total Cost": 606.9,
+              "Plan Rows": 574,
+              "Plan Width": 7,
+              "Actual Startup Time": 0.005,
+              "Actual Total Time": 1.021,
+              "Actual Rows": 537,
+              "Actual Loops": 1,
+              "Filter": "(doc @> '{\"item\": {\"brandId\": \"10016\"}}'::jsonb)",
+              "Rows Removed by Filter": 5775,
+              "Shared Hit Blocks": 528,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.043,
+            "Triggers": [],
+            "Execution Time": 1.038
+          }
+        ]
+      },
+      "aggregation": {
+        "rows": 2,
+        "explain": [
+          {
+            "Plan": {
+              "Node Type": "Aggregate",
+              "Strategy": "Hashed",
+              "Partial Mode": "Simple",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 638.46,
+              "Total Cost": 717.36,
+              "Plan Rows": 6312,
+              "Plan Width": 40,
+              "Group Key": [
+                "(doc ->> 'locationId'::text)"
+              ],
+              "Planned Partitions": 0,
+              "Plans": [
+                {
+                  "Node Type": "Seq Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Relation Name": "transactions",
+                  "Alias": "transactions",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 606.9,
+                  "Plan Rows": 6312,
+                  "Plan Width": 32
+                }
+              ]
+            }
+          }
+        ],
+        "profile": [
+          {
+            "Plan": {
+              "Node Type": "Aggregate",
+              "Strategy": "Hashed",
+              "Partial Mode": "Simple",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 638.46,
+              "Total Cost": 717.36,
+              "Plan Rows": 6312,
+              "Plan Width": 40,
+              "Actual Startup Time": 1.183,
+              "Actual Total Time": 1.198,
+              "Actual Rows": 2,
+              "Actual Loops": 1,
+              "Group Key": [
+                "(doc ->> 'locationId'::text)"
+              ],
+              "Planned Partitions": 0,
+              "HashAgg Batches": 1,
+              "Peak Memory Usage": 217,
+              "Disk Usage": 0,
+              "Shared Hit Blocks": 528,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Seq Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Relation Name": "transactions",
+                  "Alias": "transactions",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 606.9,
+                  "Plan Rows": 6312,
+                  "Plan Width": 32,
+                  "Actual Startup Time": 0.003,
+                  "Actual Total Time": 0.665,
+                  "Actual Rows": 6312,
+                  "Actual Loops": 1,
+                  "Shared Hit Blocks": 528,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.008,
+            "Triggers": [],
+            "Execution Time": 1.204
+          }
+        ]
+      }
+    },
+    "after": {
+      "equality": {
+        "rows": 13,
+        "explain": [
+          {
+            "Plan": {
+              "Node Type": "Bitmap Heap Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 4.36,
+              "Total Cost": 40.38,
+              "Plan Rows": 10,
+              "Plan Width": 7,
+              "Recheck Cond": "((doc ->> 'customerId'::text) = '864896'::text)",
+              "Plans": [
+                {
+                  "Node Type": "Bitmap Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Index Name": "tx_customer",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 4.36,
+                  "Plan Rows": 10,
+                  "Plan Width": 0,
+                  "Index Cond": "((doc ->> 'customerId'::text) = '864896'::text)"
+                }
+              ]
+            }
+          }
+        ],
+        "profile": [
+          {
+            "Plan": {
+              "Node Type": "Bitmap Heap Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 4.36,
+              "Total Cost": 40.38,
+              "Plan Rows": 10,
+              "Plan Width": 7,
+              "Actual Startup Time": 0.005,
+              "Actual Total Time": 0.008,
+              "Actual Rows": 13,
+              "Actual Loops": 1,
+              "Recheck Cond": "((doc ->> 'customerId'::text) = '864896'::text)",
+              "Rows Removed by Index Recheck": 0,
+              "Exact Heap Blocks": 5,
+              "Lossy Heap Blocks": 0,
+              "Shared Hit Blocks": 7,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Bitmap Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Index Name": "tx_customer",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 4.36,
+                  "Plan Rows": 10,
+                  "Plan Width": 0,
+                  "Actual Startup Time": 0.003,
+                  "Actual Total Time": 0.003,
+                  "Actual Rows": 13,
+                  "Actual Loops": 1,
+                  "Index Cond": "((doc ->> 'customerId'::text) = '864896'::text)",
+                  "Shared Hit Blocks": 2,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.015,
+            "Triggers": [],
+            "Execution Time": 0.011
+          }
+        ]
+      },
+      "range": {
+        "rows": 220,
+        "explain": [
+          {
+            "Plan": {
+              "Node Type": "Index Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "tx_price",
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 0.28,
+              "Total Cost": 116.45,
+              "Plan Rows": 220,
+              "Plan Width": 7,
+              "Index Cond": "(((doc #>> '{payment,purchasePrice}'::text[]))::numeric < '2'::numeric)"
+            }
+          }
+        ],
+        "profile": [
+          {
+            "Plan": {
+              "Node Type": "Index Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "tx_price",
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 0.28,
+              "Total Cost": 116.45,
+              "Plan Rows": 220,
+              "Plan Width": 7,
+              "Actual Startup Time": 0.01,
+              "Actual Total Time": 0.058,
+              "Actual Rows": 220,
+              "Actual Loops": 1,
+              "Index Cond": "(((doc #>> '{payment,purchasePrice}'::text[]))::numeric < '2'::numeric)",
+              "Rows Removed by Index Recheck": 0,
+              "Shared Hit Blocks": 187,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.023,
+            "Triggers": [],
+            "Execution Time": 0.071
+          }
+        ]
+      },
+      "containment": {
+        "rows": 537,
+        "explain": [
+          {
+            "Plan": {
+              "Node Type": "Bitmap Heap Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 33.23,
+              "Total Cost": 591.67,
+              "Plan Rows": 574,
+              "Plan Width": 7,
+              "Recheck Cond": "(doc @> '{\"item\": {\"brandId\": \"10016\"}}'::jsonb)",
+              "Plans": [
+                {
+                  "Node Type": "Bitmap Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Index Name": "tx_doc",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 33.09,
+                  "Plan Rows": 574,
+                  "Plan Width": 0,
+                  "Index Cond": "(doc @> '{\"item\": {\"brandId\": \"10016\"}}'::jsonb)"
+                }
+              ]
+            }
+          }
+        ],
+        "profile": [
+          {
+            "Plan": {
+              "Node Type": "Bitmap Heap Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "transactions",
+              "Alias": "transactions",
+              "Startup Cost": 33.23,
+              "Total Cost": 591.67,
+              "Plan Rows": 574,
+              "Plan Width": 7,
+              "Actual Startup Time": 0.094,
+              "Actual Total Time": 0.283,
+              "Actual Rows": 537,
+              "Actual Loops": 1,
+              "Recheck Cond": "(doc @> '{\"item\": {\"brandId\": \"10016\"}}'::jsonb)",
+              "Rows Removed by Index Recheck": 0,
+              "Exact Heap Blocks": 346,
+              "Lossy Heap Blocks": 0,
+              "Shared Hit Blocks": 355,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Bitmap Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Index Name": "tx_doc",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 33.09,
+                  "Plan Rows": 574,
+                  "Plan Width": 0,
+                  "Actual Startup Time": 0.074,
+                  "Actual Total Time": 0.074,
+                  "Actual Rows": 537,
+                  "Actual Loops": 1,
+                  "Index Cond": "(doc @> '{\"item\": {\"brandId\": \"10016\"}}'::jsonb)",
+                  "Shared Hit Blocks": 9,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 1,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.056,
+            "Triggers": [],
+            "Execution Time": 0.302
+          }
+        ]
+      },
+      "aggregation": {
+        "rows": 2,
+        "explain": [
+          {
+            "Plan": {
+              "Node Type": "Aggregate",
+              "Strategy": "Hashed",
+              "Partial Mode": "Simple",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 638.46,
+              "Total Cost": 717.36,
+              "Plan Rows": 6312,
+              "Plan Width": 40,
+              "Group Key": [
+                "(doc ->> 'locationId'::text)"
+              ],
+              "Planned Partitions": 0,
+              "Plans": [
+                {
+                  "Node Type": "Seq Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Relation Name": "transactions",
+                  "Alias": "transactions",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 606.9,
+                  "Plan Rows": 6312,
+                  "Plan Width": 32
+                }
+              ]
+            }
+          }
+        ],
+        "profile": [
+          {
+            "Plan": {
+              "Node Type": "Aggregate",
+              "Strategy": "Hashed",
+              "Partial Mode": "Simple",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 638.46,
+              "Total Cost": 717.36,
+              "Plan Rows": 6312,
+              "Plan Width": 40,
+              "Actual Startup Time": 1.222,
+              "Actual Total Time": 1.237,
+              "Actual Rows": 2,
+              "Actual Loops": 1,
+              "Group Key": [
+                "(doc ->> 'locationId'::text)"
+              ],
+              "Planned Partitions": 0,
+              "HashAgg Batches": 1,
+              "Peak Memory Usage": 217,
+              "Disk Usage": 0,
+              "Shared Hit Blocks": 528,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Seq Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Relation Name": "transactions",
+                  "Alias": "transactions",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 606.9,
+                  "Plan Rows": 6312,
+                  "Plan Width": 32,
+                  "Actual Startup Time": 0.004,
+                  "Actual Total Time": 0.68,
+                  "Actual Rows": 6312,
+                  "Actual Loops": 1,
+                  "Shared Hit Blocks": 528,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.021,
+            "Triggers": [],
+            "Execution Time": 1.248
+          }
+        ]
+      }
+    }
+  }
+}
