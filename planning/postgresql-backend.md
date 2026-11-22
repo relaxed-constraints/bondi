@@ -119,3 +119,18 @@ PostgreSQL supports typed temporal columns. Inside the proposed JSONB payload a 
 Two differences warrant PostgreSQL-specific handling. JSONB supports exact numeric values beyond the Couchbase loader's safe-integer limit. Retain at least signed 64-bit BSON integers. Keep the existing strict decimal default and opt-in string mode until a separate Python write/read probe verifies lossless numeric serialization and decoding. JSONB also rejects U+0000 in string values, which the current Couchbase conversion allows. Report the offending path. These are proposed policies; the live check covered server types only.
 
 [Existing conversion and identity rules](../src/bondi/data/_values.py) · [PostgreSQL JSONB input limits](https://www.postgresql.org/docs/17/datatype-json.html)
+
+### 2026-11-22 · Exact decimal round trip through Psycopg
+
+Tested PostgreSQL 17.5, Psycopg 3.3.9 and simplejson 4.3.0 in an isolated environment. The default Jsonb adapter raised TypeError on a nested Python Decimal. As a control, binding Decimal("1234567890.123456789") to a numeric SQL parameter inside jsonb_build_object stored a JSON number exactly. Selecting the JSONB document with the default decoder yielded Python float 1234567890.1234567. Extracting the same field as SQL numeric yielded the original Decimal.
+
+For arbitrary nested documents, the following pair preserved all three tested values, including -1E-30 and 1234567890123456789012345678901234.5 inside an array.
+
+```python
+set_json_loads(partial(json.loads, parse_float=Decimal), conn)
+payload = Jsonb(document, dumps=partial(simplejson.dumps, use_decimal=True))
+restored = conn.execute("SELECT %s::jsonb", (payload,)).fetchone()[0]
+assert restored == document
+```
+
+A PostgreSQL numeric decimal mode is feasible. Decide the read policy before exposing it. The decoder applies to every fractional JSON number on that connection, including fields originally supplied as Python floats. JSONB retains numeric values but carries no record of the original Python or BSON type. Keep finite-value checks and scope any decoder override to the intended connections. The experiment added no runtime dependency.
