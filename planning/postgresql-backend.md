@@ -103,3 +103,19 @@ uv run --with 'psycopg[binary]==3.3.9' python dev/probes/postgresql_beer_factory
 ```
 
 [Executable probe](../dev/probes/postgresql_beer_factory.py) · [Recorded plans and counts](../dev/probes/postgresql-beer-factory.json)
+
+### 2026-11-22 · Native SQL types and JSONB conversion
+
+In an isolated postgres:17.5 container, the following SQL returned `date | string | string | 9007199254740993 | 1234567890.123456789`.
+
+```sql
+SELECT pg_typeof(current_date), jsonb_typeof(to_jsonb(current_date)),
+       jsonb_typeof(to_jsonb(current_timestamp)), to_jsonb(9007199254740993::bigint),
+       to_jsonb(1234567890.123456789::numeric);
+```
+
+PostgreSQL supports typed temporal columns. Inside the proposed JSONB payload a date becomes a string and loses its type identity. An explicit SQL cast can restore temporal comparison semantics for a field with a known format. A managed document loader can share Couchbase's UTC millisecond datetime strings, ISO calendar dates, ObjectId strings, naive-datetime policy, and conversion counters. Preserve input strings as strings. Compute document identity before lossy payload conversion using BONDI's typed identity helper.
+
+Two differences warrant PostgreSQL-specific handling. JSONB supports exact numeric values beyond the Couchbase loader's safe-integer limit. Retain at least signed 64-bit BSON integers. Keep the existing strict decimal default and opt-in string mode until a separate Python write/read probe verifies lossless numeric serialization and decoding. JSONB also rejects U+0000 in string values, which the current Couchbase conversion allows. Report the offending path. These are proposed policies; the live check covered server types only.
+
+[Existing conversion and identity rules](../src/bondi/data/_values.py) · [PostgreSQL JSONB input limits](https://www.postgresql.org/docs/17/datatype-json.html)
