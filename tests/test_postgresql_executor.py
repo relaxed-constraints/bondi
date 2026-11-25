@@ -73,9 +73,15 @@ def test_postgres_execution(tmp_path, monkeypatch, live_ports):
                 executor.run(
                     PostgresQuery("SELECT 1 AS x, 2 AS x WHERE false"), collect_results=True
                 )
-            for stmt in ("SELECT 1; SELECT 2", "DELETE FROM pg_class"):
+            for stmt in (
+                "SELECT 1; SELECT 2",
+                "DELETE FROM pg_class",
+                "WITH changed AS (DELETE FROM pg_class RETURNING oid) SELECT * FROM changed",
+            ):
                 with pytest.raises(pg.Error):
                     executor.run(PostgresQuery(stmt))
+                with pytest.raises(pg.Error):
+                    executor.profile(PostgresQuery(stmt))
             assert summarize(executor.explain(query).raw).rows_returned is None
             profile = executor.profile(query)
             assert profile.row_count is profile.documents is None
@@ -129,5 +135,69 @@ def test_postgres_execution(tmp_path, monkeypatch, live_ports):
                 assert (await ex.run(query)).row_count == 520
 
         asyncio.run(recovery())
+    finally:
+        db.remove()
+
+
+@pytest.mark.live
+def test_standalone_parallel_aggregate(tmp_path, monkeypatch, live_ports):
+    """Compare both BONDI diagnostics to native PostgreSQL with default planner costs."""
+    pg = pytest.importorskip("psycopg")
+    pytest.importorskip("psycopg_pool")
+    monkeypatch.setenv("BONDI_DEPLOYMENT_DIR", str(tmp_path))
+    db = deploy_postgresql("parallel-aggregate", port=live_ports.claim("postgresql")[0])
+    query = PostgresQuery("SELECT sum(n) AS total FROM measurements WHERE n >= %s", [1])
+
+    def gather_workers(plan):
+        if plan["Node Type"] in ("Gather", "Gather Merge"):
+            return plan
+        for child in plan.get("Plans", []):
+            if found := gather_workers(child):
+                return found
+        return None
+
+    try:
+        with pg.connect(db.uri, user=db.username, password=db.password, autocommit=True) as conn:
+            conn.execute("CREATE TABLE measurements AS SELECT generate_series(1, 1000000) AS n")
+            conn.execute("ANALYZE measurements")
+            native = conn.execute(
+                "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) " + query.statement,
+                query.positional_parameters,
+            ).fetchone()[0]
+            cursor = conn.execute(
+                "EXPLAIN (FORMAT JSON) DECLARE old_cursor CURSOR FOR " + query.statement,
+                query.positional_parameters,
+            ).fetchone()[0]
+            # Instrument fresh sessions in this disposable instance to observe run()
+            # itself, independently of the two explicit diagnostic operations.
+            conn.execute("ALTER ROLE postgres SET session_preload_libraries = 'auto_explain'")
+            conn.execute("ALTER ROLE postgres SET auto_explain.log_analyze = on")
+            conn.execute("ALTER ROLE postgres SET auto_explain.log_min_duration = 0")
+        with PostgresExecutor.from_connection(db.connection) as executor:
+            run = executor.run(query, collect_results=True)
+            stream_log = db.logs(tail=100)
+            assert "Query Text: SELECT sum(n) AS total FROM measurements" in stream_log
+            assert "Workers Launched: 2" in stream_log or "Workers Launched: 1" in stream_log
+            estimated = executor.explain(query).raw
+            observed = executor.profile(query).raw
+        native_gather = gather_workers(native[0]["Plan"])
+        estimated_gather = gather_workers(estimated["explain"][0]["Plan"])
+        observed_gather = gather_workers(observed["explain"][0]["Plan"])
+        assert native_gather and native_gather["Workers Launched"] > 0
+        assert estimated_gather and estimated_gather["Workers Planned"] > 0
+        assert observed_gather and observed_gather["Workers Launched"] > 0
+        assert (
+            summarize({"explain": native}).plan_stages
+            == summarize(estimated).plan_stages
+            == summarize(observed).plan_stages
+        )
+        assert gather_workers(cursor[0]["Plan"]) is None
+        assert run.documents == [{"total": 500000500000}] and run.row_count == 1
+        print(
+            f"Native workers launched={native_gather['Workers Launched']}, "
+            f"BONDI planned={estimated_gather['Workers Planned']}, "
+            f"BONDI launched={observed_gather['Workers Launched']}, "
+            f"stages={summarize(observed).plan_stages}"
+        )
     finally:
         db.remove()

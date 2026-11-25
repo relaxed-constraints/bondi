@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stream standalone PostgreSQL reads and explain or profile the same SQL directly, enabling native parallel plans.
+
 - Manage PostgreSQL JSONB path B-trees, native expression B-trees and GIN indexes through the shared index lifecycle.
 
 - Run, explain and profile PostgreSQL read workloads through synchronous and asynchronous executors,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import aclosing
 from decimal import Decimal
 from functools import partial
 from time import perf_counter
@@ -21,6 +22,67 @@ from .query import PostgresQuery
 
 if TYPE_CHECKING:
     from psycopg_pool import AsyncConnectionPool
+
+
+def _validate_read(conn, statement, params):
+    """Validate the single SELECT grammar formerly enforced by DECLARE CURSOR."""
+    from pglast import ast, parse_sql
+    from pglast.parser import ParseError
+    from psycopg import AsyncClientCursor, ProgrammingError
+
+    # Substitute dummy literals only for grammar checking. The original SQL and
+    # actual bindings go separately through Psycopg's extended query protocol.
+    template = (
+        AsyncClientCursor(conn).mogrify(statement, [None] * len(params)) if params else statement
+    )
+    try:
+        parsed = parse_sql(template)
+    except ParseError as exc:
+        raise ProgrammingError(str(exc)) from exc
+    if len(parsed) != 1 or not isinstance(parsed[0].stmt, ast.SelectStmt):
+        raise ProgrammingError("Expected one PostgreSQL read query")
+    select = parsed[0].stmt
+    if select.intoClause or (
+        select.withClause
+        and any(not isinstance(cte.ctequery, ast.SelectStmt) for cte in select.withClause.ctes)
+    ):
+        raise ProgrammingError("Expected a read-only SELECT")
+
+
+def _check_labels(labels):
+    if len(set(labels)) != len(labels):
+        raise ValueError("Use unique SQL output labels to collect results")
+
+
+async def _stream_rows(cur, statement, params, collect):
+    from psycopg import generators, pq
+    from psycopg.types.json import set_json_loads
+
+    set_json_loads(partial(json.loads, parse_float=Decimal), cur)
+    documents = [] if collect else None
+    labels = None
+    count = 0
+    async with aclosing(cur.stream(statement, params)) as rows:
+        async for row in rows:
+            if collect:
+                if labels is None:
+                    labels = [column.name for column in cur.description]
+                    _check_labels(labels)
+                documents.append(dict(zip(labels, row, strict=True)))
+            count += 1
+
+    if collect and count == 0:
+        # Psycopg stream() does not expose a description for an empty stream.
+        # Describe its unnamed prepared statement without executing the query again.
+        conn = cur.connection
+        conn.pgconn.send_describe_prepared(b"")
+        (metadata,) = await conn.wait(generators.execute(conn.pgconn))
+        if metadata.status != pq.ExecStatus.COMMAND_OK:
+            from psycopg.errors import error_from_result
+
+            raise error_from_result(metadata, encoding=conn.info.encoding)
+        _check_labels([metadata.fname(i) for i in range(metadata.nfields)])
+    return count, documents
 
 
 class AsyncPostgresExecutor:
@@ -152,7 +214,6 @@ class AsyncPostgresExecutor:
 
     async def _execute(self, query, mode, collect):
         from psycopg.rows import tuple_row
-        from psycopg.types.json import set_json_loads
 
         self._check_open()
         self._validate_query(query)
@@ -167,36 +228,18 @@ class AsyncPostgresExecutor:
                     conn.cursor(row_factory=tuple_row) as cur,
                 ):
                     await cur.execute("SET TRANSACTION READ ONLY")
-                    # Optimize for consuming the whole cursor, including for diagnostic plans.
-                    await cur.execute("SET LOCAL cursor_tuple_fraction = 1")
-                    declare = "DECLARE bondi_rows NO SCROLL CURSOR FOR " + query.statement
+                    _validate_read(conn, query.statement, params)
                     if mode == "run":
-                        await cur.execute(declare, params, prepare=True)
-                        set_json_loads(partial(json.loads, parse_float=Decimal), cur)
-                        result.row_count = 0
-                        result.documents = [] if collect else None
-                        labels = None
-                        while True:
-                            await cur.execute("FETCH FORWARD 256 FROM bondi_rows")
-                            if collect and labels is None:
-                                labels = [col.name for col in cur.description]
-                                if len(set(labels)) != len(labels):
-                                    raise ValueError(
-                                        "Use unique SQL output labels to collect results"
-                                    )
-                            rows = await cur.fetchall()
-                            result.row_count += len(rows)
-                            if collect:
-                                result.documents.extend(
-                                    dict(zip(labels, row, strict=True)) for row in rows
-                                )
-                            if len(rows) < 256:
-                                break
+                        result.row_count, result.documents = await _stream_rows(
+                            cur, query.statement, params, collect
+                        )
                     else:
                         options = (
                             "FORMAT JSON" if mode == "explain" else "ANALYZE, BUFFERS, FORMAT JSON"
                         )
-                        await cur.execute(f"EXPLAIN ({options}) " + declare, params, prepare=True)
+                        await cur.execute(
+                            f"EXPLAIN ({options}) " + query.statement, params, prepare=True
+                        )
                         result.raw = {"explain": (await cur.fetchone())[0]}
         except self._pool_timeout as error:
             raise TimeoutError("PostgreSQL pool acquisition timed out") from error

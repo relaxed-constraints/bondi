@@ -356,11 +356,11 @@ with PostgresExecutor.from_connection(get_deployment("pg-demo").connection) as e
     observed = summarize(executor.profile(query).raw)
 ```
 
-Each operation borrows a connection and opens a read-only transaction. BONDI uses
-a forward-only SQL cursor and asks PostgreSQL to plan for complete consumption.
-Explain and profile use the same cursor declaration, so their plans reflect this
-execution path. PostgreSQL may choose a different plan for a standalone SELECT.
-Run counts rows in bounded fetches. Collected rows use SQL output labels as keys,
+Each operation borrows a connection and opens a read-only transaction. Run streams
+the standalone SELECT through Psycopg and discards each row after counting it
+unless collection is requested. Explain and profile prefix the same SQL with
+PostgreSQL's EXPLAIN options. The planner can choose parallel scans and aggregates
+under the usual PostgreSQL rules. Collected rows use SQL output labels as keys,
 which must be unique. Native SQL types use Psycopg decoding. Fractional numbers
 in JSON and JSONB outputs use Python Decimal.
 

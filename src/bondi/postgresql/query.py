@@ -13,8 +13,8 @@ from bondi.workload import _json_object, _reject_constant
 class PostgresQuery:
     """Describe a read query with optional Psycopg %s positional placeholders.
 
-    The statement is preserved verbatim. SQL syntax is checked by the server
-    during execution. Bindings accept strings, finite numbers, booleans and null.
+    The statement is preserved verbatim. SQL grammar and server validation
+    run at execution time. Bindings accept strings, finite numbers, booleans and null.
     """
 
     statement: str
