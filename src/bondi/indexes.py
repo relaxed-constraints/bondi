@@ -105,12 +105,18 @@ class FieldIndex(_Definition):
 def _from_dict(data):
     from bondi.couchbase.indexes import CouchbaseIndex
     from bondi.mongodb.indexes import MongoIndex
+    from bondi.postgresql.indexes import PostgresIndex
 
     if not isinstance(data, dict):
         raise TypeError("Index definition must be a dictionary")
     data = deepcopy(data)
     kind = data.pop("kind", "field")
-    classes = {"field": FieldIndex, "mongodb": MongoIndex, "couchbase": CouchbaseIndex}
+    classes = {
+        "field": FieldIndex,
+        "mongodb": MongoIndex,
+        "couchbase": CouchbaseIndex,
+        "postgresql": PostgresIndex,
+    }
     if not isinstance(kind, str) or kind not in classes:
         raise ValueError(f"Unknown index kind: {kind!r}")
     cls = classes[kind]
@@ -121,7 +127,7 @@ def _from_dict(data):
         data["keys"] = [(field, 1) for field in fields]
     if set(data) - {"keys", "name", *cls._options}:
         raise ValueError("Unknown index options")
-    keys = data.get("keys")
+    keys = data.get("keys", () if kind == "postgresql" and data.get("method") == "gin" else None)
     if not isinstance(keys, (list, tuple)) or any(
         not isinstance(pair, (list, tuple)) for pair in keys
     ):
@@ -148,7 +154,7 @@ def _read(path):
 
 
 def load_index(path):
-    """Load a FieldIndex, MongoIndex or CouchbaseIndex from a versioned JSON file."""
+    """Load a shared or backend-native index from a versioned JSON file."""
     data = _read(path)
     if "kind" not in data:
         raise ValueError("Index file must include a kind discriminator")

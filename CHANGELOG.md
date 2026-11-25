@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Manage PostgreSQL JSONB path B-trees, native expression B-trees and GIN indexes through the shared index lifecycle.
+
 - Run, explain and profile PostgreSQL read workloads through synchronous and asynchronous executors,
   persist native SQL queries, and summarize JSON plans offline.
 

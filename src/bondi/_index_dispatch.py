@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
+from bondi.connection import (
+    CouchbaseConnection,
+    MongoConnection,
+    PostgresConnection,
+    _validate_connection,
+)
 from bondi.indexes import FieldIndex, IndexSet
 
 if TYPE_CHECKING:
@@ -12,10 +17,14 @@ if TYPE_CHECKING:
     from bondi.couchbase.indexes import CouchbaseIndex
     from bondi.mongodb.collection import MongoCollectionRef
     from bondi.mongodb.indexes import MongoIndex
+    from bondi.postgresql import PostgresCollectionRef, PostgresIndex
 
 
 def _operation(connection, action):
-    from bondi import couchbase, mongodb
+    from bondi import couchbase, mongodb, postgresql
+
+    if isinstance(connection, PostgresConnection):
+        return connection, getattr(postgresql, action.replace("_", "_postgres_", 1))
 
     conn = _validate_connection(connection)
     module, prefix = (
@@ -24,7 +33,13 @@ def _operation(connection, action):
     return conn, getattr(module, action.replace("_", f"_{prefix}_", 1))
 
 
-def _namespace(conn, database, bucket, scope):
+def _namespace(conn, database, bucket, scope, schema):
+    if isinstance(conn, PostgresConnection):
+        if schema is None or any(x is not None for x in (database, bucket, scope)):
+            raise ValueError("PostgreSQL requires schema only")
+        return {"schema": schema}
+    if schema is not None:
+        raise ValueError("schema requires PostgreSQL")
     if isinstance(conn, MongoConnection):
         if database is None or bucket is not None or scope is not None:
             raise ValueError("MongoDB requires database and does not accept bucket or scope")
@@ -35,24 +50,24 @@ def _namespace(conn, database, bucket, scope):
 
 
 def create_index(
-    connection: MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
     *,
-    collection: MongoCollectionRef | CouchbaseCollectionRef,
-    index: FieldIndex | MongoIndex | CouchbaseIndex,
+    collection: MongoCollectionRef | CouchbaseCollectionRef | PostgresCollectionRef,
+    index: FieldIndex | MongoIndex | CouchbaseIndex | PostgresIndex,
     timeout: float = 300.0,
 ) -> str:
     """Create one index using the connection's backend.
 
     Args:
-        connection (MongoConnection | CouchbaseConnection): Connection settings.
-        collection (MongoCollectionRef | CouchbaseCollectionRef): Collection matching the backend.
-        index (FieldIndex | MongoIndex | CouchbaseIndex): Shared or matching native definition.
+        connection: Connection settings.
+        collection: Collection matching the backend.
+        index: Shared or matching native definition.
         timeout (float): Positive finite seconds for creation and readiness.
 
     Returns:
         The confirmed index name.
 
-    Delegates to create_mongo_index or create_couchbase_index. Backend validation,
+    Delegates to the matching backend. Backend validation,
     readiness and native errors are preserved. No index replacement is performed.
     """
     conn, operation = _operation(connection, "create_index")
@@ -60,22 +75,24 @@ def create_index(
 
 
 def create_indexes(
-    connection: MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
     *,
     indexes: IndexSet,
     database: str | None = None,
     bucket: str | None = None,
     scope: str | None = None,
+    schema: str | None = None,
     timeout: float = 300.0,
     replace: bool = False,
 ) -> dict[str, list[str]]:
     """Create an IndexSet using the connection's backend.
 
     Args:
-        connection (MongoConnection | CouchbaseConnection): Connection settings.
+        connection: Connection settings.
         indexes (IndexSet): Collection-keyed shared or matching native definitions.
         database (str | None): Required for MongoDB; omit for Couchbase.
         bucket (str | None): Required for Couchbase; omit for MongoDB.
+        schema (str | None): Required for PostgreSQL.
         scope (str | None): Required for Couchbase; omit for MongoDB.
         timeout (float): Positive finite seconds per inspection, removal or creation.
         replace (bool): Clear secondary indexes on included collections before creating.
@@ -87,23 +104,23 @@ def create_indexes(
     primary indexes and is non-atomic. Backend IndexCreationError progress is preserved.
     """
     conn, operation = _operation(connection, "create_indexes")
-    namespace = _namespace(conn, database, bucket, scope)
+    namespace = _namespace(conn, database, bucket, scope, schema)
     return operation(conn, indexes=indexes, timeout=timeout, replace=replace, **namespace)
 
 
 def remove_index(
-    connection: MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
     *,
-    collection: MongoCollectionRef | CouchbaseCollectionRef,
-    index: FieldIndex | MongoIndex | CouchbaseIndex,
+    collection: MongoCollectionRef | CouchbaseCollectionRef | PostgresCollectionRef,
+    index: FieldIndex | MongoIndex | CouchbaseIndex | PostgresIndex,
     timeout: float = 300.0,
 ) -> bool:
     """Remove one named index using the connection's backend.
 
     Args:
-        connection (MongoConnection | CouchbaseConnection): Connection settings.
-        collection (MongoCollectionRef | CouchbaseCollectionRef): Collection matching the backend.
-        index (FieldIndex | MongoIndex | CouchbaseIndex): Definition identifying the index name.
+        connection: Connection settings.
+        collection: Collection matching the backend.
+        index: Definition identifying the index name.
         timeout (float): Positive finite seconds per inspection or removal.
 
     Returns:
@@ -117,21 +134,23 @@ def remove_index(
 
 
 def remove_indexes(
-    connection: MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
     *,
     indexes: IndexSet,
     database: str | None = None,
     bucket: str | None = None,
     scope: str | None = None,
+    schema: str | None = None,
     timeout: float = 300.0,
 ) -> dict[str, list[str]]:
     """Remove named definitions using the connection's backend.
 
     Args:
-        connection (MongoConnection | CouchbaseConnection): Connection settings.
+        connection: Connection settings.
         indexes (IndexSet): Collection-keyed definitions identifying index names.
         database (str | None): Required for MongoDB; omit for Couchbase.
         bucket (str | None): Required for Couchbase; omit for MongoDB.
+        schema (str | None): Required for PostgreSQL.
         scope (str | None): Required for Couchbase; omit for MongoDB.
         timeout (float): Positive finite seconds per inspection or removal.
 
@@ -142,5 +161,5 @@ def remove_indexes(
     indexes are rejected before deletion. Backend IndexRemovalError progress is preserved.
     """
     conn, operation = _operation(connection, "remove_indexes")
-    namespace = _namespace(conn, database, bucket, scope)
+    namespace = _namespace(conn, database, bucket, scope, schema)
     return operation(conn, indexes=indexes, timeout=timeout, **namespace)

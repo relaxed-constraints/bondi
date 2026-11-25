@@ -253,3 +253,48 @@ Batch server failures raise `IndexRemovalError` with `completed`, `collection`,
 position or index name. Single-index calls propagate the original error. No rollback
 is attempted, and the failing removal may have taken effect. These functions do
 not remove collections, documents or deployments.
+
+## PostgreSQL JSONB indexes
+
+Single operations take a PostgresCollectionRef. Batch operations take an explicit
+schema and use the table names in the IndexSet. Install the postgresql extra for
+database operations. Persistence and name resolution work offline.
+
+```python
+from bondi import FieldIndex, IndexSet, create_indexes
+from bondi.postgresql import PostgresIndex
+
+indexes = IndexSet(
+    {
+        "transactions": [
+            FieldIndex((("customerId", 1),), name="tx_customer"),
+            PostgresIndex.btree(
+                (("(doc #>> '{payment,purchasePrice}')::numeric", 1),), name="tx_price"
+            ),
+            PostgresIndex.gin("doc", name="tx_doc"),
+        ]
+    }
+)
+names = create_indexes(connection, schema="beer_factory", indexes=indexes)
+```
+
+A FieldIndex maps each dotted path to a B-tree expression using JSONB extraction
+(`doc #> ARRAY['customerId']::text[]`). A missing path yields SQL NULL, JSON null
+retains its JSONB type, and arrays are indexed as whole values. Compare against
+a JSONB operand to use this index. Text extraction and numeric casts are different
+expressions. For these, use native B-tree keys with integer directions. GIN accepts
+a JSONB expression and either jsonb_ops (default) or jsonb_path_ops. Both native
+constructors accept an optional partial predicate via condition. Native expressions
+and predicates must come from a trusted source.
+
+PostgreSQL index names share the schema namespace. Use
+`postgres_index_name(collection, index)` to resolve the actual name, including
+the target table in the digest for unnamed definitions. Explicit names must fit
+63 UTF-8 bytes. A duplicate name on creation is an error.
+
+Creation uses ordinary synchronous DDL and can block writers. Replacement and
+named removal operate only on the selected tables. Primary, unique, exclusion
+and replica-identity indexes are protected. Partitioned parents and partitions
+are unsupported. The database enforces other dependencies during restricted
+drops. As for other backends, use exclusive index administration. Each successful
+mutation commits separately and batch exceptions report confirmed progress.

@@ -9,15 +9,29 @@ from time import monotonic
 import pymongo
 from pymongo import IndexModel, MongoClient
 
-from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
+from bondi.connection import (
+    CouchbaseConnection,
+    MongoConnection,
+    PostgresConnection,
+    _validate_connection,
+)
 from bondi.indexes import FieldIndex, IndexCreationError, IndexRemovalError, IndexSet
 
 
-def _validate(backend, connection, indexes, targets, timeout):
+def _target_name(backend, collection, index):
+    if backend == "postgresql":
+        from bondi.postgresql import postgres_index_name
+
+        return postgres_index_name(collection, index)
+    return index.resolved_name
+
+
+def _validate(backend, connection, indexes, targets, timeout, *, creating=False):
     from bondi.couchbase.collection import CouchbaseCollectionRef
     from bondi.couchbase.indexes import CouchbaseIndex
     from bondi.mongodb.collection import MongoCollectionRef
     from bondi.mongodb.indexes import MongoIndex
+    from bondi.postgresql import PostgresCollectionRef, PostgresIndex
 
     if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
         raise TypeError("timeout must be a positive finite number of seconds")
@@ -28,14 +42,21 @@ def _validate(backend, connection, indexes, targets, timeout):
     indexes.validate()
     if not isinstance(targets, Mapping) or set(targets) != set(indexes):
         raise ValueError("targets must map exactly the collection names in indexes")
-    conn = _validate_connection(connection)
-    native, ref, credentials = (
-        (MongoIndex, MongoCollectionRef, MongoConnection)
-        if backend == "mongodb"
-        else (CouchbaseIndex, CouchbaseCollectionRef, CouchbaseConnection)
+    conn = (
+        connection
+        if isinstance(connection, PostgresConnection)
+        else _validate_connection(connection)
     )
+    native, ref, credentials = {
+        "mongodb": (MongoIndex, MongoCollectionRef, MongoConnection),
+        "couchbase": (CouchbaseIndex, CouchbaseCollectionRef, CouchbaseConnection),
+        "postgresql": (PostgresIndex, PostgresCollectionRef, PostgresConnection),
+    }[backend]
     if not isinstance(conn, credentials):
         raise TypeError(f"Connection must be for {backend}")
+    schema_names = set()
+    if backend == "postgresql" and creating:
+        schema_names.update(target.table for target in targets.values() if isinstance(target, ref))
     for collection_name, definitions in indexes.items():
         if not isinstance(targets[collection_name], ref):
             raise TypeError(f"Incorrect collection type for {collection_name}")
@@ -44,13 +65,17 @@ def _validate(backend, connection, indexes, targets, timeout):
             if type(index) not in (FieldIndex, native):
                 raise TypeError(f"Index kind {index.kind} is not supported by {backend}")
             # Serialization also checks BSON/JSON encodability before any side effects.
-            name = index.resolved_name
+            name = _target_name(backend, targets[collection_name], index)
             if name in names:
                 raise ValueError(f"Duplicate resolved index name for {collection_name}: {name}")
             names.add(name)
+            if backend == "postgresql":
+                if name in schema_names:
+                    raise ValueError(f"Conflicting PostgreSQL schema name: {name}")
+                schema_names.add(name)
             if backend == "mongodb":
                 _mongo_model(index)
-            else:
+            elif backend == "couchbase":
                 _couchbase_statement(targets[collection_name], index)
     return conn
 
@@ -107,6 +132,10 @@ def _client(backend, conn, timeout):
             if value is not None
         }
         client = MongoClient(conn.uri, timeoutMS=timeout * 1000, **credentials)
+    elif backend == "postgresql":
+        from bondi.postgresql import _index_ddl
+
+        client = _index_ddl.connect(conn, timeout)
     else:
         try:
             from couchbase.auth import PasswordAuthenticator
@@ -127,6 +156,10 @@ def _client(backend, conn, timeout):
 
 
 def _create(backend, client, collection, index, timeout):
+    if backend == "postgresql":
+        from bondi.postgresql import _index_ddl
+
+        return _index_ddl.create(client, collection, index)
     if backend == "mongodb":
         with pymongo.timeout(timeout):
             native_collection = client[collection.database][collection.collection]
@@ -159,13 +192,17 @@ def _create(backend, client, collection, index, timeout):
 
 def create_one(backend, connection, collection, index, timeout):
     indexes = IndexSet({"target": [index]})
-    conn = _validate(backend, connection, indexes, {"target": collection}, timeout)
+    conn = _validate(backend, connection, indexes, {"target": collection}, timeout, creating=True)
     with _client(backend, conn, timeout) as client:
         return _create(backend, client, collection, indexes["target"][0], timeout)
 
 
 def _existing(backend, client, collection, timeout):
     """Return name-to-protected flags, including indexes created outside BONDI."""
+    if backend == "postgresql":
+        from bondi.postgresql import _index_ddl
+
+        return _index_ddl.inspect(client, collection)
     if backend == "mongodb":
         with pymongo.timeout(timeout):
             return {
@@ -186,6 +223,10 @@ def _existing(backend, client, collection, timeout):
 
 def _drop(backend, client, collection, name, timeout):
     """Return whether the server acknowledged removal; tolerate only missing indexes."""
+    if backend == "postgresql":
+        from bondi.postgresql import _index_ddl
+
+        return _index_ddl.drop(client, collection, name)
     if backend == "mongodb":
         try:
             with pymongo.timeout(timeout):
@@ -213,7 +254,7 @@ def _drop(backend, client, collection, name, timeout):
 def create_many(backend, connection, indexes, targets, timeout, replace=False):
     if type(replace) is not bool:
         raise TypeError("replace must be a boolean")
-    conn = _validate(backend, connection, indexes, targets, timeout)
+    conn = _validate(backend, connection, indexes, targets, timeout, creating=True)
     # Freeze inputs after preflight; caller mutations cannot alter this batch.
     indexes = IndexSet(indexes)
     targets = dict(targets)
@@ -227,12 +268,12 @@ def create_many(backend, connection, indexes, targets, timeout, replace=False):
             # Discover every collection before deleting anything.
             for collection_name in indexes:
                 try:
+                    target = targets[collection_name]
+                    existing = _existing(backend, client, target, timeout)
+                    if backend == "postgresql":
+                        _check_protected(backend, target, existing, indexes[collection_name])
                     plan[collection_name] = [
-                        name
-                        for name, protected in _existing(
-                            backend, client, targets[collection_name], timeout
-                        ).items()
-                        if not protected
+                        name for name, protected in existing.items() if not protected
                     ]
                 except Exception as exc:
                     raise IndexCreationError(
@@ -274,9 +315,12 @@ def _removal_inputs(backend, connection, indexes, targets, timeout):
     return conn, indexes, dict(targets)
 
 
-def _check_protected(existing, definitions):
+def _check_protected(backend, collection, existing, definitions):
     for index in definitions:
-        if existing.get(index.resolved_name):
+        name = _target_name(backend, collection, index)
+        if existing.get(name):
+            if backend == "postgresql":
+                raise ValueError(f"Cannot remove protected PostgreSQL index: {name}")
             raise ValueError(f"Cannot remove protected primary index: {index.resolved_name}")
 
 
@@ -287,10 +331,9 @@ def remove_one(backend, connection, collection, index, timeout):
     definition = indexes["target"][0]
     with _client(backend, conn, timeout) as client:
         existing = _existing(backend, client, collection, timeout)
-        _check_protected(existing, [definition])
-        return definition.resolved_name in existing and _drop(
-            backend, client, collection, definition.resolved_name, timeout
-        )
+        _check_protected(backend, collection, existing, [definition])
+        name = _target_name(backend, collection, definition)
+        return name in existing and _drop(backend, client, collection, name, timeout)
 
 
 def remove_many(backend, connection, indexes, targets, timeout):
@@ -310,10 +353,12 @@ def remove_many(backend, connection, indexes, targets, timeout):
             except Exception as exc:
                 raise IndexRemovalError(completed, collection_name, None, phase="inspect") from exc
             # A protected-name request aborts the entire batch before any deletion.
-            _check_protected(existing[collection_name], definitions)
+            _check_protected(
+                backend, targets[collection_name], existing[collection_name], definitions
+            )
         for collection_name, definitions in indexes.items():
             for position, index in enumerate(definitions):
-                name = index.resolved_name
+                name = _target_name(backend, targets[collection_name], index)
                 if name not in existing[collection_name]:
                     continue
                 try:
