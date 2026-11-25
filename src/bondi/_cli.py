@@ -11,7 +11,13 @@ import click
 from bondi._terminal import message, table
 from bondi._terminal import status as status_line
 from bondi.data._cli import dataset
-from bondi.deployment import deploy_couchbase, deploy_mongodb, get_deployment, list_deployments
+from bondi.deployment import (
+    deploy_couchbase,
+    deploy_mongodb,
+    deploy_postgresql,
+    get_deployment,
+    list_deployments,
+)
 
 
 @click.group(no_args_is_help=False)
@@ -52,6 +58,20 @@ def create():
 def mongodb(**options):
     """Deploy MongoDB."""
     return _run(SimpleNamespace(command="create", backend="mongodb", **options))
+
+
+@create.command("postgresql")
+@click.option("--name", default="postgresql", show_default=True)
+@click.option("--port", type=int, default=5432, show_default=True)
+@click.option("--memory-limit-mb", type=int, help="Container cap in MiB.")
+@click.option("--database", default="postgres", show_default=True)
+@click.option("--username", default="postgres", show_default=True)
+@click.option("--password-env", help="Read the password from this environment variable.")
+@click.option("--version", help="PostgreSQL major.minor image version.")
+@click.option("--timeout", type=float, default=120, show_default=True)
+def postgresql(**options):
+    """Deploy PostgreSQL."""
+    return _run(SimpleNamespace(command="create", backend="postgresql", **options))
 
 
 @create.command("couchbase")
@@ -235,19 +255,31 @@ def _run(args):
                             f"Password environment variable {args.password_env!r} is unset"
                         )
                     password = os.environ[args.password_env]
-                db = deploy_couchbase(
-                    args.name,
-                    management_port=args.management_port,
-                    query_port=args.query_port,
-                    kv_port=args.kv_port,
-                    edition=args.edition,
-                    version=args.version,
-                    username=args.username,
-                    password=password,
-                    bucket=args.bucket,
-                    memory_limit_mb=args.memory_limit_mb,
-                    timeout=args.timeout,
-                )
+                if args.backend == "postgresql":
+                    db = deploy_postgresql(
+                        args.name,
+                        port=args.port,
+                        database=args.database,
+                        memory_limit_mb=args.memory_limit_mb,
+                        username=args.username,
+                        password=password,
+                        version=args.version,
+                        timeout=args.timeout,
+                    )
+                else:
+                    db = deploy_couchbase(
+                        args.name,
+                        management_port=args.management_port,
+                        query_port=args.query_port,
+                        kv_port=args.kv_port,
+                        edition=args.edition,
+                        version=args.version,
+                        username=args.username,
+                        password=password,
+                        bucket=args.bucket,
+                        memory_limit_mb=args.memory_limit_mb,
+                        timeout=args.timeout,
+                    )
 
             status_line(db.name, "running", db.uri)
             if args.backend == "mongodb":
@@ -255,6 +287,9 @@ def _run(args):
                 message("Install mongosh: https://www.mongodb.com/docs/mongodb-shell/install/")
                 message("Install mongoimport, mongoexport, mongodump, mongorestore:")
                 message("  https://www.mongodb.com/docs/database-tools/installation/")
+            elif args.backend == "postgresql":
+                message(f"Database: {db.database}")
+                message(f"Username: {db.username}")
             else:
                 message(f"Console: {db.console_url}")
                 message(f"Username: {db.username}")

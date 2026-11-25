@@ -3,12 +3,12 @@
 BONDI separates a database's lifecycle, connection settings and collection names.
 
 - A `Deployment` manages a named local Docker database.
-- `MongoConnection` and `CouchbaseConnection` describe how to access an instance.
+- `MongoConnection`, `CouchbaseConnection`, and `PostgresConnection` describe how to access an instance.
 - `MongoCollectionRef` and `CouchbaseCollectionRef` identify a collection within it.
 
 Connection settings are immutable values. Creating or reading them does not open
 an SDK client, check readiness or start Docker. They need no cleanup. Their
-representations omit URIs and credentials. Both classes reject non-string URIs
+representations omit URIs and credentials. These classes reject non-string URIs
 with `TypeError`; URI syntax validation remains with the native driver.
 
 ## Managed databases

@@ -440,7 +440,11 @@ def test_cli_command_groups():
         "status",
         "stop",
     }
-    assert set(cli.commands["deployment"].commands["create"].commands) == {"mongodb", "couchbase"}
+    assert set(cli.commands["deployment"].commands["create"].commands) == {
+        "mongodb",
+        "couchbase",
+        "postgresql",
+    }
 
 
 @pytest.mark.parametrize(

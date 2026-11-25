@@ -1,6 +1,6 @@
 # Local database deployments
 
-BONDI creates named MongoDB and Couchbase deployments with Docker Compose.
+BONDI creates named MongoDB, Couchbase, and PostgreSQL deployments with Docker Compose.
 You can use either the command-line interface (CLI) or the Python API.
 Both methods create the same kind of deployment and share its saved settings.
 
@@ -572,3 +572,32 @@ field display `—`; BONDI does not infer or backfill a creation date.
 
 In Python, `Deployment.created_at` is a timezone-aware `datetime`, or `None`
 for deployments created before this metadata was recorded.
+
+## PostgreSQL
+
+Create a named PostgreSQL deployment and select its initial database:
+
+```sh
+bondi deployment create postgresql --name pg-demo --database research
+bondi deployment status pg-demo
+```
+
+```python
+from bondi.deployment import deploy_postgresql
+
+db = deploy_postgresql("pg-demo", database="research")
+settings = db.connection
+```
+
+The default port is 5432, the login role is `postgres`, and the local demo
+password is `bondi-local`. Use `--password-env` or the Python `password`
+argument to supply your own. The URI includes the database. Credentials are
+available separately on the connection settings. For an external server,
+construct `bondi.PostgresConnection(uri, username, password)` directly.
+
+Use the same start, stop, logs, and remove operations as for MongoDB. Removing
+with `keep_data=True` retains the saved settings and volume for the next start.
+PostgreSQL accepts major.minor image versions such as the pinned default 17.5.
+BONDI uses the official image's version-specific data volume layout. Deployment
+uses Docker Compose and requires no PostgreSQL Python driver. Use a native
+PostgreSQL client for database operations at this stage.

@@ -13,3 +13,8 @@ settings from `Deployment.connection` or construct them directly. See the
     options:
       show_root_heading: true
       heading_level: 2
+
+::: bondi.PostgresConnection
+    options:
+      show_root_heading: true
+      heading_level: 2

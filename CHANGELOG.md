@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Deploy PostgreSQL with the Python API or CLI and obtain immutable PostgreSQL connection settings.
+
 ## 0.4.1 — 2026-11-22
 
 - Export observed schemas to Draft 2020-12 for ordinary JSON or Canonical Extended JSON,

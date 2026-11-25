@@ -15,8 +15,9 @@ from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Literal, Self
+from urllib.parse import quote
 
-from bondi.connection import CouchbaseConnection, MongoConnection
+from bondi.connection import CouchbaseConnection, MongoConnection, PostgresConnection
 
 from ._couchbase import DEFAULT_DATA_MEMORY_MB, DEFAULT_INDEX_MEMORY_MB
 
@@ -62,18 +63,19 @@ def _timeout(timeout: float) -> None:
 class Deployment:
     """A saved database deployment; obtaining a handle does not start Docker.
 
-    Use deploy_mongodb(), deploy_couchbase() or get_deployment() to obtain a handle. Connections use
-    localhost, so Python and Docker must run on the same machine. Lifecycle
+    Use deploy_mongodb(), deploy_postgresql(), deploy_couchbase(), or get_deployment().
+    Connections use localhost, so Python and Docker must run on the same machine. Lifecycle
     methods never stop or remove unrelated Compose projects.
 
     Attributes:
         name: User-chosen deployment name.
-        port: MongoDB port, or Couchbase management port.
-        backend: mongodb or couchbase.
-        query_port: Couchbase SQL++ port; None for MongoDB.
-        kv_port: Couchbase key/value port; None for MongoDB.
-        username: Couchbase administrator username.
-        password: Couchbase password, excluded from repr.
+        port: MongoDB or PostgreSQL port, or Couchbase management port.
+        backend: mongodb, couchbase or postgresql.
+        database: Initial PostgreSQL database.
+        query_port: Couchbase SQL++ port; None for other backends.
+        kv_port: Couchbase key/value port; None for other backends.
+        username: Couchbase administrator or PostgreSQL login role.
+        password: Database password, excluded from repr.
         bucket: Default Couchbase bucket.
         edition: Couchbase community or enterprise.
         image: Pinned database Docker image.
@@ -103,16 +105,19 @@ class Deployment:
     index_memory_mb: int | None = None
     bucket_memory_mb: int | None = None
     created_at: datetime | None = None
+    database: str | None = None
 
     @property
     def uri(self) -> str:
         """Database connection URI on the local machine (without credentials)."""
         if self.backend == "couchbase":
             return f"couchbase://127.0.0.1:{self.kv_port}?network=external"
+        if self.backend == "postgresql":
+            return f"postgresql://127.0.0.1:{self.port}/{quote(self.database, safe='')}"
         return f"mongodb://127.0.0.1:{self.port}/"
 
     @property
-    def connection(self) -> MongoConnection | CouchbaseConnection:
+    def connection(self) -> MongoConnection | CouchbaseConnection | PostgresConnection:
         """Connection settings, without Docker access or a readiness check.
 
         Available for stopped deployments too. The returned settings do not own
@@ -122,11 +127,13 @@ class Deployment:
             return MongoConnection(self.uri, self.username, self.password)
         if self.backend == "couchbase":
             return CouchbaseConnection(self.uri, self.username, self.password)
+        if self.backend == "postgresql":
+            return PostgresConnection(self.uri, self.username, self.password)
         raise ValueError(f"Unsupported deployment backend: {self.backend}")
 
     @property
     def console_url(self) -> str | None:
-        """Couchbase browser console URL, or None for MongoDB."""
+        """Couchbase browser console URL, or None for other backends."""
         return f"http://127.0.0.1:{self.port}/" if self.backend == "couchbase" else None
 
     def _run(self, *arguments: str, timeout: float = 120) -> str:
@@ -290,11 +297,24 @@ def get_deployment(name: str) -> Deployment:
     """
     path = _directory(name)
     config = json.loads((path / "deployment.json").read_text())
-    if config.get("format_version") != 1 or config.get("backend") not in {"mongodb", "couchbase"}:
+    if config.get("format_version") != 1 or config.get("backend") not in {
+        "mongodb",
+        "couchbase",
+        "postgresql",
+    }:
         raise ValueError("Unsupported deployment configuration")
     extra = {
         key: config[key]
-        for key in ("backend", "query_port", "kv_port", "username", "password", "bucket", "edition")
+        for key in (
+            "backend",
+            "query_port",
+            "kv_port",
+            "username",
+            "password",
+            "bucket",
+            "edition",
+            "database",
+        )
         if key in config
     }
     extra["created_at"] = (
@@ -481,22 +501,77 @@ def deploy_couchbase(
     )
 
 
+def deploy_postgresql(
+    name: str = "postgresql",
+    *,
+    port: int = 5432,
+    username: str = "postgres",
+    password: str = "bondi-local",
+    database: str = "postgres",
+    memory_limit_mb: int | None = None,
+    version: str | None = None,
+    timeout: float = 120,
+) -> Deployment:
+    """Start a named PostgreSQL server or reuse a matching deployment.
+
+    Args:
+        name: Local deployment name.
+        port: Localhost TCP port.
+        username: Initial PostgreSQL login role.
+        password: Initial role password.
+        database: Initial database selected by the deployment URI.
+        memory_limit_mb: Container cap in MiB. Omission reuses the saved setting.
+        version: Official image version in major.minor form, such as 17.5.
+            Omission reuses a saved image or selects the pinned default.
+        timeout: Maximum startup duration in seconds, including image download.
+
+    Returns:
+        Deployment ready for authenticated SQL connections.
+    """
+    if memory_limit_mb is not None and (type(memory_limit_mb) is not int or memory_limit_mb <= 0):
+        raise ValueError("memory_limit_mb must be a positive integer in MiB")
+    for key, value in (("username", username), ("password", password), ("database", database)):
+        if not isinstance(value, str) or not value or "\0" in value:
+            raise ValueError(f"{key} must be a nonempty string without null characters")
+    return _deploy(
+        name,
+        dict(
+            backend="postgresql",
+            port=port,
+            username=username,
+            password=password,
+            database=database,
+            memory_limit_mb=memory_limit_mb,
+        ),
+        version=version,
+        timeout=timeout,
+    )
+
+
 def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -> Deployment:
     path = _directory(name)
     _timeout(timeout)
     backend = settings["backend"]
-    if version is not None and (
-        not isinstance(version, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version)
-    ):
-        raise ValueError("version must be a numeric major.minor.patch string, e.g. '8.0.16'")
-    selected_version = (
-        version if version is not None else ("8.0.16" if backend == "mongodb" else "7.6.2")
-    )
-    image = (
-        f"mongo:{selected_version}"
-        if backend == "mongodb"
-        else f"couchbase:{settings['edition']}-{selected_version}"
-    )
+    if backend == "postgresql":
+        if version is not None and (
+            not isinstance(version, str) or not re.fullmatch(r"[1-9][0-9]+\.[0-9]+", version)
+        ):
+            raise ValueError("PostgreSQL version must be numeric major.minor, e.g. '17.5'")
+        selected_version = version or "17.5"
+        image = f"postgres:{selected_version}"
+    else:
+        if version is not None and (
+            not isinstance(version, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version)
+        ):
+            raise ValueError("version must be a numeric major.minor.patch string, e.g. '8.0.16'")
+        selected_version = (
+            version if version is not None else ("8.0.16" if backend == "mongodb" else "7.6.2")
+        )
+        image = (
+            f"mongo:{selected_version}"
+            if backend == "mongodb"
+            else f"couchbase:{settings['edition']}-{selected_version}"
+        )
     ports = [settings[key] for key in ("port", "query_port", "kv_port") if key in settings]
     if any(type(port) is not int or not 1 <= port <= 65535 for port in ports):
         raise ValueError("ports must be integers between 1 and 65535")
@@ -507,6 +582,8 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
         memory_keys = (
             {"memory_limit_mb", "wiredtiger_cache_size_gb"} if backend == "mongodb" else set()
         )
+        if backend == "postgresql":
+            memory_keys = {"memory_limit_mb"}
         differences = [
             key
             for key, value in settings.items()
@@ -524,7 +601,7 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
                 f"{', '.join(differences)}. Inspect 'bondi deployment status {name}'. "
                 "Use another name to keep it, or remove it only if its data is disposable."
             )
-        # Memory requests never reconfigure existing MongoDB assets.
+        # Memory requests never reconfigure saved assets.
         for key in ("memory_limit_mb", "wiredtiger_cache_size_gb"):
             if key not in memory_keys or settings[key] is None:
                 continue
@@ -552,7 +629,7 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
         cache = settings["wiredtiger_cache_size_gb"]
         if memory is not None and cache is not None and cache * 1024 >= memory:
             raise ValueError("wiredtiger_cache_size_gb must be smaller than memory_limit_mb")
-    else:
+    elif backend == "couchbase":
         # Resolve defaults only for new deployments; existing settings stay authoritative.
         settings["data_memory_mb"] = settings["data_memory_mb"] or DEFAULT_DATA_MEMORY_MB
         settings["index_memory_mb"] = settings["index_memory_mb"] or DEFAULT_INDEX_MEMORY_MB
@@ -569,11 +646,26 @@ def _deploy(name: str, settings: dict, *, version: str | None, timeout: float) -
     template = json.loads(files("bondi.deployment").joinpath(f"{backend}.compose.json").read_text())
     project = "bondi-" + name + "-" + hashlib.sha256(str(path).encode()).hexdigest()[:12]
     service = template["services"][backend]
-    internal_ports = [27017] if backend == "mongodb" else [8091, 8093, 11210]
+    internal_ports = {"mongodb": [27017], "couchbase": [8091, 8093, 11210], "postgresql": [5432]}[
+        backend
+    ]
     service["ports"] = [
         f"127.0.0.1:{host}:{internal}" for host, internal in zip(ports, internal_ports)
     ]
     service["image"] = image
+    if backend == "postgresql":
+        # Compose interpolates dollar signs in environment values.
+        service["environment"] = {
+            variable: settings[key].replace("$", "$$")
+            for variable, key in (
+                ("POSTGRES_USER", "username"),
+                ("POSTGRES_PASSWORD", "password"),
+                ("POSTGRES_DB", "database"),
+            )
+        }
+        service["environment"]["POSTGRES_INITDB_ARGS"] = "--auth-host=scram-sha-256"
+        if int(selected_version.split(".")[0]) >= 18:
+            service["volumes"] = ["postgresql-data:/var/lib/postgresql"]
     if settings.get("memory_limit_mb") is not None:
         service["mem_limit"] = f"{settings['memory_limit_mb']}m"
     if backend == "mongodb" and settings["wiredtiger_cache_size_gb"] is not None:

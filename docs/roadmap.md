@@ -32,7 +32,7 @@ This page tracks capabilities and open work, not a commitment to release dates.
 - MongoDB sampling estimation with temporary sample lifecycle management.
 - Synchronous single-collection MongoDB flat-find workload generation.
 - Local Docker databases and runnable teaching notebooks.
-- Packaged MongoDB/Couchbase deployment API and CLI with named, persistent Docker instances.
+- Packaged MongoDB, Couchbase and PostgreSQL deployment API and CLI with named, persistent Docker instances.
 
 ## Deferred work
 

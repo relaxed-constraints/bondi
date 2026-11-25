@@ -1,0 +1,23 @@
+{
+  "services": {
+    "postgresql": {
+      "image": "postgres:17.5",
+      "volumes": [
+        "postgresql-data:/var/lib/postgresql/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "PGUSER=\"$$POSTGRES_USER\" PGPASSWORD=\"$$POSTGRES_PASSWORD\" PGDATABASE=\"$$POSTGRES_DB\" psql -X -w -h 127.0.0.1 -c 'SELECT 1' >/dev/null"
+        ],
+        "interval": "2s",
+        "timeout": "5s",
+        "retries": 30,
+        "start_period": "10s"
+      }
+    }
+  },
+  "volumes": {
+    "postgresql-data": {}
+  }
+}

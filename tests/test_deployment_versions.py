@@ -156,3 +156,40 @@ def test_cli_version_selection_and_conflict(docker, backend, capsys):
     assert main([*args, "--version", default]) == 1
     assert "version" in capsys.readouterr().err
     docker[1].assert_not_called()
+
+
+def test_postgresql_cli_configuration(docker, monkeypatch, capsys):
+    from bondi import PostgresConnection
+    from bondi.deployment import deploy_postgresql
+
+    monkeypatch.setenv("PG_TEST_SECRET", "a$b")
+    args = [
+        "deployment",
+        "create",
+        "postgresql",
+        "--memory-limit-mb",
+        "512",
+        "--database",
+        "my db",
+        "--password-env",
+        "PG_TEST_SECRET",
+        "--version",
+        "18.1",
+    ]
+    assert main(args) == 0
+    db = get_deployment("postgresql")
+    assert db.connection == PostgresConnection(
+        "postgresql://127.0.0.1:5432/my%20db", "postgres", "a$b"
+    )
+    assert db.console_url is None
+    assert "a$b" not in repr(db.connection) + repr(db) + capsys.readouterr().out
+    service = json.loads((db._path / "compose.json").read_text())["services"]["postgresql"]
+    assert service["mem_limit"] == "512m"
+    assert service["environment"]["POSTGRES_PASSWORD"] == "a$$b"
+    assert service["volumes"] == ["postgresql-data:/var/lib/postgresql"]
+    assert service["ports"] == ["127.0.0.1:5432:5432"]
+    assert deploy_postgresql(database="my db", password="a$b").image == "postgres:18.1"
+    with pytest.raises(ValueError, match="database"):
+        deploy_postgresql(password="a$b")
+    with pytest.raises(ValueError, match="version"):
+        deploy_postgresql(version="17.5.0")

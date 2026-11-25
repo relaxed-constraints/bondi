@@ -32,3 +32,8 @@ Python deployment lookups continue to take exact names.
     options:
       show_root_heading: true
       heading_level: 3
+
+::: bondi.deployment.deploy_postgresql
+    options:
+      show_root_heading: true
+      heading_level: 3

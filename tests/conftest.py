@@ -19,14 +19,14 @@ class LivePorts:
         self.claimed = set()
 
     def claim(self, backend):
-        if backend not in {"mongodb", "couchbase"}:
+        if backend not in {"mongodb", "couchbase", "postgresql"}:
             raise ValueError(f"Unknown port pool: {backend}")
         for slot in range(10):
-            ports = (
-                (27117 + slot,)
-                if backend == "mongodb"
-                else (8191 + 10 * slot, 8193 + 10 * slot, 11310 + 10 * slot)
-            )
+            ports = {
+                "mongodb": (27117 + slot,),
+                "postgresql": (15432 + slot,),
+                "couchbase": (8191 + 10 * slot, 8193 + 10 * slot, 11310 + 10 * slot),
+            }[backend]
             if self.claimed.intersection(ports):
                 continue
             try:
