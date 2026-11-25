@@ -1,12 +1,12 @@
 ---
 name: bondi
-description: Use BONDI's Python API and CLI for document database deployments, native queries, workloads, execution, schema inspection, MongoDB estimation and generation. Also use when developing BONDI itself. Keep research algorithms and experiment pipelines in consumer projects.
+description: Use BONDI's Python API and CLI for MongoDB, Couchbase and PostgreSQL deployments, native queries, workloads, execution, schema inspection, MongoDB estimation and generation. Also use when developing BONDI itself. Keep research algorithms and experiment pipelines in consumer projects.
 ---
 
 # BONDI
 
 Help students and researchers use the toolkit and understand the building blocks
-they are combining. BONDI preserves native MongoDB queries and Couchbase SQL++;
+they are combining. BONDI preserves native MongoDB queries, Couchbase SQL++ and PostgreSQL SQL;
 it is not a query translator or an experiment-tracking framework.
 
 ## Choose the workflow
@@ -19,7 +19,9 @@ it is not a query translator or an experiment-tracking framework.
 
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
-and dependency constraints before using an API. This skill describes the 0.4.0 API.
+and dependency constraints before using an API. PostgreSQL support is in the development checkout after 0.4.1. For PostgreSQL,
+verify that the installed BONDI exposes `bondi.postgresql`. Install the
+`postgresql` extra from that checkout for loading, execution and index operations.
 Use `deployment.connection` or settings imported from `bondi` for database access.
 Executors use `from_connection()`, loaders use `connection=`, and collection
 arguments and attributes use `collection`. It includes sustained load generation, pattern selection, workload callbacks,
@@ -94,19 +96,19 @@ Lifecycle start, stop and remove accept quoted name globs (`*`, `?`, brackets).
 Multiple matches show a full table and ask once with default No; `--yes` skips
 confirmation. Single-deployment removal still asks. List and preview tables show
 Image and Created; older deployments have no creation timestamp and display —.
-Use `bondi dataset` for dataset commands. Python deployment creation still uses
-`deploy_mongodb()` and `deploy_couchbase()`.
+Use `bondi dataset` for dataset commands. Python deployment helpers include
+`deploy_mongodb()`, `deploy_couchbase()` and `deploy_postgresql()`.
 
 Load packaged demo businesses with `bondi.data.load_demo_data(connection=deployment.connection, collection=ref)`
 or `bondi dataset load-demo`. Use the dataset loader for all data sources.
 
 ## Index definitions
 
-Use `FieldIndex` and `IndexSet` from `bondi`, and native `MongoIndex` or
-`CouchbaseIndex` from their backend modules. Definitions support versioned JSON
+Use `FieldIndex` and `IndexSet` from `bondi`, and native `MongoIndex`,
+`CouchbaseIndex` or `PostgresIndex` from their backend modules. Definitions support versioned JSON
 `.save()` / `.load()`; `IndexSet.from_dict()` accepts config mappings with
-`fields` shorthand. Generic `bondi.create_index()` / `bondi.create_indexes()` dispatch from a
+`fields` shorthand. Generic `bondi.create_index()` / `bondi.create_indexes()` dispatch from the
 connection settings. Single creation uses a collection reference;
-batch creation uses IndexSet collection names and a database or bucket/scope. Batch failures expose
+batch creation uses IndexSet collection names and a MongoDB database, Couchbase bucket/scope or PostgreSQL schema. Batch failures expose
 completed names through `IndexCreationError`; no rollback is performed. See
 [index definitions](https://relaxed-constraints.github.io/bondi/indexes/).

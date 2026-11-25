@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Update the BONDI agent skill with PostgreSQL deployment, JSONB loading, queries, profiling and indexes.
+
 - Document PostgreSQL across the backend guides with dedicated API reference pages and a walkthrough for querying JSONB documents.
 
 - Stream standalone PostgreSQL reads and explain or profile the same SQL directly, enabling native parallel plans.

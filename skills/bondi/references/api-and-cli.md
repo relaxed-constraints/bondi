@@ -20,7 +20,7 @@ uv run bondi deployment start lesson
 Choose an unused name and port; do not assume a student's existing deployment is
 disposable. Deployments start empty. Use `bondi.data.load_demo_data(connection=deployment.connection,
 collection=ref)` or `bondi dataset load-demo` to load eight fictional businesses.
-Use a MongoCollectionRef or CouchbaseCollectionRef for the exact destination.
+Use a MongoCollectionRef, CouchbaseCollectionRef or PostgresCollectionRef for the exact destination.
 The default create mode requires an empty collection. Use mode="upsert" or
 `--mode upsert` to reload matching business IDs and keep other documents.
 The result is LoadDataResult. Deployment handles do not load data.
@@ -30,7 +30,7 @@ Create query indexes separately. Demo loading creates no indexes.
 
 Inspect `uv run bondi --help` and subcommand help for installed CLI options.
 `python -m bondi` is also supported. Python equivalents live in
-`bondi.deployment`: `deploy_mongodb`, `deploy_couchbase`, `get_deployment`
+`bondi.deployment`: `deploy_mongodb`, `deploy_couchbase`, `deploy_postgresql`, `get_deployment`
 and `list_deployments`. A deployment handle exposes `connection` settings and
 lifecycle methods; loading a handle does not start the database.
 
@@ -41,6 +41,38 @@ Use `keep_data=True` to retain them. Match cleanup to the user's intended data o
 Use the managed API/CLI rather than legacy repository Compose scripts.
 
 [Deployment guide](https://relaxed-constraints.github.io/bondi/deployment/)
+
+### PostgreSQL in the development checkout
+
+Run these commands from a BONDI checkout with PostgreSQL support and Docker running:
+
+```sh
+uv run --extra postgresql bondi deployment create postgresql --name pg-demo --database research
+uv run --extra postgresql bondi dataset load-demo --deployment pg-demo --schema demo --collection business
+```
+
+The connection selects the database. Within it, `PostgresCollectionRef("demo", "business")`
+selects a schema and table. Each managed row stores a typed text primary key
+(`document_id`) and a JSONB object (`doc`). Inside the document, dates and
+ObjectIds become strings and exact decimals remain JSON numbers.
+
+```python
+from bondi.deployment import get_deployment
+from bondi.postgresql import PostgresExecutor, PostgresQuery, summarize
+
+query = PostgresQuery("SELECT doc FROM demo.business WHERE doc ->> 'city' = %s", ["Sydney"])
+with PostgresExecutor.from_connection(get_deployment("pg-demo").connection) as executor:
+    result = executor.run(query, collect_results=True)
+    businesses = [row["doc"] for row in result.documents]
+    summary = summarize(executor.profile(query).raw)
+```
+
+Psycopg 3 is the Python driver. Bind positional values with `%s`. Use
+`AsyncPostgresExecutor` in async applications. `run()` streams the standalone
+SELECT and counts all rows. Collected rows use SQL column labels as keys.
+`explain()` returns the estimated plan. `profile()` runs the same SQL with
+`EXPLAIN ANALYZE` and returns the measured plan. Use the backend's `summarize()`
+to map either JSON plan to the shared summary.
 
 ### Deployment selection and creation time (0.3.4+)
 
@@ -68,8 +100,8 @@ Metadata resolution still contacts the Hub, so caching is not an offline guarant
 
 AptMQL loaders (0.3.5+; check installed exports) use the fixed
 `MongoDB/AptMQL-Bench` repository. `load_aptmql_dataset("beer_factory", connection=...)`
-loads all related collections into a MongoDB database or Couchbase scope named
-`beer_factory`. Single-dataset calls allow `database` or `scope` overrides.
+loads all related collections into a MongoDB database, Couchbase scope or PostgreSQL schema named
+`beer_factory`. Single-dataset calls allow `database`, `scope` or `schema` overrides respectively.
 `load_aptmql_repository(connection=...)` loads all datasets under their source names.
 Couchbase requires `bucket` for either function. The CLI commands are
 `bondi dataset load-aptmql beer_factory` and `bondi dataset load-aptmql-repository`.
@@ -85,7 +117,7 @@ Repository writes are non-atomic. Partial errors include earlier acknowledged wr
 BONDI 0.1.8 adds version selection: pass `version="8.0.16"` to
 `deploy_mongodb` and `version="7.6.12"` to `deploy_couchbase`, with matching
 `--version` CLI options. Check installed signatures/help for availability.
-Versions must be numeric `major.minor.patch` strings.
+MongoDB and Couchbase versions use numeric `major.minor.patch` strings. PostgreSQL uses `major.minor`.
 New deployments still default to MongoDB 8.0.16 and Couchbase 7.6.2; Couchbase
 edition is selected separately. Docker checks image availability at startup.
 
@@ -254,7 +286,7 @@ database sampling deterministic. Sample-based selectivity bounds are not
 full-population guarantees.
 
 Current generation is synchronous, single-collection MongoDB flat-find generation.
-Do not assume aggregation generation or Couchbase generation/estimation exists.
+Do not assume aggregation generation or Couchbase or PostgreSQL generation/estimation exists.
 Use the documentation map for detailed contracts and runnable notebooks.
 
 ## External MongoDB JSON (0.1.5+)
@@ -365,9 +397,13 @@ containers automatically. See the
 
 ## Index lifecycle
 
-`FieldIndex`, `MongoIndex`, `CouchbaseIndex` and `IndexSet` define reusable indexes.
+`FieldIndex`, `MongoIndex`, `CouchbaseIndex`, `PostgresIndex` and `IndexSet` define reusable indexes.
 The generic `bondi.create_indexes()` accepts an IndexSet plus MongoDB `database` or
-Couchbase `bucket`/`scope`, and a connection configuration.
+Couchbase `bucket`/`scope` or PostgreSQL `schema`, and a connection configuration.
+For PostgreSQL, `FieldIndex` creates a B-tree on the JSONB path. Match the indexed
+expression in the query. For text extraction or numeric casts, use
+`PostgresIndex.btree()`. For JSONB containment, use `PostgresIndex.gin()`.
+Replacement protects primary, unique, exclusion and replica-identity indexes.
 These examples use the BONDI 0.4.0 connection settings API.
 
 `create_indexes(..., replace=True)` removes all secondary indexes on the collections
@@ -378,7 +414,7 @@ non-atomic and must not run alongside concurrent index administration.
 
 `remove_index(..., collection=ref, index=definition)` returns whether removal was
 confirmed. `remove_indexes(..., indexes=index_set, database=...)` returns confirmed
-removed names by collection; Couchbase uses bucket/scope. Removal uses explicit or
+removed names by collection; Couchbase uses bucket/scope and PostgreSQL uses schema. Removal uses explicit or
 generated names, not semantic equivalence. Missing names are skipped; protected
 primary requests fail before any deletion. Empty lists remove nothing.
 
@@ -391,5 +427,6 @@ reference in the matching checkout for exact fields and timeout semantics.
 Generic `bondi.create_index`, `create_indexes`, `remove_index` and `remove_indexes`
 dispatch from the connection type. Explicit backend functions are
 `create_mongo_index[es]` / `remove_mongo_index[es]` in `bondi.mongodb` and
-`create_couchbase_index[es]` / `remove_couchbase_index[es]` in `bondi.couchbase`.
+`create_couchbase_index[es]` / `remove_couchbase_index[es]` in `bondi.couchbase`, and
+`create_postgres_index[es]` / `remove_postgres_index[es]` in `bondi.postgresql`.
 There are no old-name backend aliases. Namespace arguments must match the backend.
