@@ -43,6 +43,16 @@ For reproducible experiments, pin the release (`bondi=={{ bondi_version }}`) and
 lockfile. The API is still evolving.
 
 
+## PostgreSQL development checkout
+
+PostgreSQL support is available in development. From a checkout that contains the
+PostgreSQL backend, use `uv sync --locked --extra postgresql` or
+`python -m pip install -e '.[postgresql]'`. Include `--extra postgresql` on
+subsequent `uv run` commands that access the database. Query and index
+definitions, workload persistence, offline summary parsing and Docker deployment
+work with the base installation. Loading, execution and index administration
+use the extra. [Run the PostgreSQL walkthrough](postgresql-query.md).
+
 ## Get notebooks and demo data
 
 Educational Jupyter notebooks are included in the GitHub source, not in the installed wheel.

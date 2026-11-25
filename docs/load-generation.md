@@ -2,8 +2,9 @@
 
 `run_workload()` executes each workload entry once. `generate_load()` repeatedly
 selects entries until its admission window ends, using the executor's concurrency,
-query timeout, error policy and optional health preflight. Both MongoDB and
-Couchbase provide synchronous and asynchronous methods.
+query timeout, error policy and optional health preflight. MongoDB, Couchbase and PostgreSQL provide synchronous and asynchronous methods.
+For PostgreSQL, each active client checks out one pooled connection. The query
+deadline includes pool acquisition and row consumption.
 
 ```python
 from bondi import MongoConnection

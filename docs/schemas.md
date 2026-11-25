@@ -143,6 +143,14 @@ sample_query = CouchbaseQuery("SELECT RAW b FROM `demo`.`_default`.`business` AS
 This matters because the parser would otherwise infer an extra field named `b`.
 As with MongoDB's limit, this is a bounded preview, not random sampling.
 
+### PostgreSQL document rows
+
+For a bounded sample, run `PostgresQuery("SELECT doc FROM demo.business LIMIT 100")`
+with `collect_results=True`. Feed `(row["doc"] for row in result.documents)` to
+`Schema.from_documents()` to describe the stored documents. Passing the SQL rows directly
+would introduce an extra top-level field named `doc`. LIMIT alone does not
+produce a random sample.
+
 ### Couchbase: random selection through SQL++
 
 For the current SQL++ executor, random ordering followed by a limit is an option:

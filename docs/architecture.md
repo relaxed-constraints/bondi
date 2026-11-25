@@ -9,7 +9,7 @@ independently. The toolkit has no dependency on mdbrtools or sibling repositorie
 
 ## Native queries, shared operations
 
-MongoDB find/pipeline objects and Couchbase SQL++ objects preserve native query forms.
+MongoDB find/pipeline objects, Couchbase SQL++ objects, and PostgreSQL SQL objects preserve native query forms.
 There is no intermediate query language or cross-backend translation.
 MongoDB find queries can be explicitly converted to aggregation through
 `MongoFindQuery.to_aggregate()` for supported syntax. `Query` is a small
@@ -20,7 +20,7 @@ entries from one backend, retaining input order and optional integer pattern IDs
 
 Deployment handles manage Docker lifecycle and expose immutable connection settings
 through `deployment.connection`. Database operations that create a client accept
-`MongoConnection` or `CouchbaseConnection`. Collection references identify data
+`MongoConnection`, `CouchbaseConnection`, or `PostgresConnection`. Collection references identify data
 independently of these settings. Executors own or borrow backend clients. Async implementations perform I/O;
 synchronous adapters use a dedicated background loop and are the teaching default.
 Workload concurrency stays inside the executor rather than a separate runner class.
@@ -77,20 +77,19 @@ speculative compatibility layers.
 Source readers, conversion rules and writers remain separate. Consumers own data generation and benchmark-specific verification.
 Single-source loaders use exact collection references. Hub repository loading
 maps configurations directly to collection names. AptMQL loaders decode cached BSON
-dumps through the same writers. Dataset names map to MongoDB databases or Couchbase
-scopes; dump indexes and collection metadata are not restored. There are no manifests.
+dumps through the same writers. Dataset names map to MongoDB databases, Couchbase scopes, or PostgreSQL schemas; dump indexes and collection metadata are not restored. There are no manifests.
 Loading is synchronous and non-atomic. Partial results report acknowledged writes.
 
 ## Index definitions
 
 FieldIndex describes ordered paths and directions with backend-native semantics.
-MongoIndex and CouchbaseIndex are independent native definitions, not subclasses
+MongoIndex, CouchbaseIndex and PostgresIndex are independent native definitions, not subclasses
 of FieldIndex. IndexSet groups ordered definitions by collection name; batch application supplies
-a MongoDB database or Couchbase bucket/scope. Single creation uses a collection reference. Versioned
+a MongoDB database, Couchbase bucket/scope, or PostgreSQL schema. Single creation uses a collection reference. Versioned
 JSON artifacts contain definitions only, with BSON-aware MongoDB predicates.
 Creation validates the whole request before opening a client, reuses one client
 per batch, and reports partial progress without rollback. Top-level index lifecycle functions dispatch from shared connection settings.
-Explicit backend functions use mongo/couchbase names and retain backend validation. Research
+Explicit backend functions use mongo/couchbase/postgres names and retain backend validation. Research
 index recommendation and experiment orchestration remain in consumer projects.
 Batch replacement explicitly clears secondary indexes on included collections,
 preserving primary indexes, before creating the new set. Named removal is repeatable

@@ -2,7 +2,7 @@
 
 BONDI provides reusable components for students and researchers working with document databases:
 
-- **Native queries:** describe MongoDB find/aggregation queries and Couchbase SQL++ queries.
+- **Native queries:** describe MongoDB find/aggregation queries, Couchbase SQL++ and PostgreSQL reads.
 - **Query execution:** run individual queries or workloads, with optional concurrency.
 - **Explain and profiling:** inspect plans and extract common execution metrics.
 - **Workload persistence:** save and reload queries with their pattern IDs.
@@ -11,8 +11,7 @@ BONDI provides reusable components for students and researchers working with doc
 - **Workload generation:** generate MongoDB find patterns with multiple instances and optional selectivity constraints.
 
 The examples below use synchronous APIs, which work in scripts and notebooks.
-Execution and summary parsing support MongoDB and Couchbase; estimation and generation
-currently target MongoDB.
+Execution and summary parsing support MongoDB, Couchbase and PostgreSQL. Estimation and workload generation currently target MongoDB.
 
 [Documentation](https://relaxed-constraints.github.io/bondi/) ·
 [Quickstart](https://relaxed-constraints.github.io/bondi/quickstart/) ·
@@ -28,6 +27,9 @@ uv add bondi
 
 Or use `pip install bondi`. To execute Couchbase queries, install the optional extra:
 `uv add 'bondi[couchbase]'` or `pip install 'bondi[couchbase]'`.
+
+PostgreSQL support is in the development checkout. Install it there with
+`uv sync --extra postgresql`, then follow the [PostgreSQL walkthrough](docs/postgresql-query.md).
 
 For notebooks and demo data, get the source from a
 [GitHub release](https://github.com/relaxed-constraints/bondi/releases).
@@ -51,7 +53,7 @@ local installation and a manual fallback. It does not install the Python library
 ## Native queries
 
 Describe operations without opening a connection. MongoDB filters and pipelines
-stay native, while Couchbase queries use SQL++ text and parameters.
+stay native, Couchbase queries use SQL++ text and parameters, and PostgreSQL queries use positional SQL bindings.
 
 ```python
 from bondi.mongodb import MongoCollectionRef, MongoFindQuery
@@ -121,7 +123,7 @@ restored = Workload.load("workload.jsonl")
 
 ## Schema inspection
 
-Inspect Python dictionaries from either database or a file, without a database
+Inspect Python dictionaries from any supported database or a file, without a database
 connection. Retain distinct values when you want to generate queries later.
 
 ```python
@@ -185,7 +187,7 @@ Report problems or suggest improvements through [GitHub issues](https://github.c
 ## Dataset loading
 
 Use `load_demo_data`, `load_file`, `load_documents`, `load_hf_dataset` or `load_hf_repository`
-from `bondi.data` to insert data into MongoDB and Couchbase. CLI commands are
+from `bondi.data` to insert data into MongoDB, Couchbase and PostgreSQL. CLI commands are
 `bondi dataset load-demo`, `load-file`, `load-hf` and `load-hf-repository`. See the
 [dataset guide](docs/datasets.md) and [demo notebook](notebooks/dataset_loading.ipynb).
 All file-format and Hugging Face readers are included in a plain BONDI installation.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document PostgreSQL across the backend guides and add a walkthrough for querying JSONB documents.
+
 - Stream standalone PostgreSQL reads and explain or profile the same SQL directly, enabling native parallel plans.
 
 - Manage PostgreSQL JSONB path B-trees, native expression B-trees and GIN indexes through the shared index lifecycle.

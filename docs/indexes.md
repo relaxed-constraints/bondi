@@ -153,9 +153,8 @@ names = create_indexes(
 
 IndexSet keys are collection names. MongoDB batch creation applies them within
 one `database`; Couchbase batch creation applies them within one `bucket` and
-`scope`. These namespace arguments are required, including for empty sets.
-Shared-only sets work with either backend; a native definition for the other
-backend fails before any client is opened. The same saved set can be reused in
+`scope`. PostgreSQL batch operations take a `schema` in the connected database. These namespace arguments are required, including for empty sets.
+Shared-only sets work with all three backends. A native definition must match the connection backend. The same saved set can be reused in
 different databases or scopes without editing it. Single-index creation still
 accepts an explicit collection reference.
 
@@ -214,8 +213,8 @@ map records confirmed creations. `phase` identifies `inspect`, `remove` or `crea
 `index_name` identifies a failed removal. The original error is `__cause__`.
 A failed operation may have taken effect even when its result was not confirmed.
 
-Replacement enumerates the backend's ordinary collection indexes (MongoDB indexes
-and Couchbase SQL++ query indexes). It does not administer separate Search services.
+Replacement enumerates the backend's ordinary collection indexes (MongoDB indexes, Couchbase SQL++ query indexes,
+and PostgreSQL indexes on ordinary tables). It does not administer separate Search services.
 Run without concurrent index administration: enumeration and deletion are separate
 operations, and BONDI does not lock the schema. Each inspection, deletion and build
 gets its own timeout; there is no whole-batch deadline.

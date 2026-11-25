@@ -4,7 +4,7 @@ BONDI separates a database's lifecycle, connection settings and collection names
 
 - A `Deployment` manages a named local Docker database.
 - `MongoConnection`, `CouchbaseConnection`, and `PostgresConnection` describe how to access an instance.
-- `MongoCollectionRef` and `CouchbaseCollectionRef` identify a collection within it.
+- `MongoCollectionRef`, `CouchbaseCollectionRef`, and `PostgresCollectionRef` identify data within it.
 
 Connection settings are immutable values. Creating or reading them does not open
 an SDK client, check readiness or start Docker. They need no cleanup. Their
@@ -44,13 +44,22 @@ credentials. Construct separate settings to use another database account.
 after stopping. `remove()` returns `None`. Closing an executor closes its owned
 client; it does not stop or remove the deployment.
 
+| Backend | Address of a collection |
+| --- | --- |
+| MongoDB | Database and collection |
+| Couchbase | Bucket, scope and collection |
+| PostgreSQL | Schema and table within the database selected by the connection URI |
+
 ## External databases
 
 Import settings from `bondi`:
 
 ```python
-from bondi import MongoConnection, CouchbaseConnection
+from bondi import MongoConnection, CouchbaseConnection, PostgresConnection
 
+postgres = PostgresConnection(
+    "postgresql://localhost:5432/research", username="researcher", password=password
+)
 mongo = MongoConnection("mongodb://localhost:27017/")
 couchbase = CouchbaseConnection(
     "couchbase://localhost",
@@ -75,7 +84,10 @@ Executors created with `from_connection()` own their clients. Use a context mana
 or close them explicitly. Async factories follow their backend's setup semantics:
 `AsyncMongoExecutor.from_connection()` constructs an executor without a readiness
 probe; await `AsyncCouchbaseExecutor.from_connection()` before entering its async
-context. Couchbase setup waits for the Query service.
+context. Couchbase setup waits for the Query service. Await
+`AsyncPostgresExecutor.from_connection()` to open an owned Psycopg pool and wait
+for its first authenticated connection. `AsyncPostgresExecutor(pool)` borrows an
+existing async pool on the current event loop. The caller closes a borrowed pool.
 
 Native `client_kwargs` (MongoDB) and `cluster_kwargs` (Couchbase) remain available
 for driver options. Authentication comes from the connection settings;

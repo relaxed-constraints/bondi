@@ -19,7 +19,7 @@ print(workload[0].query.filter)
 ```
 
 All entries must use the same backend. MongoDB find and aggregation queries can
-coexist; MongoDB and Couchbase queries cannot. The shared `Query` protocol describes
+coexist in one workload. SQL++ and PostgreSQL SQL each use their own backend. The shared `Query` protocol describes
 common behavior without translating query languages.
 
 ## Save and load
@@ -32,7 +32,7 @@ assert restored[0].query.fingerprint() == workload[0].query.fingerprint()
 
 Each JSONL line stores a version, a native query envelope and a pattern ID. Loading
 reconstructs concrete query objects and BSON values where applicable. It does not
-connect to a database. Pattern objects and generation statistics are not stored.
+connect to a database. PostgreSQL workloads restore `PostgresQuery` statements and positional scalar bindings. Pattern objects and generation statistics are not stored.
 
 The workload copies the entry list but keeps references to entries and queries.
 Edits are visible through those references; validation occurs at explicit checkpoints,

@@ -1,6 +1,6 @@
 # Loading datasets
 
-BONDI loads data from local files and Hugging Face into MongoDB and Couchbase deployments.
+BONDI loads data from local files and Hugging Face into MongoDB, Couchbase and PostgreSQL deployments.
 You can use the CLI or Python API.
 You can also load Python dictionaries directly.
 
@@ -332,7 +332,7 @@ See [Progress and failures](#progress-and-failures) for result details.
 
 ## Load into Couchbase
 
-The source functions work with either backend.
+All three backends share the same source functions.
 For Couchbase, identify the bucket, scope and collection:
 
 ```python
@@ -449,7 +449,7 @@ They depend on the namespace, logical collection, original split and row positio
 Changing row order changes generated IDs.
 For unchanged Hub data, loading a split alone or with other splits preserves its generated IDs.
 
-Couchbase uses a separate physical document key that distinguishes ID types.
+Couchbase and PostgreSQL use a separate physical document key that distinguishes ID types.
 The converted `_id` also remains in the stored document.
 
 ## Load into an existing collection
@@ -487,12 +487,16 @@ Plain JSON is the default.
 Use `json_mode="extended"` or `--json-mode extended` to decode Extended JSON wrappers.
 BONDI uses `loads_query_json` for this conversion.
 
-| Value | MongoDB | Couchbase |
-|---|---|---|
-| BSON values | Retain supported BSON types | Convert supported types to JSON |
-| Datetime | Store a BSON date | Store a UTC ISO string |
-| ObjectId | Retain ObjectId | Store a string |
-| Decimal | Store Decimal128 | Require `decimal_mode="string"` |
+| Value | MongoDB | Couchbase | PostgreSQL |
+|---|---|---| --- |
+| BSON values | Retain supported BSON types | Convert supported types to JSON | Convert supported types to JSONB |
+| Datetime | Store a BSON date | Store a UTC ISO string | UTC ISO string at millisecond precision |
+| ObjectId | Retain ObjectId | Store a string | Store a string |
+| Decimal | Store Decimal128 | Require `decimal_mode="string"` | Store an exact JSONB number |
+
+PostgreSQL accepts signed 64-bit BSON integers. JSONB rejects strings containing U+0000.
+The loader derives the physical key before converting the payload, so an ObjectId and
+a string with the same spelling remain distinct upsert targets.
 
 A naive datetime has no timezone.
 Use `naive_datetimes="utc"` to interpret native naive datetimes as UTC.

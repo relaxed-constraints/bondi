@@ -21,6 +21,7 @@ nav:
     - MongoDB queries: find-query.md
     - MongoDB Query statistics: mongodb-query-statistics.md
     - Couchbase queries: couchbase-query.md
+    - PostgreSQL queries: postgresql-query.md
     - Building and saving workloads: workloads.md
   - Query execution:
     - Running queries and workloads: executor.md

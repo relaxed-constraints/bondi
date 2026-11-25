@@ -40,5 +40,12 @@ server support, such as the Enterprise evaluation setup in [Database deployment]
 A successful request without detailed timings carries a warning; inspect
 `result.warnings` rather than assuming every metric will be present.
 
+PostgreSQL runs each read in a read-only transaction. Explain prefixes the
+standalone SQL with `EXPLAIN (FORMAT JSON)`. Profile adds `ANALYZE, BUFFERS`
+and executes the query once. Both put PostgreSQL's plan array in
+`result.raw["explain"]`. Use `run(collect_results=True)` to retrieve output
+rows. PostgreSQL profiling exposes server-side operators, row counts and buffer
+activity, including parallel workers when the planner chooses them.
+
 Profiling measurements are not interchangeable with ordinary execution timings.
 See [query summaries](summaries.md) for metric meanings and interpretation.

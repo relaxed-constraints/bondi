@@ -5,11 +5,11 @@ This page tracks capabilities and open work, not a commitment to release dates.
 ## Available
 
 - Reusable shared and native index definitions, versioned persistence, and synchronous
-  single/batch index creation and removal, plus opt-in batch replacement, for MongoDB and Couchbase.
+  single/batch index creation and removal, plus opt-in batch replacement, for MongoDB, Couchbase and PostgreSQL.
 
 - AptMQL dataset and repository loading from cached BSON dumps, without index restoration.
 
-- Dataset loading with explicit identity, split and write policies for MongoDB and Couchbase.
+- Dataset loading with explicit identity, split and write policies for MongoDB, Couchbase and PostgreSQL.
 
 - Pattern-based load selection over saved workload instances with `ByPattern`.
 
@@ -21,9 +21,9 @@ This page tracks capabilities and open work, not a commitment to release dates.
 - Offline MongoDB query statistics with versioned counts, structural depth/fan-out,
   and optional nested-pipeline scope.
 - Explicit conversion of supported MongoDB find queries to aggregation pipelines.
-- Native MongoDB find/aggregation and Couchbase SQL++ query descriptions.
+- Native MongoDB find/aggregation, Couchbase SQL++ and PostgreSQL SQL query descriptions.
 - Single-backend workloads, JSONL persistence and query fingerprints.
-- Synchronous and asynchronous execution, explain and profile for both backends.
+- Synchronous and asynchronous execution, explain and profile for all three backends.
 - Bounded workload concurrency, error continuation, deadlines and serialized
   per-query result callbacks (caller-thread callbacks for synchronous executors).
 - Offline summary parsing with conservative handling of unsupported metrics.

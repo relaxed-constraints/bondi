@@ -5,6 +5,9 @@ Below are example code snippets of common workflows with BONDI. Follow the
 
 Run the snippets in order in a notebook or Python script. 
 
+The numbered walkthrough uses MongoDB, including its sampling estimator and workload generator.
+For PostgreSQL, follow [deploy, load and query the demo businesses](postgresql-query.md#run-your-first-postgresql-query).
+
 ## 1. Deploy a local MongoDB instance
 
 _Requires Docker running._

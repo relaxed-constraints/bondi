@@ -1,6 +1,6 @@
 # Understanding query summaries
 
-Both backends expose `summarize(raw)`. Import it from the backend that produced the
+All three backends expose `summarize(raw)`. Import it from the backend that produced the
 response. The parser operates offline and returns the shared `QuerySummary` class.
 
 ```python
@@ -29,6 +29,14 @@ MongoDB structured plan stages such as `IXSCAN` and `GROUP` differ from aggregat
 pipeline operators such as `$group`. The parser does not conflate them. Couchbase
 operator output counts are not automatically document/index examination counts;
 unsupported totals remain `None`.
+
+PostgreSQL traverses the native plan tree in root-first order. For a profiled
+single-loop root, `rows_returned` comes from its actual rows. For example, an
+aggregate over thousands of inputs can return just one row. The top-level
+`Execution Time` supplies server milliseconds. Plain explain supplies estimates
+in the raw plan. Both PostgreSQL examination counters remain `None`. Buffer
+hits measure page accesses, and an index scan’s output counts rows. See the
+[PostgreSQL reference](reference/postgresql.md).
 
 Use `result.elapsed_ms` for client-observed duration and the summary for server
 measurements. Check workload result errors before parsing. `summarize(None)` returns

@@ -1,6 +1,6 @@
 # Running queries and workloads
 
-Use `MongoExecutor` or `CouchbaseExecutor` in both scripts and notebooks. They manage
+Use `MongoExecutor`, `CouchbaseExecutor`, or `PostgresExecutor` in both scripts and notebooks. They manage
 connections and expose the same operations for individual queries and workloads.
 Create an executor with `from_connection(connection, ...)`, using
 `deployment.connection` or explicit [connection settings](connections.md).
@@ -158,7 +158,7 @@ Couchbase 7.6.2 editions.
 ## Per-query result callbacks
 
 All three workload methods (`run_workload`, `explain_workload`, `profile_workload`)
-on MongoDB and Couchbase executors accept keyword-only `on_result`:
+on all three executors accept keyword-only `on_result`:
 
 ```python
 from bondi.mongodb import summarize

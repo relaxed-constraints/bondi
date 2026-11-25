@@ -334,7 +334,7 @@ fictional businesses. Data loading is separate from deployment management.
 
 ## Database versions
 
-Use a numeric `major.minor.patch` version:
+MongoDB and Couchbase use numeric `major.minor.patch` versions. PostgreSQL uses `major.minor`:
 
 ```python
 mongo = deploy_mongodb("example-mongo", version="8.0.16")
@@ -348,7 +348,7 @@ bondi deployment create mongodb --name example-mongo --version 8.0.16
 bondi deployment create couchbase --name example-cb --version 7.6.12 --edition enterprise
 ```
 
-For new names, omission selects MongoDB 8.0.16 or Couchbase 7.6.2.
+For new names, omission selects MongoDB 8.0.16, Couchbase 7.6.2 or PostgreSQL 17.5.
 For saved names, omission reuses the saved image.
 An explicit version must match that image exactly.
 Otherwise, BONDI rejects the request before contacting Docker or changing files.
@@ -519,7 +519,7 @@ If startup fails, the saved deployment's configuration and data remain available
 
 ## Startup and troubleshooting
 
-Default startup deadlines are 120 seconds for MongoDB and 300 seconds for Couchbase.
+Default startup deadlines are 120 seconds for MongoDB and PostgreSQL, and 300 seconds for Couchbase.
 These include the initial image download.
 Use `timeout=300` in Python or `--timeout 300` in the CLI to allow more time.
 Start, stop and remove also accept a timeout.
@@ -599,5 +599,4 @@ Use the same start, stop, logs, and remove operations as for MongoDB. Removing
 with `keep_data=True` retains the saved settings and volume for the next start.
 PostgreSQL accepts major.minor image versions such as the pinned default 17.5.
 BONDI uses the official image's version-specific data volume layout. Deployment
-uses Docker Compose and requires no PostgreSQL Python driver. Use a native
-PostgreSQL client for database operations at this stage.
+uses Docker Compose and requires no PostgreSQL Python driver. Install the `postgresql` extra to [load and query the demo](postgresql-query.md).
