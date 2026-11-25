@@ -134,3 +134,15 @@ assert restored == document
 ```
 
 A PostgreSQL numeric decimal mode is feasible. Decide the read policy before exposing it. The decoder applies to every fractional JSON number on that connection, including fields originally supplied as Python floats. JSONB retains numeric values but carries no record of the original Python or BSON type. Keep finite-value checks and scope any decoder override to the intended connections. The experiment added no runtime dependency.
+
+### 2026-11-26 · Mixed IDs, dates and decimals
+
+The [mixed-type probe](../dev/probes/postgresql_mixed_types.py) inserted four documents into a PostgreSQL 17.5 temporary table. Using BONDI's existing document_key on each original ID gave distinct primary keys for integer 1, string "1", a BSON ObjectId and its hexadecimal string. A native upsert using the ObjectId's key changed exactly its row. Inside JSONB the last two IDs have identical string values. Use the primary key for typed identity lookups; projecting the payload alone loses that distinction.
+
+The calendar date remained an ISO string. An offset timestamp at 11:30:00.123456 in UTC+11 became 00:30:00.123Z. A nested Decimal128 converted to Decimal retained all digits as a JSON number. A neighboring Python float also came back as Decimal with the exact decoder. Proposed write contract: derive keys before conversion, share Couchbase temporal and ObjectId conversion rules, and preserve finite representable decimals numerically by default. Readback policy remains a public API decision.
+
+To repeat, set SPIKE_PG_DSN and run:
+
+```sh
+uv run --with 'psycopg[binary]==3.3.9' --with simplejson==4.3.0 python dev/probes/postgresql_mixed_types.py
+```
