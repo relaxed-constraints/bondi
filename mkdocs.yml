@@ -55,6 +55,7 @@ nav:
     - Indexes: reference/couchbase/indexes.md
     - Executors: reference/couchbase/executors.md
     - Summary parsing: reference/couchbase/summaries.md
+  - PostgreSQL: reference/postgresql.md
 - Projects: projects.md
 - Development:
   - Changelog: changelog.md

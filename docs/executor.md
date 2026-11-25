@@ -336,3 +336,42 @@ Your experiment code must save progress and decide when to stop related backend 
 
 Use [`generate_load()`](load-generation.md) to repeatedly select workload entries
 under concurrent load with explicit warm-up, measurement and drain phases.
+
+## PostgreSQL reads and plans
+
+Install the `postgresql` extra for execution. Query persistence and plan parsing
+work offline. Bind positional scalar values with Psycopg placeholders.
+
+```python
+from bondi.deployment import get_deployment
+from bondi.postgresql import PostgresExecutor, PostgresQuery, summarize
+
+query = PostgresQuery(
+    "SELECT doc FROM beer_factory.transactions WHERE doc ->> 'customerId' = %s",
+    ["864896"],
+)
+with PostgresExecutor.from_connection(get_deployment("pg-demo").connection) as executor:
+    rows = executor.run(query, collect_results=True)
+    estimated = executor.explain(query)
+    observed = summarize(executor.profile(query).raw)
+```
+
+Each operation borrows a connection and opens a read-only transaction. BONDI uses
+a forward-only SQL cursor and asks PostgreSQL to plan for complete consumption.
+Explain and profile use the same cursor declaration, so their plans reflect this
+execution path. PostgreSQL may choose a different plan for a standalone SELECT.
+Run counts rows in bounded fetches. Collected rows use SQL output labels as keys,
+which must be unique. Native SQL types use Psycopg decoding. Fractional numbers
+in JSON and JSONB outputs use Python Decimal.
+
+Explain returns planner estimates. Profile executes once with ANALYZE and BUFFERS.
+Both retain the JSON array at `result.raw["explain"]`. Profile returns no query
+documents. Its summary can report server execution time and final row count for a
+single-loop root. Buffer statistics, estimates, loops and node timings remain in
+the native tree. Documents and keys examined remain unknown.
+
+The async factory opens an owned connection pool. An async executor constructed
+with an existing Psycopg AsyncConnectionPool borrows it on the current event loop.
+The operation deadline covers pool acquisition and row consumption. Workload and
+load-generation callbacks follow the same thread, ordering and error policies
+as the other executors.

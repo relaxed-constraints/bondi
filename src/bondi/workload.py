@@ -16,8 +16,10 @@ def _query_types() -> dict:
     from bondi.couchbase import CouchbaseQuery
     from bondi.mongodb.aggregate import MongoAggregateQuery
     from bondi.mongodb.query import MongoFindQuery
+    from bondi.postgresql.query import PostgresQuery
 
     return {
+        "postgresql.sql": PostgresQuery,
         "mongodb.find": MongoFindQuery,
         "mongodb.aggregate": MongoAggregateQuery,
         "couchbase.sqlpp": CouchbaseQuery,

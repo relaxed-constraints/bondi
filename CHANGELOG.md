@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Run, explain and profile PostgreSQL read workloads through synchronous and asynchronous executors,
+  persist native SQL queries, and summarize JSON plans offline.
+
 - Load documents and datasets directly into PostgreSQL JSONB tables with typed keys and exact decimal storage.
 
 - Deploy PostgreSQL with the Python API or CLI and obtain immutable PostgreSQL connection settings.
