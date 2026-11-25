@@ -36,7 +36,7 @@ aggregate over thousands of inputs can return just one row. The top-level
 `Execution Time` supplies server milliseconds. Plain explain supplies estimates
 in the raw plan. Both PostgreSQL examination counters remain `None`. Buffer
 hits measure page accesses, and an index scan’s output counts rows. See the
-[PostgreSQL reference](reference/postgresql.md).
+[PostgreSQL summary parsing](reference/postgresql/summaries.md).
 
 Use `result.elapsed_ms` for client-observed duration and the summary for server
 measurements. Check workload result errors before parsing. `summarize(None)` returns

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Document PostgreSQL across the backend guides and add a walkthrough for querying JSONB documents.
+- Document PostgreSQL across the backend guides with dedicated API reference pages and a walkthrough for querying JSONB documents.
 
 - Stream standalone PostgreSQL reads and explain or profile the same SQL directly, enabling native parallel plans.
 

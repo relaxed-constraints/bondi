@@ -3,7 +3,7 @@
 Shared definitions, automatic backend dispatch, persistence and batch errors are documented here. For native
 index definitions and creation, replacement and removal functions, see the
 [MongoDB](mongodb/indexes.md), [Couchbase](couchbase/indexes.md), and
-[PostgreSQL](postgresql.md).
+[PostgreSQL](postgresql/indexes.md).
 
 See the [index guide](../indexes.md) for semantics and usage examples.
 

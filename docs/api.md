@@ -14,7 +14,7 @@ configuration supplied by relcon-docs; see [Building the documentation](document
 | Estimation contracts | [Estimator interfaces](reference/estimation.md) |
 | MongoDB | [Queries](reference/mongodb/queries.md), [indexes](reference/mongodb/indexes.md), [query statistics](reference/mongodb/statistics.md), [executors](reference/mongodb/executors.md), [estimation](reference/mongodb/estimation.md), [generation](reference/mongodb/generation.md), [summary parsing](reference/mongodb/summaries.md) |
 | Couchbase | [Queries](reference/couchbase/queries.md), [indexes](reference/couchbase/indexes.md), [executors](reference/couchbase/executors.md), [summary parsing](reference/couchbase/summaries.md) |
-| PostgreSQL | [SQL queries, executors, plan summaries and JSONB indexes](reference/postgresql.md) |
+| PostgreSQL | [Queries](reference/postgresql/queries.md), [indexes](reference/postgresql/indexes.md), [executors](reference/postgresql/executors.md), [summary parsing](reference/postgresql/summaries.md) |
 
 Synchronous classes are the default for scripts and notebooks. Async classes remain
 available for applications that already use an event loop.
