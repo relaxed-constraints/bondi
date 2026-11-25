@@ -659,3 +659,21 @@ An unknown dataset error lists the available names.
 For example, `beer_factory` contains `brands`, `customers`, `inventory`, `locations`,
 `reviews`, and `transactions`. See the upstream repository for dataset descriptions
 and its CC BY-SA 4.0 license.
+
+## PostgreSQL document tables
+
+Install the `postgresql` extra for dataset loading. The connection URI selects
+the database. Use `PostgresCollectionRef(schema, table)` for a single collection.
+AptMQL uses one schema per dataset and one table per source collection:
+
+```sh
+bondi dataset load-aptmql beer_factory --deployment pg-demo
+```
+
+Each row stores a typed document key in the text primary key `document_id` and
+the document (including its converted `_id`) in the JSONB object column `doc`.
+ObjectIds and temporal values become strings. Exact decimals remain JSON numbers.
+The loader checks the managed table layout before clearing an existing destination.
+Create and replace acknowledge committed batches. Upsert replaces one document per commit.
+For single collections and Hugging Face repositories the CLI accepts `--schema`
+(default `public`). Use `--collection` to name a single table.

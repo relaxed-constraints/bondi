@@ -39,6 +39,7 @@ Issues = "https://github.com/relaxed-constraints/bondi/issues"
 Changelog = "https://github.com/relaxed-constraints/bondi/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+postgresql = ["psycopg[binary]>=3.2,<4", "simplejson>=3.19,<5"]
 couchbase = ["couchbase>=4.6.3,<5"]
 
 [build-system]

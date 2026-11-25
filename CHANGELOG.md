@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Load documents and datasets directly into PostgreSQL JSONB tables with typed keys and exact decimal storage.
+
 - Deploy PostgreSQL with the Python API or CLI and obtain immutable PostgreSQL connection settings.
 
 ## 0.4.1 — 2026-11-22

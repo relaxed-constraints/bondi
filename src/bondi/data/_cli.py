@@ -10,9 +10,10 @@ from types import SimpleNamespace
 import click
 
 from bondi._terminal import table
-from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
+from bondi.connection import CouchbaseConnection, MongoConnection, PostgresConnection
 from bondi.couchbase.collection import CouchbaseCollectionRef
 from bondi.mongodb import MongoCollectionRef
+from bondi.postgresql import PostgresCollectionRef
 
 from . import (
     dataset_info,
@@ -24,6 +25,7 @@ from . import (
     load_hf_dataset,
     load_hf_repository,
 )
+from ._loader import load_connection
 
 
 @click.group(no_args_is_help=False)
@@ -67,6 +69,7 @@ def _load_options(function, *, hub=False, aptmql=False, repository_names=False):
     if not repository_names:
         decorators.extend(
             [
+                click.option("--schema", help="PostgreSQL destination schema."),
                 click.option(
                     "--database", help="MongoDB database. AptMQL defaults to the dataset name."
                 ),
@@ -198,14 +201,15 @@ def run(args):
         config = json.loads(Path(args.connection).read_text())
         if not isinstance(config, dict) or not config.get("uri"):
             raise ValueError("Connection file requires a uri")
-        if config.get("backend") == "mongodb":
+        if config.get("backend") in {"mongodb", "postgresql"}:
             password = None
             if "password_env" in config:
                 variable = config["password_env"]
                 if not isinstance(variable, str) or variable not in os.environ:
-                    raise ValueError("MongoDB password_env must name a set environment variable")
+                    raise ValueError("password_env must name a set environment variable")
                 password = os.environ[variable]
-            connection = MongoConnection(config["uri"], config.get("username"), password)
+            cls = PostgresConnection if config["backend"] == "postgresql" else MongoConnection
+            connection = cls(config["uri"], config.get("username"), password)
         elif config.get("backend") == "couchbase":
             if not config.get("username") or config.get("password_env") not in os.environ:
                 raise ValueError("Couchbase connection requires username and a set password_env")
@@ -214,6 +218,9 @@ def run(args):
             )
         else:
             raise ValueError("Unsupported connection backend")
+    schema = getattr(args, "schema", None)
+    if schema is not None and not isinstance(connection, PostgresConnection):
+        raise ValueError("--schema requires PostgreSQL")
     options = {
         key: getattr(args, key)
         for key in (
@@ -235,6 +242,7 @@ def run(args):
                 database=args.database,
                 bucket=args.bucket,
                 scope=args.scope,
+                schema=schema,
                 revision=args.revision,
                 **options,
             )
@@ -254,12 +262,15 @@ def run(args):
             }
         print(json.dumps(payload, indent=2))
         return 0
-    conn = _validate_connection(connection)
+    conn = load_connection(connection)
     if isinstance(conn, MongoConnection):
         if not args.database:
             raise ValueError("MongoDB requires a destination database. Specify --database NAME.")
         if args.bucket is not None or args.scope != "_default":
             raise ValueError("MongoDB does not accept --bucket or --scope")
+    elif isinstance(conn, PostgresConnection):
+        if args.database is not None or args.bucket is not None or args.scope != "_default":
+            raise ValueError("Use --schema for PostgreSQL")
     else:
         if not args.bucket:
             raise ValueError("Couchbase requires a destination bucket. Specify --bucket NAME.")
@@ -272,6 +283,7 @@ def run(args):
             database=args.database,
             bucket=args.bucket,
             scope=args.scope,
+            schema=schema,
             split=args.split,
             revision=args.revision,
             streaming=args.streaming,
@@ -279,11 +291,12 @@ def run(args):
         )
         payload = {key: asdict(value) for key, value in result.items()}
     else:
-        ref = (
-            MongoCollectionRef(args.database, args.collection)
-            if isinstance(conn, MongoConnection)
-            else CouchbaseCollectionRef(args.bucket, args.scope, args.collection)
-        )
+        if isinstance(conn, PostgresConnection):
+            ref = PostgresCollectionRef("public" if schema is None else schema, args.collection)
+        elif isinstance(conn, MongoConnection):
+            ref = MongoCollectionRef(args.database, args.collection)
+        else:
+            ref = CouchbaseCollectionRef(args.bucket, args.scope, args.collection)
         if args.dataset_command == "load-demo":
             result = load_demo_data(connection=connection, collection=ref, **options)
         elif args.dataset_command == "load-file":

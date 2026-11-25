@@ -44,7 +44,7 @@ def convert(value, backend, settings, counts, path="$", *, decoded=False):
         record("date")
         return value.isoformat()
     if isinstance(value, ObjectId):
-        if backend == "couchbase":
+        if backend in {"couchbase", "postgresql"}:
             record("objectid")
             return str(value)
         return value
@@ -57,10 +57,16 @@ def convert(value, backend, settings, counts, path="$", *, decoded=False):
                 return Decimal128(decimal)
             except Exception:
                 raise ValueError(f"{path}: decimal cannot be represented as Decimal128") from None
+        if backend == "postgresql":
+            if decimal.adjusted() >= 131072 or decimal.as_tuple().exponent < -16383:
+                raise ValueError(f"{path}: decimal exceeds PostgreSQL numeric range")
+            return decimal
         if settings["decimal_mode"] == "string":
             record("decimal_string")
             return str(decimal)
         raise ValueError(f'{path}: decimal requires decimal_mode="string" for Couchbase')
+    if backend == "postgresql" and isinstance(value, str) and "\0" in value:
+        raise ValueError(f"{path}: PostgreSQL strings cannot contain null characters")
     if value is None or type(value) in (str, bool):
         return value
     if isinstance(value, int):

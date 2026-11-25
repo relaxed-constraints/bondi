@@ -4,9 +4,10 @@ import json
 from importlib.resources import files
 from typing import Any
 
-from bondi.connection import CouchbaseConnection, MongoConnection
+from bondi.connection import CouchbaseConnection, MongoConnection, PostgresConnection
 from bondi.couchbase.collection import CouchbaseCollectionRef
 from bondi.mongodb import MongoCollectionRef
+from bondi.postgresql import PostgresCollectionRef
 
 from ._loader import load_documents
 from ._types import LoadDataResult
@@ -14,8 +15,8 @@ from ._types import LoadDataResult
 
 def load_demo_data(
     *,
-    connection: MongoConnection | CouchbaseConnection,
-    collection: MongoCollectionRef | CouchbaseCollectionRef,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
+    collection: MongoCollectionRef | CouchbaseCollectionRef | PostgresCollectionRef,
     id_field: str | None = "business_id",
     **options: Any,
 ) -> LoadDataResult:

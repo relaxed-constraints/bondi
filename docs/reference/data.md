@@ -67,3 +67,8 @@ namespace mappings, and the available datasets. Dump indexes are not restored.
     options:
       show_root_heading: true
       heading_level: 2
+
+::: bondi.postgresql.PostgresCollectionRef
+    options:
+      show_root_heading: true
+      heading_level: 2

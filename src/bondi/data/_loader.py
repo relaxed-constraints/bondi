@@ -8,10 +8,17 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any, Literal
 
-from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
+from bondi.connection import (
+    CouchbaseConnection,
+    MongoConnection,
+    PostgresConnection,
+    _validate_connection,
+)
 from bondi.couchbase.collection import CouchbaseCollectionRef
 from bondi.mongodb import MongoCollectionRef
+from bondi.postgresql import PostgresCollectionRef
 
+from ._postgres import PostgresWriter
 from ._sources import (
     HubJsonLines,
     decode_document,
@@ -26,10 +33,24 @@ from ._values import convert, document_key, generated_id, identity
 from ._writers import CouchbaseWriter, InsertBatchError, MongoWriter, name
 
 
+def load_connection(connection):
+    if isinstance(connection, PostgresConnection):
+        return connection
+    return _validate_connection(connection)
+
+
+def backend_for(connection):
+    if isinstance(connection, PostgresConnection):
+        return "postgresql"
+    return "couchbase" if isinstance(connection, CouchbaseConnection) else "mongodb"
+
+
 def _destination(connection, collection):
-    conn = _validate_connection(connection)
+    conn = load_connection(connection)
     if isinstance(conn, MongoConnection) and isinstance(collection, MongoCollectionRef):
         dest = (name(collection.database), None, name(collection.collection))
+    elif isinstance(conn, PostgresConnection) and isinstance(collection, PostgresCollectionRef):
+        dest = (name(collection.schema), None, name(collection.table))
     elif isinstance(conn, CouchbaseConnection) and isinstance(collection, CouchbaseCollectionRef):
         dest = (name(collection.bucket), name(collection.scope), name(collection.collection))
     else:
@@ -40,8 +61,8 @@ def _destination(connection, collection):
 def load_documents(
     documents: Iterable[dict],
     *,
-    connection: MongoConnection | CouchbaseConnection,
-    collection: MongoCollectionRef | CouchbaseCollectionRef,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
+    collection: MongoCollectionRef | CouchbaseCollectionRef | PostgresCollectionRef,
     id_field: str | None = None,
     namespace: str | None = None,
     mode: Literal["create", "replace", "upsert"] = "create",
@@ -85,9 +106,9 @@ def load_documents(
     """
     if isinstance(documents, (str, Path, Mapping)) or not isinstance(documents, Iterable):
         raise TypeError("documents must be an iterable of dictionaries, not a file or mapping")
-    _destination(connection, collection)
+    _, dest = _destination(connection, collection)
     return _load(
-        [source_plan(documents, collection.collection, namespace)],
+        [source_plan(documents, dest[-1], namespace)],
         connection=connection,
         collection=collection,
         id_field=id_field,
@@ -105,8 +126,8 @@ def load_documents(
 def load_file(
     path: str | Path,
     *,
-    connection: MongoConnection | CouchbaseConnection,
-    collection: MongoCollectionRef | CouchbaseCollectionRef,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
+    collection: MongoCollectionRef | CouchbaseCollectionRef | PostgresCollectionRef,
     **options: Any,
 ) -> LoadDataResult:
     """Load one CSV, JSON, JSONL or Parquet file into an exact CollectionRef.
@@ -123,12 +144,12 @@ def load_file(
     CSV values remain strings. JSON arrays are streamed. No manifest, package
     mapping or catalogue alias is accepted.
     """
-    _destination(connection, collection)
+    _, dest = _destination(connection, collection)
     path = Path(path)
     if path.suffix.lower() not in (".csv", ".json", ".jsonl", ".parquet"):
         raise ValueError("Supported file formats: csv, json, jsonl, parquet")
     return _load(
-        [source_plan(path, collection.collection, options.get("namespace"))],
+        [source_plan(path, dest[-1], options.get("namespace"))],
         connection=connection,
         collection=collection,
         **options,
@@ -138,8 +159,8 @@ def load_file(
 def load_hf_dataset(
     repo_id: str,
     *,
-    connection: MongoConnection | CouchbaseConnection,
-    collection: MongoCollectionRef | CouchbaseCollectionRef,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
+    collection: MongoCollectionRef | CouchbaseCollectionRef | PostgresCollectionRef,
     dataset: str | None = None,
     split: str | list[str] | None = None,
     revision: str | None = None,
@@ -190,10 +211,11 @@ def load_hf_dataset(
 def load_hf_repository(
     repo_id: str,
     *,
-    connection: MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
     database: str | None = None,
     bucket: str | None = None,
     scope: str = "_default",
+    schema: str | None = None,
     split: str | list[str] | None = None,
     revision: str | None = None,
     streaming: bool = False,
@@ -208,6 +230,7 @@ def load_hf_repository(
         database: Required for MongoDB. Do not pass bucket or scope.
         bucket: Required for Couchbase. Do not pass database.
         scope: Couchbase scope, default _default.
+        schema: Destination schema for PostgreSQL, default public.
         split: Selection applied to every configuration. None combines all splits.
         revision: Resolve once so all configurations use the same commit.
         streaming: Stream remote records instead of using Hugging Face disk caches.
@@ -226,7 +249,9 @@ def load_hf_repository(
     LoadDataError.result includes completed collections and the failed collection.
     Progress callbacks report the current collection only.
     """
-    conn = _validate_connection(connection)
+    conn = load_connection(connection)
+    if schema is not None and not isinstance(conn, PostgresConnection):
+        raise ValueError("schema requires PostgreSQL")
     if isinstance(conn, MongoConnection):
         if database is None:
             raise ValueError("MongoDB requires --database NAME or database='NAME'")
@@ -236,6 +261,13 @@ def load_hf_repository(
 
         def make_ref(value):
             return MongoCollectionRef(database, value)
+    elif isinstance(conn, PostgresConnection):
+        if database is not None or bucket is not None or scope != "_default":
+            raise ValueError("PostgreSQL accepts schema for the destination namespace")
+        schema = name("public" if schema is None else schema)
+
+        def make_ref(value):
+            return PostgresCollectionRef(schema, value)
     else:
         if database is not None:
             raise ValueError("Couchbase does not accept database")
@@ -326,7 +358,9 @@ def _load(
     ):
         raise ValueError("bucket_memory_mb must be an integer of at least 100")
     conn, dest = _destination(connection, collection)
-    backend = "couchbase" if isinstance(conn, CouchbaseConnection) else "mongodb"
+    backend = backend_for(conn)
+    if backend == "postgresql" and bucket_memory_mb is not None:
+        raise ValueError("PostgreSQL does not accept bucket_memory_mb")
     for plan in plans:
         plan["destination"] = dest
     result = LoadDataResult(
@@ -344,7 +378,12 @@ def _load(
     writer = None
     context = "destination preparation"
     try:
-        writer = CouchbaseWriter(conn) if backend == "couchbase" else MongoWriter(conn)
+        writer_type = {
+            "mongodb": MongoWriter,
+            "couchbase": CouchbaseWriter,
+            "postgresql": PostgresWriter,
+        }[backend]
+        writer = writer_type(conn)
         occupied = writer.preflight(dest, bucket_memory_mb)
         if occupied and mode == "create":
             raise ValueError("create requires absent or empty collections")

@@ -8,11 +8,12 @@ from bson import decode_file_iter
 from bson.codec_options import CodecOptions
 from huggingface_hub import HfApi, hf_hub_download
 
-from bondi.connection import CouchbaseConnection, MongoConnection, _validate_connection
+from bondi.connection import CouchbaseConnection, MongoConnection, PostgresConnection
 from bondi.couchbase.collection import CouchbaseCollectionRef
 from bondi.mongodb import MongoCollectionRef
+from bondi.postgresql import PostgresCollectionRef
 
-from ._loader import _load
+from ._loader import _load, backend_for, load_connection
 from ._sources import source_plan
 from ._types import LoadDataError, LoadDataResult
 from ._writers import name
@@ -44,8 +45,22 @@ def _catalog(revision):
     return commit, catalog
 
 
-def _references(connection, datasets, database, bucket, scope):
-    conn = _validate_connection(connection)
+def _references(connection, datasets, database, bucket, scope, schema=None):
+    conn = load_connection(connection)
+    if isinstance(conn, PostgresConnection):
+        if any(value is not None for value in (database, bucket, scope)):
+            raise ValueError("PostgreSQL accepts schema for the destination namespace")
+        return {
+            dataset: {
+                collection: PostgresCollectionRef(
+                    name(dataset if schema is None else schema), collection
+                )
+                for collection in entry["collections"]
+            }
+            for dataset, entry in datasets.items()
+        }
+    if schema is not None:
+        raise ValueError("schema requires PostgreSQL")
     if isinstance(conn, MongoConnection):
         if bucket is not None or scope is not None:
             raise ValueError("MongoDB does not accept bucket or scope")
@@ -112,9 +127,7 @@ def _load_catalog(connection, commit, catalog, refs, options):
                 error = LoadDataError(
                     f"{dataset}.{collection}: {type(error).__name__}",
                     LoadDataResult(
-                        "mongodb"
-                        if isinstance(_validate_connection(connection), MongoConnection)
-                        else "couchbase",
+                        backend_for(connection),
                         sources=[plan["info"]],
                     ),
                 )
@@ -135,10 +148,11 @@ def _load_catalog(connection, commit, catalog, refs, options):
 def load_aptmql_dataset(
     dataset: str,
     *,
-    connection: MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
     database: str | None = None,
     bucket: str | None = None,
     scope: str | None = None,
+    schema: str | None = None,
     revision: str | None = None,
     **options: Any,
 ) -> dict[str, LoadDataResult]:
@@ -149,6 +163,7 @@ def load_aptmql_dataset(
         connection: Connection settings for the destination instance.
         database: MongoDB destination name. Defaults to the source dataset name.
         bucket: Required Couchbase bucket. Do not supply for MongoDB.
+        schema: PostgreSQL destination schema. Defaults to the source dataset name.
         scope: Couchbase destination scope. Defaults to the source dataset name.
         revision: Hub branch, tag or commit. Resolved once before downloading.
         **options: Write, identity, conversion and progress options from load_documents.
@@ -168,20 +183,20 @@ def load_aptmql_dataset(
     before writes. Unsupported destination values follow load_documents policies.
     """
     name(dataset)
-    _validate_connection(connection)
+    load_connection(connection)
     commit, catalog = _catalog(revision)
     if dataset not in catalog:
         raise ValueError(
             f"Unknown AptMQL dataset {dataset!r}. Available datasets: {sorted(catalog)}"
         )
     selected = {dataset: catalog[dataset]}
-    refs = _references(connection, selected, database, bucket, scope)
+    refs = _references(connection, selected, database, bucket, scope, schema)
     return _load_catalog(connection, commit, selected, refs, options)[dataset]
 
 
 def load_aptmql_repository(
     *,
-    connection: MongoConnection | CouchbaseConnection,
+    connection: MongoConnection | CouchbaseConnection | PostgresConnection,
     bucket: str | None = None,
     revision: str | None = None,
     **options: Any,
@@ -207,9 +222,9 @@ def load_aptmql_repository(
     in sorted order. Indexes and collection metadata are ignored. Conversion, cache,
     progress and non-atomic failure behavior match load_aptmql_dataset.
     """
-    if "database" in options or "scope" in options:
+    if any(key in options for key in ("database", "scope", "schema")):
         raise ValueError("Repository loading uses source dataset names as databases or scopes")
-    _validate_connection(connection)
+    load_connection(connection)
     commit, catalog = _catalog(revision)
     refs = _references(connection, catalog, None, bucket, None)
     return _load_catalog(connection, commit, catalog, refs, options)
