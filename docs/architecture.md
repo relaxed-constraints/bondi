@@ -1,5 +1,7 @@
 # Architecture and design
 
+For the implementation sequence and verification steps, see [Adding a new database backend](adding-a-database-backend.md).
+
 ## Toolkit boundary
 
 The toolkit supplies database interactions and reusable representations. Models,

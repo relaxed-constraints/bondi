@@ -66,6 +66,7 @@ nav:
   - Changelog: changelog.md
   - Contributing: contributing.md
   - Architecture and design: architecture.md
+  - Adding a new database backend: adding-a-database-backend.md
   - Building the documentation: documentation.md
   - Uploading datasets to Hugging Face: uploading-datasets-to-hugging-face.md
   - Roadmap: roadmap.md

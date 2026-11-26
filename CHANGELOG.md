@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a contributor guide for evaluating, implementing and verifying a new database backend.
+
 - Update the BONDI agent skill with PostgreSQL deployment, JSONB loading, queries, profiling and indexes.
 
 - Document PostgreSQL across the backend guides with dedicated API reference pages and a walkthrough for querying JSONB documents.
