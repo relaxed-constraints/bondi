@@ -6,14 +6,26 @@ render_macros: true
 
 ## Current release
 
-Version {{ bondi_version }} adds JSON Schema export and validation. Use
-`Schema.to_json_schema()` to describe observed document types, required fields,
-nested structures and polymorphic fields in ordinary JSON or Canonical Extended JSON.
-Use `validate_json_schema()` to check a single document or a batch.
+Version {{ bondi_version }} adds PostgreSQL as a document backend. Deploy a local
+server, load data into JSONB tables, execute and profile SQL workloads, and
+manage B-tree and GIN indexes. Install `bondi[postgresql]` for database operations.
+See the [PostgreSQL walkthrough](postgresql-query.md).
 
-See the [schema guide](schemas.md#export-and-validate-json-schema) for examples.
 Release artifacts are available on [PyPI](https://pypi.org/project/bondi/{{ bondi_version }}/)
 and [GitHub](https://github.com/relaxed-constraints/bondi/releases/tag/v{{ bondi_version }}).
+
+## 0.4.2 verification
+
+All 1,647 offline cases and all 206 live Docker cases passed. The initial live
+run passed 188 cases before Docker network allocation failures affected 18
+cases. Each of those 18 passed on an isolated rerun. PostgreSQL coverage
+included persistent deployment, JSONB loading, execution, parallel plans and
+index lifecycle.
+
+Ruff, the strict documentation build and Twine checks passed. Separate clean
+environments installed the wheel and source distribution with the Couchbase
+and PostgreSQL extras. Both passed dependency checks, backend imports, CLI
+discovery, packaged Compose asset and PostgreSQL query persistence checks.
 
 ## 0.4.1 verification
 
@@ -240,13 +252,13 @@ For pip, use the development environment from [Contributing](contributing.md#set
 === "uv"
 
     ```sh
-    BONDI_LIVE=1 uv run --extra couchbase pytest -m live -v
+    BONDI_LIVE=1 uv run --all-extras pytest -m live -v
     ```
 
 === "pip"
 
     ```sh
-    python -m pip install -e ".[couchbase]"
+    python -m pip install -e ".[couchbase,postgresql]"
     BONDI_LIVE=1 python -m pytest -m live -v
     ```
 

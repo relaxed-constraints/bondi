@@ -28,8 +28,7 @@ uv add bondi
 Or use `pip install bondi`. To execute Couchbase queries, install the optional extra:
 `uv add 'bondi[couchbase]'` or `pip install 'bondi[couchbase]'`.
 
-PostgreSQL support is in the development checkout. Install it there with
-`uv sync --extra postgresql`, then follow the [PostgreSQL walkthrough](docs/postgresql-query.md).
+For PostgreSQL, install `bondi[postgresql]` with uv or pip, then follow the [PostgreSQL walkthrough](docs/postgresql-query.md).
 
 For notebooks and demo data, get the source from a
 [GitHub release](https://github.com/relaxed-constraints/bondi/releases).

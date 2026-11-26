@@ -10,7 +10,7 @@ render_macros: true
 MongoDB, Couchbase and PostgreSQL. It gives students and researchers reusable building blocks
 for setting up databases, running experiments and analysing their behaviour.
 
-PostgreSQL support is available in the development checkout. Use the checkout installation instructions below for this backend.
+Install `bondi[postgresql]` for PostgreSQL loading, execution and index administration.
 
 ## Start here
 

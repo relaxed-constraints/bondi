@@ -10,8 +10,7 @@ or a source checkout for notebooks and local demo databases.
 
 ## Install the Python library
 
-Choose the base install for MongoDB support or include the Couchbase extra
-if you need to execute Couchbase queries.
+Choose the base install for MongoDB. Add the corresponding extra for Couchbase or PostgreSQL.
 
 === "uv"
 
@@ -23,6 +22,9 @@ if you need to execute Couchbase queries.
 
     # Include the optional Couchbase SDK
     uv add 'bondi[couchbase]'
+
+    # Include PostgreSQL support
+    uv add 'bondi[postgresql]'
     ```
 
 === "pip"
@@ -35,6 +37,9 @@ if you need to execute Couchbase queries.
 
     # Include the optional Couchbase SDK
     python -m pip install 'bondi[couchbase]'
+
+    # Include PostgreSQL support
+    python -m pip install 'bondi[postgresql]'
     ```
 
 PyMongo and its BSON codecs are installed automatically. Couchbase query descriptions
@@ -43,10 +48,9 @@ For reproducible experiments, pin the release (`bondi=={{ bondi_version }}`) and
 lockfile. The API is still evolving.
 
 
-## PostgreSQL development checkout
+## PostgreSQL in a source checkout
 
-PostgreSQL support is available in development. From a checkout that contains the
-PostgreSQL backend, use `uv sync --locked --extra postgresql` or
+From the matching source checkout, use `uv sync --locked --extra postgresql` or
 `python -m pip install -e '.[postgresql]'`. Include `--extra postgresql` on
 subsequent `uv run` commands that access the database. Query and index
 definitions, workload persistence, offline summary parsing and Docker deployment

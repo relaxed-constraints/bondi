@@ -11,8 +11,8 @@ version if published documentation differs.
 | First end-to-end workflow | https://relaxed-constraints.github.io/bondi/quickstart/ |
 | Deploy, load demo data, inspect or clean up | https://relaxed-constraints.github.io/bondi/deployment/ |
 | MongoDB find and aggregation descriptions | https://relaxed-constraints.github.io/bondi/find-query/ |
-| PostgreSQL SQL and JSONB walkthrough (development checkout) | `docs/postgresql-query.md` |
-| PostgreSQL query, index, executor and summary APIs (development checkout) | `docs/reference/postgresql/` |
+| PostgreSQL SQL and JSONB walkthrough (0.4.2+) | `docs/postgresql-query.md` |
+| PostgreSQL query, index, executor and summary APIs (0.4.2+) | `docs/reference/postgresql/` |
 | Couchbase SQL++ descriptions | https://relaxed-constraints.github.io/bondi/couchbase-query/ |
 | Workloads and persistence | https://relaxed-constraints.github.io/bondi/workloads/ |
 | Run queries, concurrency, errors | https://relaxed-constraints.github.io/bondi/executor/ |

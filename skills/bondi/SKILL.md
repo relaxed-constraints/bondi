@@ -19,9 +19,8 @@ it is not a query translator or an experiment-tracking framework.
 
 Check the project's installed version (for example,
 `uv run python -c "from importlib.metadata import version; print(version('bondi'))"`)
-and dependency constraints before using an API. PostgreSQL support is in the development checkout after 0.4.1. For PostgreSQL,
-verify that the installed BONDI exposes `bondi.postgresql`. Install the
-`postgresql` extra from that checkout for loading, execution and index operations.
+and dependency constraints before using an API. PostgreSQL requires BONDI 0.4.2 or newer. Install the
+`postgresql` extra for loading, execution and index operations.
 Use `deployment.connection` or settings imported from `bondi` for database access.
 Executors use `from_connection()`, loaders use `connection=`, and collection
 arguments and attributes use `collection`. It includes sustained load generation, pattern selection, workload callbacks,

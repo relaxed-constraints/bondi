@@ -42,7 +42,7 @@ Use the managed API/CLI rather than legacy repository Compose scripts.
 
 [Deployment guide](https://relaxed-constraints.github.io/bondi/deployment/)
 
-### PostgreSQL in the development checkout
+### PostgreSQL (0.4.2+)
 
 Run these commands from a BONDI checkout with PostgreSQL support and Docker running:
 

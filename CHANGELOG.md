@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.4.2 — 2026-11-27
+
 - Add a contributor guide for evaluating, implementing and verifying a new database backend.
 
 - Update the BONDI agent skill with PostgreSQL deployment, JSONB loading, queries, profiling and indexes.
